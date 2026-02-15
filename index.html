@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aerohorse — Urban delivery. Reinvented.</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Rajdhani:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="app">
+      <!-- Header -->
+      <header class="site-header">
+        <a href="#" class="header-logo">Aerohorse</a>
+        <nav class="header-nav">
+          <a href="#solutions">Solutions</a>
+          <a href="#technology">Technology</a>
+          <a href="#benefits">Benefits</a>
+          <a href="#cta" class="header-cta">Get in touch</a>
+        </nav>
+      </header>
+
+      <!-- WebGL canvas (fixed, full viewport) -->
+      <div id="webgl-container"></div>
+
+      <!-- Scroll overlay sections with copy -->
+      <div id="scroll-sections">
+        <section class="webgl-overlay" data-section="hero">
+          <div class="hero-content">
+            <h1 class="overlay-title">Urban delivery.<br />Reinvented.</h1>
+            <p class="overlay-subtitle">Anything · Anytime · Delivered</p>
+          </div>
+        </section>
+        <section class="webgl-overlay" data-section="route">
+          <h2 class="overlay-title overlay-title--sm">AI selects the fastest route.</h2>
+        </section>
+        <section class="webgl-overlay" data-section="pod">
+          <h2 class="overlay-title overlay-title--sm">Pods every 500 meters.</h2>
+        </section>
+        <section class="webgl-overlay" data-section="delivery">
+          <h2 class="overlay-title overlay-title--sm">Drone to pod. Rider to doorstep.</h2>
+        </section>
+        <section class="webgl-overlay" data-section="scale">
+          <h2 class="overlay-title overlay-title--sm">Built to scale across entire cities.</h2>
+        </section>
+      </div>
+
+      <!-- 2D sections -->
+      <section id="solutions" class="section-2d">
+        <div class="container">
+          <h2 class="section-heading">Solutions</h2>
+          <p class="section-lead">
+            Last-mile delivery reimagined with autonomous drones and smart pods.
+          </p>
+          <div class="grid-3">
+            <div class="card">
+              <div class="card-icon">✈</div>
+              <h3>Drone Fleet</h3>
+              <p>Autonomous drones fly packages to neighborhood pods in minutes.</p>
+            </div>
+            <div class="card">
+              <div class="card-icon">📍</div>
+              <h3>Smart Pods</h3>
+              <p>Secure, climate-controlled pods every 500m for instant pickup.</p>
+            </div>
+            <div class="card">
+              <div class="card-icon">🛵</div>
+              <h3>Rider Network</h3>
+              <p>Local riders complete the final leg to the customer's door.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="technology" class="section-2d alt">
+        <div class="container">
+          <h2 class="section-heading">Technology</h2>
+          <p class="section-lead">
+            AI routing, real-time tracking, and city-scale infrastructure.
+          </p>
+          <ul class="tech-list">
+            <li>Real-time pathfinding across the pod network</li>
+            <li>Computer vision for safe landing and package handoff</li>
+            <li>Predictive placement based on demand patterns</li>
+            <li>Full integration with existing logistics APIs</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="benefits" class="section-2d alt">
+        <div class="container">
+          <h2 class="section-heading">Benefits</h2>
+          <p class="section-lead">
+            Faster, greener, and more reliable than traditional delivery.
+          </p>
+          <div class="grid-2">
+            <div class="benefit-item">
+              <span class="benefit-value">~15 min</span>
+              <span class="benefit-label">Average delivery window</span>
+            </div>
+            <div class="benefit-item">
+              <span class="benefit-value">-60%</span>
+              <span class="benefit-label">Carbon vs. van delivery</span>
+            </div>
+            <div class="benefit-item">
+              <span class="benefit-value">24/7</span>
+              <span class="benefit-label">Pod availability</span>
+            </div>
+            <div class="benefit-item">
+              <span class="benefit-value">99.9%</span>
+              <span class="benefit-label">On-time delivery</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="cta" class="section-2d cta-section">
+        <div class="container">
+          <h2 class="section-heading">Ready to reinvent delivery?</h2>
+          <p class="section-lead">
+            Partner with Aerohorse for drone-powered last-mile in your city.
+          </p>
+          <div class="cta-buttons">
+            <a href="#contact" class="btn btn-primary">Get in touch</a>
+            <a href="#solutions" class="btn btn-secondary">Learn more</a>
+          </div>
+        </div>
+      </section>
+
+      <footer id="footer" class="section-2d footer">
+        <div class="container">
+          <div class="footer-grid">
+            <div>
+              <img src="/logo.png" alt="Aerohorse" class="footer-logo-img" />
+              <p class="footer-tagline">Urban delivery. Reinvented.</p>
+            </div>
+            <div>
+              <h4>Product</h4>
+              <ul>
+                <li><a href="#solutions">Solutions</a></li>
+                <li><a href="#technology">Technology</a></li>
+                <li><a href="#benefits">Benefits</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4>Company</h4>
+              <ul>
+                <li><a href="#">About</a></li>
+                <li><a href="#">Careers</a></li>
+                <li><a href="#">Contact</a></li>
+              </ul>
+            </div>
+          </div>
+          <div class="footer-bottom">
+            <p>&copy; 2025 Aerohorse. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
