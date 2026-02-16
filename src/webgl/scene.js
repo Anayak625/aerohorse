@@ -10,9 +10,10 @@ const DARK = 0x0a0e17;
  * Light theme by default (brand-aligned).
  */
 export function createScene(container) {
+  /* Creative Light Mode: Soft, airy, futuristic */
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(LIGHT_BG);
-  scene.fog = new THREE.Fog(LIGHT_BG, 40, 120);
+  scene.background = new THREE.Color(0xf0f5fa); // Very light cool grey/blue
+  scene.fog = new THREE.Fog(0xf0f5fa, 60, 180); // Soft distance fog
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);
   camera.position.set(0, 35, 55);
@@ -22,18 +23,32 @@ export function createScene(container) {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.9;
+  renderer.toneMappingExposure = 1.1;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.shadowMap.enabled = true; // Enable shadows for depth
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   container.appendChild(renderer.domElement);
 
-  /* Soft daylight for light theme */
-  const ambient = new THREE.AmbientLight(0x8899bb, 0.7);
+  /* Lighting: Bright, soft, global illumination feel */
+  const ambient = new THREE.AmbientLight(0xffffff, 0.6);
   scene.add(ambient);
-  const key = new THREE.DirectionalLight(0xffffff, 0.6);
-  key.position.set(20, 40, 20);
-  scene.add(key);
-  const fill = new THREE.DirectionalLight(0xe8e0f0, 0.35);
-  fill.position.set(-15, 20, -15);
+
+  const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+  sun.position.set(30, 50, 20);
+  sun.castShadow = true;
+  sun.shadow.mapSize.width = 2048;
+  sun.shadow.mapSize.height = 2048;
+  sun.shadow.camera.near = 0.5;
+  sun.shadow.camera.far = 150;
+  sun.shadow.camera.left = -50;
+  sun.shadow.camera.right = 50;
+  sun.shadow.camera.top = 50;
+  sun.shadow.camera.bottom = -50;
+  sun.shadow.bias = -0.0005;
+  scene.add(sun);
+
+  const fill = new THREE.DirectionalLight(0xddeeff, 0.4);
+  fill.position.set(-20, 30, -20);
   scene.add(fill);
 
   const state = {

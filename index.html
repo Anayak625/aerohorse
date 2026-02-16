@@ -13,15 +13,18 @@
   </head>
   <body>
     <div id="app">
-      <!-- Header -->
-      <header class="site-header">
-        <a href="#" class="header-logo">Aerohorse</a>
-        <nav class="header-nav">
-          <a href="#solutions">Solutions</a>
-          <a href="#technology">Technology</a>
-          <a href="#benefits">Benefits</a>
-          <a href="#cta" class="header-cta">Get in touch</a>
-        </nav>
+      <!-- Header: floating pill that docks on scroll -->
+      <header class="site-header" id="site-header">
+        <div class="header-pill">
+          <a href="#" class="header-logo">Aerohorse</a>
+          <span class="header-divider" aria-hidden="true"></span>
+          <nav class="header-nav">
+            <a href="#solutions">Solutions</a>
+            <a href="#technology">Technology</a>
+            <a href="#benefits">Benefits</a>
+            <a href="#cta" class="header-cta">Get in touch</a>
+          </nav>
+        </div>
       </header>
 
       <!-- WebGL canvas (fixed, full viewport) -->
@@ -36,16 +39,16 @@
           </div>
         </section>
         <section class="webgl-overlay" data-section="route">
-          <h2 class="overlay-title overlay-title--sm">AI selects the fastest route.</h2>
+          <h2 class="overlay-title overlay-title--sm">Smart routing.</h2>
         </section>
         <section class="webgl-overlay" data-section="pod">
-          <h2 class="overlay-title overlay-title--sm">Pods every 500 meters.</h2>
+          <h2 class="overlay-title overlay-title--sm">Pods every 500m.</h2>
         </section>
         <section class="webgl-overlay" data-section="delivery">
-          <h2 class="overlay-title overlay-title--sm">Drone to pod. Rider to doorstep.</h2>
+          <h2 class="overlay-title overlay-title--sm">Drone to Pod.<br>Rider to Door.</h2>
         </section>
         <section class="webgl-overlay" data-section="scale">
-          <h2 class="overlay-title overlay-title--sm">Built to scale across entire cities.</h2>
+          <h2 class="overlay-title overlay-title--sm">City-wide scale.</h2>
         </section>
       </div>
 
