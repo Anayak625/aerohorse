@@ -10,11 +10,12 @@ export function initTechnology() {
   const section = document.getElementById('technology');
   if (!section) return;
 
+  const badge = section.querySelector('.section-badge');
   const heading = section.querySelector('.section-heading');
   const lead = section.querySelector('.section-lead');
   const listItems = section.querySelectorAll('.tech-list li');
 
-  gsap.set([heading, lead, ...listItems], { opacity: 0, x: -16 });
+  gsap.set([badge, heading, lead, ...listItems].filter(Boolean), { opacity: 0, y: 16 });
 
   const tl = gsap.timeline({
     scrollTrigger: {
@@ -25,7 +26,8 @@ export function initTechnology() {
     },
   });
 
-  tl.to(heading, { opacity: 1, x: 0, duration: 0.5, ease: 'power2.out' })
-    .to(lead, { opacity: 1, x: 0, duration: 0.5, ease: 'power2.out' }, '-=0.3')
-    .to(listItems, { opacity: 1, x: 0, duration: 0.35, stagger: 0.06, ease: 'power2.out' }, '-=0.2');
+  if (badge) tl.to(badge, { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' });
+  tl.to(heading, { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' }, badge ? '-=0.2' : 0)
+    .to(lead, { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' }, '-=0.3')
+    .to(listItems, { opacity: 1, y: 0, duration: 0.35, stagger: 0.06, ease: 'power2.out' }, '-=0.2');
 }

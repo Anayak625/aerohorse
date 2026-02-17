@@ -4,10 +4,10 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { createScene } from './webgl/scene.js';
 import { createStage } from './webgl/stage.js';
+import { createCity } from './webgl/city.js';
 import { Drone } from './webgl/drone.js';
-import { Rider } from './webgl/rider.js';
+import { Car } from './webgl/car.js';
 import { createPackage } from './webgl/package.js';
-import { createFlightPath } from './webgl/routes.js';
 import { initSolutions } from './sections/solutions.js';
 import { initTechnology } from './sections/technology.js';
 import { initBenefits } from './sections/benefits.js';
@@ -27,53 +27,47 @@ const sceneApi = createScene(container);
 const { scene, camera, getState, render, setPhase } = sceneApi;
 scene.add(camera);
 
+// Create City Background first
+const city = createCity(scene);
+
 const stage = createStage(scene);
 const { podPosition, doorstep, setPodGlow } = stage;
 
-// Single drone for the whole journey — one mesh, one continuous path (scroll or Play both use applySceneFromProgress)
+// Align city garden to pod
+city.setGardenPatchPosition(podPosition.x, podPosition.z);
+
 const drone = new Drone(scene, camera);
-const rider = new Rider(scene);
+const car = new Car(scene);
 const pkg = createPackage();
 
 const STEPS = [
   { title: 'Urban delivery.<br />Reinvented.', subtitle: 'Anything · Anytime · Delivered' },
-  { title: 'Smart routing.', subtitle: 'Drone flies to your neighborhood pod.' },
-  { title: 'Pods every 500m.', subtitle: 'Package lands. Secure pickup.' },
-  { title: 'Drone to Pod.<br />Rider to Door.', subtitle: 'Local rider collects and heads to you.' },
+  { title: 'Drone to pod.', subtitle: 'Flies to your neighborhood delivery point.' },
+  { title: 'Hover & deliver.', subtitle: 'Package descends safely to the pod.' },
+  { title: 'Pod to door.', subtitle: 'Car collects and drives to you.' },
   { title: 'City-wide scale.', subtitle: 'From sky to doorstep, reinvented.' }
 ];
 
-// Camera frames so pod + drone are visible together when drone is above pod
+// Cinematic Camera Keyframes
 const CAMERA_KEYFRAMES = [
-  { position: [0, 18, 32], lookAt: [0, 2, 0], fov: 48 },
-  { position: [8, 14, 22], lookAt: [0, 10, -4], fov: 42 },
-  { position: [-4, 5, 11], lookAt: [0, 3, 0], fov: 44 },  // pod phase: frame pod + drone above it
-  { position: [10, 5, 6], lookAt: [-4, 0, 0], fov: 38 },
-  { position: [4, 22, 18], lookAt: [14, 0, 10], fov: 50 }
+  { position: [8, 14, -8], lookAt: [-6, 2, 8], fov: 48 },      // 0: Wide establishing shot, high angle
+  { position: [2, 11, 0], lookAt: [-6, 3, 10], fov: 50 },      // 1: Tracking shot closing in
+  { position: [-5, 8, 8], lookAt: [-6, 3, 10], fov: 45 },      // 2: Orbit around pod, detail view
+  { position: [-4, 6, 8], lookAt: [-6, 1.5, 10], fov: 45 },    // 3: Low angle, watching drop
+  { position: [-8, 5, 16], lookAt: [-12, 1, 20], fov: 52 }     // 4: Follow car to destination
 ];
 
-const depotWorld = new THREE.Vector3(0, 20, 26);
-const depotTop = new THREE.Vector3(depotWorld.x, depotWorld.y + 4, depotWorld.z); // top of depot
-const podHover = new THREE.Vector3(0, 12, 0);
-const flightCurve = createFlightPath(depotWorld, podHover, 18);
-const podSlotPos = new THREE.Vector3(0, 0.9, 0.7);
-
-// Drone path: top of depot → hover (lower so pod stays in view) → above pod (both in frame)
-const DRONE_TARGETS = [
-  depotTop.clone(),              // top of depot (handoff ends here)
-  new THREE.Vector3(0, 7, 0),   // hover above area, lower so pod visible as we approach
-  new THREE.Vector3()            // above pod (y set in applySceneFromProgress)
-];
+const droneStart = new THREE.Vector3(0, 8, 0);  // center of view
+const droneAbovePod = new THREE.Vector3(podPosition.x, 6, podPosition.z);  // hover height (uses rotated podPosition)
+const podSlotPos = new THREE.Vector3(podPosition.x - 0.7, 0.9, podPosition.z);  // slot in rotated layout
 
 let currentStep = 0;
 let timeline = null;
 let storyScrollProgress = 0;
 
 drone.setPackage(pkg);
-drone.mesh.position.set(0, -1, -5);
-
-const _handoffWorld = new THREE.Vector3();
-const _cameraLocalOffset = new THREE.Vector3(0, -1, -5);
+drone.mesh.position.copy(droneStart);
+scene.add(drone.mesh);
 
 function lerpV3(out, a, b, t) {
   out.x = a.x + (b.x - a.x) * t;
@@ -82,104 +76,73 @@ function lerpV3(out, a, b, t) {
   return out;
 }
 
-// Apply drone/rider/package positions from scroll progress (smooth, continuous, no disappear)
+// Flow: drone center → moves to pod → hovers above → parcel descends → car pod→building
+// All driven by scroll. Drone, pod, parcel stay in frame throughout.
 function applySceneFromProgress(progress) {
   const p = Math.max(0, Math.min(1, progress));
-  const phase = p * 5;
-  const i = Math.floor(phase);
-  const j = Math.min(i + 1, 4);
-  const t = i === j ? 0 : phase - i;
-
-  // Drone: on camera until handoff start; then smooth handoff so it never disappears
-  const HANDOFF_START = 0.12;
-  const HANDOFF_END = 0.28;
-
-  if (p < HANDOFF_START) {
-    if (drone.mesh.parent === scene) {
-      camera.add(drone.mesh);
-      drone.mesh.position.set(0, -1, -5);
-    }
-    drone.setPackage(pkg);
-    rider.mesh.visible = false;
-    rider.active = false;
-    setPodGlow(0.5 + 0.2 * (p / HANDOFF_START));
-    return;
-  }
-
-  // Move to scene once: use world position where drone was (so no pop), then lerp to top of depot
-  if (drone.mesh.parent !== scene) {
-    _handoffWorld.copy(_cameraLocalOffset).applyQuaternion(camera.quaternion).add(camera.position);
-    camera.remove(drone.mesh);
-    scene.add(drone.mesh);
-    drone.mesh.position.copy(_handoffWorld);
-  }
-
-  // Drone above pod at height so pod + drone both visible in frame (camera looks at mid-point)
-  const droneAbovePodY = 4.5;
-  DRONE_TARGETS[2].set(podPosition.x, droneAbovePodY, podPosition.z);
-
   const dronePos = drone.mesh.position;
 
-  if (p < HANDOFF_END) {
-    // Handoff: from in front of camera to top of depot (no disappear)
-    const handoffT = (p - HANDOFF_START) / (HANDOFF_END - HANDOFF_START);
-    lerpV3(dronePos, _handoffWorld, DRONE_TARGETS[0], Math.min(1, handoffT));
-  } else {
-    // 0.28→0.48 top of depot→hover, 0.48→0.68 hover→top of pod; after that drone stays on pod
-    const segment = Math.min(2, Math.floor((p - HANDOFF_END) / 0.2));
-    const segT = ((p - HANDOFF_END) / 0.2) - segment;
-    if (segment === 0) lerpV3(dronePos, DRONE_TARGETS[0], DRONE_TARGETS[1], segT);
-    else if (segment === 1) lerpV3(dronePos, DRONE_TARGETS[1], DRONE_TARGETS[2], segT);
-    else dronePos.copy(DRONE_TARGETS[2]); // stay on top of pod for rest of scroll
-  }
+  // Phase 0 (0–0.25): Drone at center, pod at distance — both in frame
+  // Phase 1 (0.25–0.5): Drone moves toward pod, stands above it
+  // Phase 2 (0.5–0.6): Drone hovers, locks position
+  // Phase 3 (0.6–0.8): Parcel descends slowly to pod
+  // Phase 4 (0.8–1.0): Car runs from pod to building
 
-  // Pod glow (aligned with handoff and segments)
-  if (p < 0.4) setPodGlow(0.5 + 0.2 * (p - HANDOFF_START) / (0.4 - HANDOFF_START));
-  else if (p < 0.6) setPodGlow(0.7 + 0.5 * (p - 0.4) / 0.2);
-  else if (p < 0.8) setPodGlow(1.2 - 0.2 * (p - 0.6) / 0.2);
-  else setPodGlow(1 - 0.5 * (p - 0.8) / 0.2);
-
-  // Package: on drone until 0.4, then lerp to pod slot by 0.6, then rider/doorstep
-  if (p < 0.4) {
+  if (p < 0.25) {
+    // Drone at center, pod at distance — both in frame
+    dronePos.copy(droneStart);
     drone.setPackage(pkg);
-  } else {
+    drone.setFlightIntensity(0.5);
+    car.mesh.visible = false;
+    car.active = false;
+    setPodGlow(0.5);
+  } else if (p < 0.5) {
+    // Drone moves to pod, stands above
+    const t = (p - 0.25) / 0.25;
+    lerpV3(dronePos, droneStart, droneAbovePod, t);
+    drone.setPackage(pkg);
+    drone.setFlightIntensity(0.8);
+    car.mesh.visible = false;
+    setPodGlow(0.8 + 0.2 * t);
+  } else if (p < 0.6) {
+    // Drone hovers, locks position
+    dronePos.copy(droneAbovePod);
+    drone.setPackage(pkg);
+    drone.setFlightIntensity(0.2); // Hovering
+    car.mesh.visible = false;
+    setPodGlow(1);
+  } else if (p < 0.8) {
+    // Parcel descends slowly to pod
+    dronePos.copy(droneAbovePod);
     if (drone.package) drone.dropPackage();
-    if (p < 0.6) {
-      rider.mesh.visible = false;
-      rider.active = false;
-      if (rider.package) {
-        const dropped = rider.dropPackage();
-        if (dropped) scene.add(dropped);
-      }
-      scene.add(pkg);
-      const from = new THREE.Vector3(podPosition.x, 4.5, podPosition.z);
-      lerpV3(pkg.position, from, podSlotPos, (p - 0.4) / 0.2);
-    } else if (p < 0.8) {
-      if (!rider.mesh.visible) {
-        rider.spawn(new THREE.Vector3(podPosition.x - 1.5, 0, podPosition.z));
-        scene.remove(pkg);
-        rider.setPackage(pkg);
-        rider.mesh.visible = true;
-        rider.active = true;
-      }
-      rider.mesh.position.set(podPosition.x - 1.5, 0, podPosition.z);
-    } else {
-      const riderEnd = new THREE.Vector3(doorstep.x - 0.5, 0, doorstep.z - 0.5);
-      const rp = (p - 0.8) / 0.2;
-      rider.mesh.position.lerpVectors(
-        new THREE.Vector3(podPosition.x - 1.5, 0, podPosition.z),
-        riderEnd,
-        rp
-      );
-      if (rp >= 1) {
-        const dropped = rider.dropPackage();
-        if (dropped) {
-          dropped.position.copy(doorstep);
-          scene.add(dropped);
-        }
-      }
-      setPodGlow(0.5 + 0.5 * rp);
+    scene.add(pkg);
+    const t = (p - 0.6) / 0.2;
+    const from = new THREE.Vector3(podPosition.x, 6, podPosition.z);
+    lerpV3(pkg.position, from, podSlotPos, t);
+    car.mesh.visible = false;
+    setPodGlow(1 - 0.2 * t);
+  } else {
+    // Car runs from pod to building
+    dronePos.copy(droneAbovePod);
+    drone.setFlightIntensity(0.2);
+    scene.remove(pkg);
+    if (!car.mesh.visible) {
+      car.spawn(new THREE.Vector3(podPosition.x, 0, podPosition.z - 2));
+      car.setPackage(pkg);
     }
+    const t = (p - 0.8) / 0.2;
+    const carStart = new THREE.Vector3(podPosition.x, 0, podPosition.z - 2);
+    const carEnd = new THREE.Vector3(doorstep.x + 1, 0, doorstep.z - 1.5);
+    car.mesh.position.lerpVectors(carStart, carEnd, t);
+    car.mesh.rotation.y = Math.atan2(carEnd.x - carStart.x, carEnd.z - carStart.z);
+    if (t >= 1) {
+      const dropped = car.dropPackage();
+      if (dropped) {
+        dropped.position.copy(doorstep);
+        scene.add(dropped);
+      }
+    }
+    setPodGlow(0.8 - 0.3 * t);
   }
 }
 
@@ -192,55 +155,55 @@ function applyCameraFromProgress(progress) {
   const t = i === j ? 0 : phase - i;
   const k0 = CAMERA_KEYFRAMES[i];
   const k1 = CAMERA_KEYFRAMES[j];
-  camera.position.x = k0.position[0] + (k1.position[0] - k0.position[0]) * t;
-  camera.position.y = k0.position[1] + (k1.position[1] - k0.position[1]) * t;
-  camera.position.z = k0.position[2] + (k1.position[2] - k0.position[2]) * t;
+  
+  // Smooth ease for camera transition
+  const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // easeInOutQuad
+  
+  camera.position.x = k0.position[0] + (k1.position[0] - k0.position[0]) * ease;
+  camera.position.y = k0.position[1] + (k1.position[1] - k0.position[1]) * ease;
+  camera.position.z = k0.position[2] + (k1.position[2] - k0.position[2]) * ease;
   const target = getState().cameraTarget;
-  target.x = k0.lookAt[0] + (k1.lookAt[0] - k0.lookAt[0]) * t;
-  target.y = k0.lookAt[1] + (k1.lookAt[1] - k0.lookAt[1]) * t;
-  target.z = k0.lookAt[2] + (k1.lookAt[2] - k0.lookAt[2]) * t;
-  camera.fov = k0.fov + (k1.fov - k0.fov) * t;
+  target.x = k0.lookAt[0] + (k1.lookAt[0] - k0.lookAt[0]) * ease;
+  target.y = k0.lookAt[1] + (k1.lookAt[1] - k0.lookAt[1]) * ease;
+  target.z = k0.lookAt[2] + (k1.lookAt[2] - k0.lookAt[2]) * ease;
+  camera.fov = k0.fov + (k1.fov - k0.fov) * ease;
   camera.updateProjectionMatrix();
 }
 
-// Update drone/rider/package/pod to match step (no camera, no timeline) — used when scroll changes phase
 function updateSceneToStep(stepIndex) {
   if (timeline) timeline.kill();
+  scene.add(drone.mesh);
   if (stepIndex === 0) {
-    camera.add(drone.mesh);
-    drone.mesh.position.set(0, -1, -5);
+    drone.mesh.position.copy(droneStart);
     drone.setPackage(pkg);
-    rider.mesh.visible = false;
-    rider.active = false;
+    car.mesh.visible = false;
+    car.active = false;
     setPodGlow(0.5);
     return;
   }
-  camera.remove(drone.mesh);
-  scene.add(drone.mesh);
   if (stepIndex === 1) {
-    drone.mesh.position.set(0, 12, 0);
+    drone.mesh.position.copy(droneAbovePod);
     drone.setPackage(pkg);
-    rider.mesh.visible = false;
-    setPodGlow(0.7);
+    car.mesh.visible = false;
+    setPodGlow(0.9);
   } else if (stepIndex === 2) {
-    drone.mesh.position.set(podPosition.x, 3.5, podPosition.z);
-    drone.dropPackage();
+    drone.mesh.position.copy(droneAbovePod);
+    if (drone.package) drone.dropPackage();
     pkg.position.copy(podSlotPos);
     scene.add(pkg);
-    rider.mesh.visible = false;
-    setPodGlow(1.2);
-  } else if (stepIndex === 3) {
-    drone.mesh.position.set(podPosition.x, 4.5, podPosition.z);
-    scene.remove(pkg);
-    rider.setPackage(pkg);
-    rider.spawn(new THREE.Vector3(podPosition.x - 1.5, 0, podPosition.z));
-    rider.mesh.visible = true;
-    rider.active = true;
+    car.mesh.visible = false;
     setPodGlow(1);
+  } else if (stepIndex === 3) {
+    drone.mesh.position.copy(droneAbovePod);
+    scene.remove(pkg);
+    car.spawn(new THREE.Vector3(podPosition.x - 2, 0, podPosition.z));
+    car.setPackage(pkg);
+    car.mesh.visible = true;
+    setPodGlow(0.9);
   } else {
-    drone.mesh.position.set(podPosition.x, 4.5, podPosition.z);
-    rider.mesh.position.set(doorstep.x - 0.5, 0, doorstep.z - 0.5);
-    const dropped = rider.dropPackage();
+    drone.mesh.position.copy(droneAbovePod);
+    car.mesh.position.set(doorstep.x + 1, 0, doorstep.z - 1.5);
+    const dropped = car.dropPackage();
     if (dropped) dropped.position.copy(doorstep);
     setPodGlow(0.5);
   }
@@ -271,6 +234,7 @@ function dismissHint() {
   if (hintDismissed) return;
   hintDismissed = true;
   document.getElementById('story-hint')?.classList.add('hidden');
+  document.querySelector('.story-scroll-hint')?.classList.add('hidden');
 }
 
 function updateStoryUI(stepIndex) {
@@ -298,84 +262,52 @@ function goToStep(stepIndex, skipCamera = false) {
   if (stepIndex === currentStep) return;
   stopPlayJourney();
   if (timeline) timeline.kill();
-  const prev = currentStep;
   currentStep = stepIndex;
   updateStoryUI(stepIndex);
   if (!skipCamera) setCameraToStep(stepIndex);
 
   if (stepIndex === 0) {
-    camera.add(drone.mesh);
-    drone.mesh.position.set(0, -1, -5);
+    drone.mesh.position.copy(droneStart);
     drone.setPackage(pkg);
-    rider.mesh.visible = false;
-    rider.active = false;
+    car.mesh.visible = false;
+    car.active = false;
     setPodGlow(0.5);
     return;
   }
 
-  if (prev < 1 && stepIndex >= 1) {
-    camera.remove(drone.mesh);
-    scene.add(drone.mesh);
-    drone.mesh.position.copy(depotWorld);
-    const progress = { t: 0 };
-    timeline = gsap.timeline();
-    timeline.to(progress, { t: 1, duration: 2, ease: 'power2.inOut', onUpdate: () => {
-      const p = flightCurve.getPoint(progress.t);
-      drone.mesh.position.copy(p);
-      const next = flightCurve.getPoint(Math.min(1, progress.t + 0.03));
-      drone.mesh.lookAt(next);
-      drone.setFlightIntensity(0.9);
-      drone.setTilt(0.2);
-    }});
-    timeline.call(() => { drone.setFlightIntensity(0.3); drone.setTilt(0); }, null, 1.9);
-    setPodGlow(0.7);
+  if (stepIndex === 1) {
+    drone.mesh.position.copy(droneAbovePod);
+    drone.setPackage(pkg);
+    car.mesh.visible = false;
+    setPodGlow(0.9);
     return;
   }
 
   if (stepIndex === 2) {
-    drone.mesh.position.set(podPosition.x, 12, podPosition.z);
-    timeline = gsap.timeline();
-    timeline.to(drone.mesh.position, { y: 3.5, duration: 1.2, ease: 'power2.inOut' });
-    timeline.call(() => {
-      drone.dropPackage();
-      pkg.position.copy(podSlotPos);
-      scene.add(pkg);
-    }, null, 0.85);
-    timeline.to({}, { duration: 0.3 });
-    timeline.call(() => setPodGlow(1.2), null, 1);
-    return;
-  }
-
-  if (stepIndex === 3) {
-    drone.mesh.position.set(podPosition.x, 3.5, podPosition.z);
+    drone.mesh.position.copy(droneAbovePod);
     if (drone.package) drone.dropPackage();
     pkg.position.copy(podSlotPos);
     scene.add(pkg);
-    scene.remove(pkg);
-    rider.setPackage(pkg);
-    rider.spawn(new THREE.Vector3(podPosition.x - 12, 0, podPosition.z));
-    rider.mesh.visible = true;
-    rider.active = true;
-    timeline = gsap.timeline();
-    timeline.to(drone.mesh.position, { y: 4.5, x: podPosition.x, z: podPosition.z, duration: 1, ease: 'power2.inOut' });
-    timeline.to(rider.mesh.position, { x: podPosition.x - 1.5, z: podPosition.z, duration: 1.5, ease: 'power2.inOut' }, 0.2);
+    car.mesh.visible = false;
     setPodGlow(1);
     return;
   }
 
+  if (stepIndex === 3) {
+    drone.mesh.position.copy(droneAbovePod);
+    scene.remove(pkg);
+    car.spawn(new THREE.Vector3(podPosition.x - 2, 0, podPosition.z));
+    car.setPackage(pkg);
+    car.mesh.visible = true;
+    setPodGlow(0.9);
+    return;
+  }
+
   if (stepIndex === 4) {
-    rider.mesh.position.set(podPosition.x - 1.5, 0, podPosition.z);
-    timeline = gsap.timeline();
-    timeline.to(rider.mesh.position, {
-      x: doorstep.x - 0.5,
-      z: doorstep.z - 0.5,
-      duration: 2,
-      ease: 'power2.inOut'
-    });
-    timeline.call(() => {
-      const dropped = rider.dropPackage();
-      if (dropped) dropped.position.copy(doorstep);
-    }, null, 1.85);
+    drone.mesh.position.copy(droneAbovePod);
+    car.mesh.position.set(doorstep.x + 1, 0, doorstep.z - 1.5);
+    const dropped = car.dropPackage();
+    if (dropped) dropped.position.copy(doorstep);
     setPodGlow(0.5);
   }
 }
@@ -386,41 +318,36 @@ function goToStepInstant(stepIndex) {
   currentStep = stepIndex;
   updateStoryUI(stepIndex);
   setCameraToStep(stepIndex, 0.4);
+  scene.add(drone.mesh);
 
   if (stepIndex === 0) {
-    camera.add(drone.mesh);
-    drone.mesh.position.set(0, -1, -5);
+    drone.mesh.position.copy(droneStart);
     drone.setPackage(pkg);
-    rider.mesh.visible = false;
+    car.mesh.visible = false;
     setPodGlow(0.5);
-    return;
-  }
-  camera.remove(drone.mesh);
-  scene.add(drone.mesh);
-  if (stepIndex === 1) {
-    drone.mesh.position.set(0, 12, 0);
+  } else if (stepIndex === 1) {
+    drone.mesh.position.copy(droneAbovePod);
     drone.setPackage(pkg);
-    rider.mesh.visible = false;
-    setPodGlow(0.7);
+    car.mesh.visible = false;
+    setPodGlow(0.9);
   } else if (stepIndex === 2) {
-    drone.mesh.position.set(0, 3.5, 0);
-    drone.dropPackage();
+    drone.mesh.position.copy(droneAbovePod);
+    if (drone.package) drone.dropPackage();
     pkg.position.copy(podSlotPos);
     scene.add(pkg);
-    rider.mesh.visible = false;
-    setPodGlow(1.2);
-  } else if (stepIndex === 3) {
-    drone.mesh.position.set(podPosition.x, 4.5, podPosition.z);
-    scene.remove(pkg);
-    rider.setPackage(pkg);
-    rider.spawn(new THREE.Vector3(podPosition.x - 1.5, 0, podPosition.z));
-    rider.mesh.visible = true;
-    rider.active = true;
+    car.mesh.visible = false;
     setPodGlow(1);
+  } else if (stepIndex === 3) {
+    drone.mesh.position.copy(droneAbovePod);
+    scene.remove(pkg);
+    car.spawn(new THREE.Vector3(podPosition.x - 2, 0, podPosition.z));
+    car.setPackage(pkg);
+    car.mesh.visible = true;
+    setPodGlow(0.9);
   } else {
-    drone.mesh.position.set(podPosition.x, 4.5, podPosition.z);
-    rider.mesh.position.set(doorstep.x - 0.5, 0, doorstep.z - 0.5);
-    const dropped = rider.dropPackage();
+    drone.mesh.position.copy(droneAbovePod);
+    car.mesh.position.set(doorstep.x + 1, 0, doorstep.z - 1.5);
+    const dropped = car.dropPackage();
     if (dropped) dropped.position.copy(doorstep);
     setPodGlow(0.5);
   }
@@ -500,6 +427,16 @@ ScrollTrigger.create({
   end: 'bottom top'
 });
 
+// Hide scroll hint after user scrolls down a bit
+ScrollTrigger.create({
+  trigger: '#story-viewport',
+  start: 'top top',
+  end: 'top+=120 top',
+  onUpdate: (self) => {
+    if (self.progress > 0.15) dismissHint();
+  }
+});
+
 window.addEventListener('resize', () => ScrollTrigger.refresh());
 window.addEventListener('mousemove', (e) => {
   targetMouse.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -535,6 +472,10 @@ function animate() {
   setPhase(phaseIndex, phaseProgress);
   // Single drone, single path: always drive from scroll progress (scroll or Play both use this)
   applySceneFromProgress(progress);
+  
+  // Update city (traffic + phase opacity)
+  city.updateForPhase(phaseIndex, progress, podPosition);
+  city.updateTraffic(delta);
 
   if (phaseIndex !== lastScrollPhaseIndex) {
     lastScrollPhaseIndex = phaseIndex;
@@ -547,7 +488,7 @@ function animate() {
   const parallax = new THREE.Vector3(mouse.x * 1.5, mouse.y * 1.5, 0);
   camera.lookAt(smoothLookAt.clone().add(parallax));
   drone.update(time, delta);
-  rider.update(delta);
+  car.update(delta);
   render();
 }
 animate();
@@ -556,3 +497,118 @@ initSolutions();
 initTechnology();
 initBenefits();
 initCta();
+
+function initInnovativeFeatures() {
+  // --- Custom Cursor ---
+  const cursorDot = document.querySelector('.cursor-dot');
+  const cursorOutline = document.querySelector('.cursor-dot-outline');
+
+  if (cursorDot && cursorOutline) {
+    window.addEventListener('mousemove', (e) => {
+      const posX = e.clientX;
+      const posY = e.clientY;
+
+      // Cursor dot follows instantly
+      cursorDot.style.left = `${posX}px`;
+      cursorDot.style.top = `${posY}px`;
+
+      // Cursor outline follows with a slight delay (using GSAP for smoothness)
+      gsap.to(cursorOutline, {
+        x: posX,
+        y: posY,
+        duration: 0.15,
+        ease: 'power2.out'
+      });
+    });
+
+    // Hover effect
+    const interactiveElements = document.querySelectorAll('a, button, .card-feature');
+    interactiveElements.forEach(el => {
+      el.addEventListener('mouseenter', () => document.body.classList.add('hovering'));
+      el.addEventListener('mouseleave', () => document.body.classList.remove('hovering'));
+    });
+  }
+
+  // --- Text Scramble Effect ---
+  const scrambleText = (element) => {
+    const originalText = element.dataset.originalText || element.innerText;
+    element.dataset.originalText = originalText;
+    const chars = '!<>-_\\/[]{}—=+*^?#________';
+    let iterations = 0;
+
+    const interval = setInterval(() => {
+      element.innerText = originalText
+        .split('')
+        .map((letter, index) => {
+          if (index < iterations) {
+            return originalText[index];
+          }
+          return chars[Math.floor(Math.random() * chars.length)];
+        })
+        .join('');
+
+      if (iterations >= originalText.length) {
+        clearInterval(interval);
+      }
+
+      iterations += 1 / 3;
+    }, 30);
+  };
+
+  const title = document.querySelector('.story-title');
+  if (title) {
+    // Wait a bit for initial load
+    setTimeout(() => scrambleText(title), 500);
+  }
+
+  // --- Scroll Animations ---
+  const sections = document.querySelectorAll('.section-2d');
+  sections.forEach(section => {
+    gsap.from(section.children, {
+      scrollTrigger: {
+        trigger: section,
+        start: 'top 80%',
+        toggleActions: 'play none none reverse'
+      },
+      y: 50,
+      opacity: 0,
+      duration: 1,
+      stagger: 0.2,
+      ease: 'power3.out'
+    });
+  });
+
+  // --- 3D Tilt Effect ---
+  const cards = document.querySelectorAll('.card-feature');
+  cards.forEach(card => {
+    card.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      
+      const rotateX = ((y - centerY) / centerY) * -10; // Max 10 deg rotation
+      const rotateY = ((x - centerX) / centerX) * 10;
+
+      gsap.to(card, {
+        rotationX: rotateX,
+        rotationY: rotateY,
+        duration: 0.5,
+        ease: 'power2.out'
+      });
+    });
+
+    card.addEventListener('mouseleave', () => {
+      gsap.to(card, {
+        rotationX: 0,
+        rotationY: 0,
+        duration: 0.5,
+        ease: 'power2.out'
+      });
+    });
+  });
+}
+
+initInnovativeFeatures();

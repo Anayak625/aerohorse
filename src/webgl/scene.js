@@ -13,29 +13,31 @@ const DARK = 0x0a0e17;
  */
 export function createScene(container) {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xf0f5fa);
-  scene.fog = new THREE.Fog(0xf0f5fa, 60, 180);
+  // Enhanced atmospheric fog - deeper color, better blend
+  const fogColor = new THREE.Color(0xf0f5fa);
+  scene.background = fogColor;
+  scene.fog = new THREE.Fog(fogColor, 20, 100); // Tighter fog for depth
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);
-  camera.position.set(0, 35, 55);
-  camera.lookAt(0, 5, 0);
+  camera.position.set(4, 12, -7);
+  camera.lookAt(-6, 3.5, 10);
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
   const pixelRatio = Math.min(window.devicePixelRatio, 2);
   renderer.setPixelRatio(pixelRatio);
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 1.2; // Slightly brighter
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   container.appendChild(renderer.domElement);
 
-  const ambient = new THREE.AmbientLight(0xffffff, 0.55);
+  const ambient = new THREE.AmbientLight(0xffffff, 0.4); // Lower ambient for more contrast
   scene.add(ambient);
 
-  const sun = new THREE.DirectionalLight(0xffffff, 1.25);
-  sun.position.set(30, 50, 20);
+  const sun = new THREE.DirectionalLight(0xffffff, 1.5); // Stronger sun
+  sun.position.set(-20, 50, 30);
   sun.castShadow = true;
   sun.shadow.mapSize.width = 2048;
   sun.shadow.mapSize.height = 2048;
@@ -46,23 +48,24 @@ export function createScene(container) {
   sun.shadow.camera.top = 50;
   sun.shadow.camera.bottom = -50;
   sun.shadow.bias = -0.0005;
+  sun.shadow.radius = 2; // Softer shadows
   scene.add(sun);
 
-  const fill = new THREE.DirectionalLight(0xddeeff, 0.45);
-  fill.position.set(-20, 30, -20);
+  const fill = new THREE.DirectionalLight(0xddeeff, 0.6); // Cool fill
+  fill.position.set(20, 30, -20);
   scene.add(fill);
 
-  const rim = new THREE.DirectionalLight(0xffffff, 0.2);
-  rim.position.set(-10, 5, -30);
+  const rim = new THREE.DirectionalLight(0xffffff, 0.4); // Stronger rim
+  rim.position.set(30, 5, -10);
   scene.add(rim);
 
-  // Phase-based lighting: per-phase sun position (x,y,z), sun intensity, ambient intensity, fog near/far
+  // Phase-based lighting (rotated 90° Y: x,y,z → -z,y,x)
   const LIGHT_PHASES = [
-    { sunPos: [30, 50, 20], sunIntensity: 1.25, ambient: 0.55, fogNear: 60, fogFar: 180 },
-    { sunPos: [25, 45, -15], sunIntensity: 1.1, ambient: 0.5, fogNear: 50, fogFar: 160 },
-    { sunPos: [-10, 35, 15], sunIntensity: 1.0, ambient: 0.48, fogNear: 40, fogFar: 140 },
-    { sunPos: [15, 28, 25], sunIntensity: 1.05, ambient: 0.52, fogNear: 45, fogFar: 150 },
-    { sunPos: [20, 42, 12], sunIntensity: 1.2, ambient: 0.54, fogNear: 55, fogFar: 170 }
+    { sunPos: [-20, 50, 30], sunIntensity: 1.5, ambient: 0.4, fogNear: 20, fogFar: 100 },
+    { sunPos: [15, 45, 25], sunIntensity: 1.3, ambient: 0.35, fogNear: 15, fogFar: 90 },
+    { sunPos: [-15, 35, -10], sunIntensity: 1.2, ambient: 0.3, fogNear: 10, fogFar: 80 },
+    { sunPos: [-25, 28, 15], sunIntensity: 1.3, ambient: 0.35, fogNear: 15, fogFar: 90 },
+    { sunPos: [-12, 42, 20], sunIntensity: 1.4, ambient: 0.4, fogNear: 20, fogFar: 100 }
   ];
 
   function setPhase(phaseIndex, phaseProgress) {
@@ -86,9 +89,9 @@ export function createScene(container) {
   canvas.height = 64;
   const ctx = canvas.getContext('2d');
   const grad = ctx.createLinearGradient(0, 0, 0, 64);
-  grad.addColorStop(0, '#e8f2fa');
-  grad.addColorStop(0.5, '#e2eef6');
-  grad.addColorStop(1, '#f0f5fa');
+  grad.addColorStop(0, '#dceaf7'); // Darker top
+  grad.addColorStop(0.5, '#e6f0fa');
+  grad.addColorStop(1, '#f0f5fa'); // Match fog
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 2, 64);
   const skyTex = new THREE.CanvasTexture(canvas);
@@ -106,9 +109,9 @@ export function createScene(container) {
   composer.addPass(new RenderPass(scene, camera));
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(container.clientWidth, container.clientHeight),
-    0.42,
-    0.85,
-    0.35
+    0.6,    // strength
+    0.8,    // radius
+    0.75    // threshold
   );
   bloomPass.renderToScreen = true;
   composer.addPass(bloomPass);
@@ -123,7 +126,7 @@ export function createScene(container) {
     sectionIndex: 0,
     mouse: new THREE.Vector2(),
     raycaster: new THREE.Raycaster(),
-    cameraTarget: new THREE.Vector3(0, 5, 0),
+    cameraTarget: new THREE.Vector3(-6, 3.5, 10),
   };
 
   function onResize() {

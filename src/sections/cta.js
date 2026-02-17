@@ -10,11 +10,11 @@ export function initCta() {
   const section = document.getElementById('cta');
   if (!section) return;
 
-  const heading = section.querySelector('.section-heading');
-  const lead = section.querySelector('.section-lead');
+  const heading = section.querySelector('.section-heading, .cta-heading');
+  const lead = section.querySelector('.section-lead, .cta-lead');
   const buttons = section.querySelector('.cta-buttons');
 
-  gsap.set([heading, lead, buttons], { opacity: 0, y: 20 });
+  gsap.set([heading, lead, buttons].filter(Boolean), { opacity: 0, y: 24 });
 
   gsap.timeline({
     scrollTrigger: {

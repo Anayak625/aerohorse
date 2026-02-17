@@ -18,7 +18,10 @@ const BUILDING_WIDTH_MAX = 0.98;
 const BUILDING_DEPTH_MIN = 0.6;
 const BUILDING_DEPTH_MAX = 0.98;
 const EMPTY_LOT_CHANCE = 0.06;  // small plazas / gaps
-const BUILDING_COLORS = [0x0c1322, 0x0f1629, 0x121a2d, 0x0d1525, 0x0a0e17, 0x10182a];
+const BUILDING_COLORS = [
+  0x0c1322, 0x0f1629, 0x121a2d, 0x0d1525, 0x0a0e17, 0x10182a,
+  0x1a2332, 0x243044, 0x2d3a52, 0x3d4a62
+];
 
 /**
  * City with main streets, block-internal paths, and buildings of random
@@ -36,6 +39,37 @@ export function createCity(scene) {
   // Max building size per lot so they don't overlap paths between lots
   const buildArea = Math.max(0.5, lotSize - PATH_WIDTH);
 
+
+  // Window Texture Generation
+  function createWindowTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, 32, 64);
+    
+    // Random lit windows
+    ctx.fillStyle = '#ffeb3b'; // Warm light
+    // or sometimes cool light
+    if (Math.random() > 0.7) ctx.fillStyle = '#e0f7fa';
+
+    for (let y = 0; y < 64; y += 8) {
+      for (let x = 0; x < 32; x += 8) {
+        if (Math.random() > 0.6) {
+          ctx.fillRect(x + 1, y + 1, 6, 6);
+        }
+      }
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
+    return tex;
+  }
+
+  // Generate a few shared window textures
+  const windowTextures = [createWindowTexture(), createWindowTexture(), createWindowTexture()];
+
   for (let bi = 0; bi < N_BLOCKS; bi++) {
     for (let bj = 0; bj < N_BLOCKS; bj++) {
       const blockOx = bi * CELL + STREET_WIDTH - half;
@@ -47,8 +81,6 @@ export function createCity(scene) {
           const lotCenterZ = blockOz + (lj + 0.5) * lotSize;
 
           if (Math.random() < EMPTY_LOT_CHANCE) continue;
-          
-          // Density reduction: skip 40% of potential lots
           if (Math.random() < 0.4) continue;
 
           const wFrac = BUILDING_WIDTH_MIN + Math.random() * (BUILDING_WIDTH_MAX - BUILDING_WIDTH_MIN);
@@ -59,30 +91,136 @@ export function createCity(scene) {
           const height = BUILDING_HEIGHT_MIN + (BUILDING_HEIGHT_MAX - BUILDING_HEIGHT_MIN) *
             (r < 0.15 ? Math.random() * 0.4 : r < 0.5 ? 0.3 + Math.random() * 0.4 : 0.5 + Math.random() * 0.5);
 
-          const material = new THREE.MeshPhysicalMaterial({
-            color: 0xffffff,
-            roughness: 0.1,
-            metalness: 0.1,
-            transmission: 0.2,
-            thickness: 1.0,
-            clearcoat: 1.0,
-            clearcoatRoughness: 0.1,
-            transparent: true,
-            opacity: 1,
-            depthWrite: true,
-          });
+          const color = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
+          const isGlass = Math.random() < 0.2;
+          
+          let material;
+          if (isGlass) {
+            material = new THREE.MeshPhysicalMaterial({
+              color: 0xe8eef4,
+              roughness: 0.1,
+              metalness: 0.1,
+              transmission: 0.6, // More glass-like
+              thickness: 1.0,
+              transparent: true,
+              opacity: 1
+            });
+          } else {
+            // Emissive windows for standard buildings
+            const tex = windowTextures[Math.floor(Math.random() * windowTextures.length)];
+            material = new THREE.MeshStandardMaterial({
+              color,
+              roughness: 0.4,
+              metalness: 0.1,
+              map: tex, // Use texture for base color variation too? Maybe not.
+              emissiveMap: tex,
+              emissive: 0xffffff,
+              emissiveIntensity: Math.random() * 0.8 + 0.2
+            });
+            // Adjust UVs for window tiling
+            material.onBeforeCompile = (shader) => {
+              // Simple UV scaling not easily done here without modifying geometry UVs or shader
+              // For box geometry, UVs correspond to faces. 
+              // Easier to just clone geometry and scale UVs? Or just accept default mapping (might look stretched)
+            };
+          }
+
           const mesh = new THREE.Mesh(boxGeometry, material);
           mesh.castShadow = true;
           mesh.receiveShadow = true;
           mesh.scale.set(width, height, depth);
           mesh.position.set(lotCenterX, height * 0.5, lotCenterZ);
-          mesh.userData = { type: 'building', blockI: bi, blockJ: bj, lotI: li, lotJ: lj };
+          
+          // Fix UVs for repeating windows
+          // BoxGeometry UVs are 0..1 per face. We want them to repeat based on size.
+          // Since we share geometry, we can't modify UVs per instance easily without multiple geometries.
+          // For now, let's skip perfect mapping and just use the texture. 
+          // Ideally we'd use a custom shader or multiple geometries.
+          // Let's create unique geometry for each building to fix UVs (expensive? 100 buildings is fine)
+          const geom = new THREE.BoxGeometry(width, height, depth);
+          // Scale UVs
+          const uvs = geom.attributes.uv;
+          for (let i = 0; i < uvs.count; i++) {
+             // Map based on X/Y/Z dimensions roughly?
+             // Top face is difficult to distinguish without normal check.
+             // Simplification: just scale all UVs by height
+             uvs.setY(i, uvs.getY(i) * height * 0.5); 
+          }
+          mesh.geometry = geom;
+
           group.add(mesh);
           buildings.push({ mesh, x: lotCenterX, z: lotCenterZ, height });
         }
       }
     }
   }
+
+  // --- Traffic System ---
+  const trafficGroup = new THREE.Group();
+  scene.add(trafficGroup);
+  const cars = [];
+  const carGeom = new THREE.BoxGeometry(0.6, 0.1, 0.3);
+  const carMatHead = new THREE.MeshBasicMaterial({ color: 0xffaa00 }); // Headlights (yellow/white)
+  const carMatTail = new THREE.MeshBasicMaterial({ color: 0xff0055 }); // Taillights (red)
+
+  // Initialize some cars
+  const NUM_CARS = 40;
+  for (let i = 0; i < NUM_CARS; i++) {
+    const isX = Math.random() > 0.5;
+    const mesh = new THREE.Mesh(carGeom, Math.random() > 0.5 ? carMatHead : carMatTail);
+    
+    // Pick a random street
+    const lanes = isX ? N_BLOCKS : N_BLOCKS; 
+    const laneIdx = Math.floor(Math.random() * lanes);
+    const pos = (laneIdx * CELL + STREET_WIDTH * 0.5 - half);
+    
+    const car = {
+      mesh,
+      isX,
+      lanePos: pos,
+      travelPos: (Math.random() - 0.5) * totalSize,
+      speed: (Math.random() * 5 + 3) * (Math.random() > 0.5 ? 1 : -1)
+    };
+    
+    if (isX) {
+      mesh.position.set(car.travelPos, 0.05, pos);
+      mesh.rotation.y = car.speed > 0 ? 0 : Math.PI;
+    } else {
+      mesh.position.set(pos, 0.05, car.travelPos);
+      mesh.rotation.y = car.speed > 0 ? -Math.PI / 2 : Math.PI / 2;
+    }
+    
+    trafficGroup.add(mesh);
+    cars.push(car);
+  }
+
+  function updateTraffic(delta) {
+    const limit = totalSize / 2 + 5;
+    cars.forEach(c => {
+      c.travelPos += c.speed * delta;
+      
+      // Wrap around
+      if (c.travelPos > limit) c.travelPos = -limit;
+      if (c.travelPos < -limit) c.travelPos = limit;
+      
+      if (c.isX) {
+        c.mesh.position.x = c.travelPos;
+        // Make it float slightly for "flying car" or just ground car? "Urban delivery" implies ground too or air?
+        // Let's keep them on ground as traffic.
+      } else {
+        c.mesh.position.z = c.travelPos;
+      }
+    });
+  }
+
+  // Reuse previous code for Street intersections and garden...
+  // (Assuming previous logic for streetPositions and garden is preserved or I need to rewrite it if I replaced the block)
+  
+  // NOTE: The previous replacement replaced the LOOPS. I need to ensure I didn't delete the rest of the file.
+  // The 'EndLine' was 305 which is the end of file. So I need to include the rest of the file content in my replacement 
+  // OR use a more targeted replacement.
+  // But I am rewriting the building generation loop heavily.
+  // I will re-include the garden and return statement.
 
   // Street intersection positions for pod placement
   for (let si = 0; si <= N_BLOCKS; si++) {
@@ -95,7 +233,7 @@ export function createCity(scene) {
 
   scene.add(group);
 
-  // Garden patch (optional soft green at focus point) - added to scene when position is set
+  // Garden patch logic (kept same)
   const gardenPatchGeom = new THREE.PlaneGeometry(8, 8);
   const gardenPatchMat = new THREE.MeshStandardMaterial({
     color: 0xbbddaa,
@@ -133,22 +271,14 @@ export function createCity(scene) {
     gardenProps.position.set(x, 0, z);
   }
 
-  /**
-   * Update city per phase so each phase has a clear, distinct look.
-   * Phase 0: full city, no fade. Phase 1: soft far fade so route stands out.
-   * Phase 2: tight focus on pod (garden). Phase 3: slightly wider (pod + street).
-   * Phase 4: reveal back to full city.
-   */
   function updateForPhase(phaseIndex, progress, focusPoint) {
     const ease = (t) => t * t * (3 - 2 * t);
-
-    // Per-phase radius and opacity (inner, outer, farOpacity)
     const phaseConfig = [
-      { inner: 0, outer: 999, far: 1 },           // 0 Hero: no fade, full city
-      { inner: 0, outer: 50, far: 0.82 },         // 1 Route: soft fade at distance so flight path reads
-      { inner: 5, outer: 11, far: 0.06 },         // 2 Pod: tight garden, only pod area clear
-      { inner: 7, outer: 16, far: 0.14 },         // 3 Delivery: pod + street clear
-      { inner: 7, outer: 16, far: 0.14 }          // 4 base for reveal (lerped to 1)
+      { inner: 0, outer: 999, far: 1 },           
+      { inner: 0, outer: 50, far: 0.82 },         
+      { inner: 5, outer: 11, far: 0.06 },         
+      { inner: 7, outer: 16, far: 0.14 },         
+      { inner: 7, outer: 16, far: 0.14 }          
     ];
 
     buildings.forEach((b) => {
@@ -206,7 +336,7 @@ export function createCity(scene) {
     }
   }
 
-  // Ground (clean white)
+  // Ground 
   const groundGeom = new THREE.PlaneGeometry(totalSize * 1.5, totalSize * 1.5);
   const ground = new THREE.Mesh(
     groundGeom,
@@ -217,7 +347,7 @@ export function createCity(scene) {
   ground.position.y = -0.01;
   scene.add(ground);
 
-  // Main streets (slightly darker than ground, subtle)
+  // Streets
   const streetMat = new THREE.MeshStandardMaterial({
     color: 0xe6eef5,
     roughness: 0.6,
@@ -243,7 +373,7 @@ export function createCity(scene) {
     scene.add(mesh);
   }
 
-  // Paths within blocks (subtle difference)
+  // Paths
   const pathMat = new THREE.MeshStandardMaterial({
     color: 0xf0f4f8,
     roughness: 0.8,
@@ -253,7 +383,6 @@ export function createCity(scene) {
     for (let bj = 0; bj < N_BLOCKS; bj++) {
       const blockOx = bi * CELL + STREET_WIDTH - half;
       const blockOz = bj * CELL + STREET_WIDTH - half;
-      // Horizontal paths (along X) between rows of lots
       for (let p = 1; p < LOTS_PER_BLOCK; p++) {
         const pathZ = blockOz + p * lotSize;
         const pathGeom = new THREE.PlaneGeometry(BLOCK_SIZE, PATH_WIDTH);
@@ -263,7 +392,6 @@ export function createCity(scene) {
         pathMesh.position.set(blockOx + BLOCK_SIZE * 0.5, pathY, pathZ);
         scene.add(pathMesh);
       }
-      // Vertical paths (along Z) between columns of lots
       for (let p = 1; p < LOTS_PER_BLOCK; p++) {
         const pathX = blockOx + p * lotSize;
         const pathGeom = new THREE.PlaneGeometry(PATH_WIDTH, BLOCK_SIZE);
@@ -284,6 +412,7 @@ export function createCity(scene) {
     gardenPatch,
     setGardenPatchPosition,
     updateForPhase,
+    updateTraffic, // New export
     getGridSize: () => ({ GRID_SIZE: N_BLOCKS, SPACING: CELL, half: totalSize * 0.5 }),
     getStreetGridParams: () => ({ CELL, STREET_WIDTH, half: totalSize * 0.5, N_BLOCKS }),
   };

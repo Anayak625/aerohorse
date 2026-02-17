@@ -7,12 +7,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Rajdhani:wght@300;400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800&family=Rajdhani:wght@300;400;500;600;700&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
   </head>
   <body>
+    <div class="grain-overlay" aria-hidden="true"></div>
     <div id="app">
+      <div class="cursor-dot-outline"></div>
+      <div class="cursor-dot"></div>
       <!-- Header: floating pill that docks on scroll -->
       <header class="site-header" id="site-header">
         <div class="header-pill">
@@ -31,9 +34,15 @@
       <div id="story-viewport">
         <div id="webgl-container"></div>
         <div id="story-ui">
-          <p id="story-hint" class="story-hint">Click <strong>Play journey</strong> or choose a step below</p>
+          <div class="story-top">
+            <span class="story-badge">
+              <span class="story-badge-dot"></span>
+              Last-mile delivery reimagined
+            </span>
+            <p id="story-hint" class="story-hint">Click <strong>Play journey</strong> or choose a step below</p>
+          </div>
           <div id="story-copy">
-            <h1 id="story-title" class="story-title">Urban delivery.<br />Reinvented.</h1>
+            <h1 id="story-title" class="story-title story-title-gradient">Urban delivery.<br />Reinvented.</h1>
             <p id="story-subtitle" class="story-subtitle">Anything · Anytime · Delivered</p>
           </div>
           <div id="story-controls">
@@ -45,46 +54,73 @@
               <div id="story-progress-line" aria-hidden="true"></div>
               <nav id="story-steps" aria-label="Story steps">
                 <button type="button" class="story-step" data-step="0" aria-current="true"><span class="story-step-num">1</span><span class="story-step-label">Intro</span></button>
-                <button type="button" class="story-step" data-step="1"><span class="story-step-num">2</span><span class="story-step-label">Fly</span></button>
+                <button type="button" class="story-step" data-step="1"><span class="story-step-num">2</span><span class="story-step-label">Drone</span></button>
                 <button type="button" class="story-step" data-step="2"><span class="story-step-num">3</span><span class="story-step-label">Land</span></button>
-                <button type="button" class="story-step" data-step="3"><span class="story-step-num">4</span><span class="story-step-label">Rider</span></button>
+                <button type="button" class="story-step" data-step="3"><span class="story-step-num">4</span><span class="story-step-label">Car</span></button>
                 <button type="button" class="story-step" data-step="4"><span class="story-step-num">5</span><span class="story-step-label">Deliver</span></button>
               </nav>
             </div>
             <button type="button" id="story-next" class="story-next">Next</button>
           </div>
+          <div class="story-scroll-hint" aria-hidden="true">
+            <span class="story-scroll-dot"></span>
+            <span class="story-scroll-label">Scroll to explore</span>
+          </div>
         </div>
       </div>
 
       <!-- 2D sections (scroll normally below story) -->
-      <section id="solutions" class="section-2d">
+      <section id="solutions" class="section-2d section-solutions">
+        <div class="solutions-bg" aria-hidden="true"></div>
         <div class="container">
+          <span class="section-badge">How it works</span>
           <h2 class="section-heading">Solutions</h2>
           <p class="section-lead">
             Last-mile delivery reimagined with autonomous drones and smart pods.
           </p>
-          <div class="grid-3">
-            <div class="card">
-              <div class="card-icon">✈</div>
+          <div class="solutions-bento">
+            <div class="card card-feature card-feature-large">
+              <div class="card-icon-wrap card-icon-svg">
+                <svg class="card-icon-drone" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M24 8v8M24 8h-6l-4 6h4l2 4-4 2v6l6-4 6 4v-6l-4-2 2-4h4l-4-6h-6z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="24" cy="24" r="2" fill="currentColor"/>
+                </svg>
+              </div>
               <h3>Drone Fleet</h3>
               <p>Autonomous drones fly packages to neighborhood pods in minutes.</p>
+              <span class="card-accent"></span>
             </div>
-            <div class="card">
-              <div class="card-icon">📍</div>
+            <div class="card card-feature">
+              <div class="card-icon-wrap card-icon-svg">
+                <svg class="card-icon-pod" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <rect x="10" y="14" width="28" height="24" rx="3" stroke="currentColor" stroke-width="2"/>
+                  <path d="M19 14V10a3 3 0 016 0v4M24 26v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
               <h3>Smart Pods</h3>
               <p>Secure, climate-controlled pods every 500m for instant pickup.</p>
+              <span class="card-accent"></span>
             </div>
-            <div class="card">
-              <div class="card-icon">🛵</div>
+            <div class="card card-feature">
+              <div class="card-icon-wrap card-icon-svg">
+                <svg class="card-icon-rider" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <circle cx="24" cy="12" r="5" stroke="currentColor" stroke-width="2"/>
+                  <path d="M14 38v-8l6-6 4 4 4-4 6 6v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M24 24v14" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </div>
               <h3>Rider Network</h3>
               <p>Local riders complete the final leg to the customer's door.</p>
+              <span class="card-accent"></span>
             </div>
           </div>
         </div>
       </section>
 
-      <section id="technology" class="section-2d alt">
+      <section id="technology" class="section-2d alt section-technology">
+        <div class="technology-bg" aria-hidden="true"></div>
         <div class="container">
+          <span class="section-badge">Under the hood</span>
           <h2 class="section-heading">Technology</h2>
           <p class="section-lead">
             AI routing, real-time tracking, and city-scale infrastructure.
@@ -98,8 +134,10 @@
         </div>
       </section>
 
-      <section id="benefits" class="section-2d alt">
+      <section id="benefits" class="section-2d section-benefits">
+        <div class="benefits-bg" aria-hidden="true"></div>
         <div class="container">
+          <span class="section-badge">By the numbers</span>
           <h2 class="section-heading">Benefits</h2>
           <p class="section-lead">
             Faster, greener, and more reliable than traditional delivery.
@@ -126,13 +164,22 @@
       </section>
 
       <section id="cta" class="section-2d cta-section">
-        <div class="container">
-          <h2 class="section-heading">Ready to reinvent delivery?</h2>
-          <p class="section-lead">
+        <div class="cta-bg-glow" aria-hidden="true"></div>
+        <div class="cta-shapes" aria-hidden="true">
+          <span class="cta-shape cta-shape-1"></span>
+          <span class="cta-shape cta-shape-2"></span>
+          <span class="cta-shape cta-shape-3"></span>
+        </div>
+        <div class="container cta-inner">
+          <h2 class="section-heading cta-heading">Ready to reinvent delivery?</h2>
+          <p class="section-lead cta-lead">
             Partner with Aerohorse for drone-powered last-mile in your city.
           </p>
           <div class="cta-buttons">
-            <a href="#contact" class="btn btn-primary">Get in touch</a>
+            <a href="#contact" class="btn btn-primary">
+              <span class="btn-text">Get in touch</span>
+              <span class="btn-arrow">→</span>
+            </a>
             <a href="#solutions" class="btn btn-secondary">Learn more</a>
           </div>
         </div>
