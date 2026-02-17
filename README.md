@@ -1,70 +1,73 @@
-# Aerohorse
+# React + TypeScript + Vite
 
-Futuristic landing page for a drone delivery company. Built with **Vite**, **Three.js**, **GSAP**, and **Tailwind CSS**.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Tech stack
+Currently, two official plugins are available:
 
-- **Vite** — build and dev server
-- **Vanilla JS** — no framework
-- **Three.js** — WebGL city, pods, and routes
-- **GSAP + ScrollTrigger** — scroll-driven narrative and 2D section animations
-- **Tailwind CSS** — 2D sections styling
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## Design
+## React Compiler
 
-- Dark futuristic theme
-- Neon blue/cyan accents (`#00d4ff`)
-- Minimal, cinematic, smooth transitions
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## WebGL experience (scroll-driven)
+## Expanding the ESLint configuration
 
-1. **Hero** — Low-poly city at night; glowing pods; network lines animate on scroll. *"Urban delivery. Reinvented."*
-2. **Route activation** — Package route appears; node-to-node path. *"AI selects the fastest route."*
-3. **Pod interaction** — Camera zooms to a pod; coverage radius; hover tooltip (delivery time, coverage). *"Pods every 500 meters."*
-4. **Delivery flow** — Blue (drone) and green (rider) paths; pod as transition node. *"Drone to pod. Rider to doorstep."*
-5. **Scale out** — Camera zooms out; city and pods scale. *"Built to scale across entire cities."*
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-Then 2D sections: Solutions, Technology, Benefits, CTA, Footer.
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
 
-## Project structure
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
 
-```
-/src
-  /webgl
-    scene.js   — Three.js scene, camera, renderer
-    city.js   — Low-poly city
-    pods.js   — Instanced pod meshes, pulse, hover
-    routes.js — Network lines, path route, drone/rider tubes
-  /sections
-    solutions.js
-    technology.js
-    benefits.js
-    cta.js
-  main.js
-  styles.css
-index.html
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
 
-## Run locally
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-```bash
-npm install
-npm run dev
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
-
-Then open the URL shown (e.g. `http://localhost:5173`).
-
-## Build
-
-```bash
-npm run build
-npm run preview
-```
-
-## Technical notes
-
-- Single WebGL canvas (fixed, full viewport).
-- Pods use **instanced meshes** for performance.
-- Routes use **TubeGeometry** for 3D lines.
-- Scroll progress drives section index and camera keyframes; overlay copy is shown per section.
-- Pod hover uses raycasting; tooltip shows delivery time and coverage in pod section.
