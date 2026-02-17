@@ -1,39 +1,40 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
-/* Aerohorse brand: magenta accent */
 const ACCENT = 0xe0359c;
 const LIGHT_BG = 0xfaf9fc;
 const DARK = 0x0a0e17;
 
 /**
- * Main WebGL scene: renderer, camera, resize, animation loop.
- * Light theme by default (brand-aligned).
+ * Main WebGL scene: renderer, camera, post-processing (bloom), resize.
+ * Light theme, advanced 3D with bloom for emissive elements.
  */
 export function createScene(container) {
-  /* Creative Light Mode: Soft, airy, futuristic */
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xf0f5fa); // Very light cool grey/blue
-  scene.fog = new THREE.Fog(0xf0f5fa, 60, 180); // Soft distance fog
+  scene.background = new THREE.Color(0xf0f5fa);
+  scene.fog = new THREE.Fog(0xf0f5fa, 60, 180);
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);
   camera.position.set(0, 35, 55);
   camera.lookAt(0, 5, 0);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const pixelRatio = Math.min(window.devicePixelRatio, 2);
+  renderer.setPixelRatio(pixelRatio);
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.1;
+  renderer.toneMappingExposure = 1.15;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.shadowMap.enabled = true; // Enable shadows for depth
+  renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   container.appendChild(renderer.domElement);
 
-  /* Lighting: Bright, soft, global illumination feel */
-  const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+  const ambient = new THREE.AmbientLight(0xffffff, 0.55);
   scene.add(ambient);
 
-  const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+  const sun = new THREE.DirectionalLight(0xffffff, 1.25);
   sun.position.set(30, 50, 20);
   sun.castShadow = true;
   sun.shadow.mapSize.width = 2048;
@@ -47,14 +48,77 @@ export function createScene(container) {
   sun.shadow.bias = -0.0005;
   scene.add(sun);
 
-  const fill = new THREE.DirectionalLight(0xddeeff, 0.4);
+  const fill = new THREE.DirectionalLight(0xddeeff, 0.45);
   fill.position.set(-20, 30, -20);
   scene.add(fill);
+
+  const rim = new THREE.DirectionalLight(0xffffff, 0.2);
+  rim.position.set(-10, 5, -30);
+  scene.add(rim);
+
+  // Phase-based lighting: per-phase sun position (x,y,z), sun intensity, ambient intensity, fog near/far
+  const LIGHT_PHASES = [
+    { sunPos: [30, 50, 20], sunIntensity: 1.25, ambient: 0.55, fogNear: 60, fogFar: 180 },
+    { sunPos: [25, 45, -15], sunIntensity: 1.1, ambient: 0.5, fogNear: 50, fogFar: 160 },
+    { sunPos: [-10, 35, 15], sunIntensity: 1.0, ambient: 0.48, fogNear: 40, fogFar: 140 },
+    { sunPos: [15, 28, 25], sunIntensity: 1.05, ambient: 0.52, fogNear: 45, fogFar: 150 },
+    { sunPos: [20, 42, 12], sunIntensity: 1.2, ambient: 0.54, fogNear: 55, fogFar: 170 }
+  ];
+
+  function setPhase(phaseIndex, phaseProgress) {
+    const i = Math.min(Math.floor(phaseIndex), LIGHT_PHASES.length - 1);
+    const j = Math.min(i + 1, LIGHT_PHASES.length - 1);
+    const t = i === j ? 0 : phaseProgress;
+    const a = LIGHT_PHASES[i];
+    const b = LIGHT_PHASES[j];
+    sun.position.x = a.sunPos[0] + (b.sunPos[0] - a.sunPos[0]) * t;
+    sun.position.y = a.sunPos[1] + (b.sunPos[1] - a.sunPos[1]) * t;
+    sun.position.z = a.sunPos[2] + (b.sunPos[2] - a.sunPos[2]) * t;
+    sun.intensity = a.sunIntensity + (b.sunIntensity - a.sunIntensity) * t;
+    ambient.intensity = a.ambient + (b.ambient - a.ambient) * t;
+    scene.fog.near = a.fogNear + (b.fogNear - a.fogNear) * t;
+    scene.fog.far = a.fogFar + (b.fogFar - a.fogFar) * t;
+  }
+
+  const skyGeom = new THREE.SphereGeometry(280, 32, 24, 0, Math.PI * 2, 0, Math.PI * 0.5);
+  const canvas = document.createElement('canvas');
+  canvas.width = 2;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, 64);
+  grad.addColorStop(0, '#e8f2fa');
+  grad.addColorStop(0.5, '#e2eef6');
+  grad.addColorStop(1, '#f0f5fa');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 2, 64);
+  const skyTex = new THREE.CanvasTexture(canvas);
+  skyTex.needsUpdate = true;
+  const skyMat = new THREE.MeshBasicMaterial({
+    map: skyTex,
+    side: THREE.BackSide,
+    depthWrite: false,
+    fog: false
+  });
+  const sky = new THREE.Mesh(skyGeom, skyMat);
+  scene.add(sky);
+
+  const composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  const bloomPass = new UnrealBloomPass(
+    new THREE.Vector2(container.clientWidth, container.clientHeight),
+    0.42,
+    0.85,
+    0.35
+  );
+  bloomPass.renderToScreen = true;
+  composer.addPass(bloomPass);
 
   const state = {
     camera,
     scene,
     renderer,
+    composer,
+    bloomPass,
     sectionProgress: 0,
     sectionIndex: 0,
     mouse: new THREE.Vector2(),
@@ -68,6 +132,8 @@ export function createScene(container) {
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
+    composer.setSize(w, h);
+    composer.setPixelRatio(pixelRatio);
   }
 
   window.addEventListener('resize', onResize);
@@ -82,11 +148,12 @@ export function createScene(container) {
   }
 
   function render() {
-    renderer.render(scene, camera);
+    composer.render();
   }
 
   function dispose() {
     window.removeEventListener('resize', onResize);
+    composer.dispose();
     renderer.dispose();
   }
 
@@ -95,6 +162,7 @@ export function createScene(container) {
     camera,
     renderer,
     setSection,
+    setPhase,
     getState,
     render,
     dispose,

@@ -63,10 +63,13 @@ export function createCity(scene) {
             color: 0xffffff,
             roughness: 0.1,
             metalness: 0.1,
-            transmission: 0.2, // Partial glass effect
+            transmission: 0.2,
             thickness: 1.0,
             clearcoat: 1.0,
             clearcoatRoughness: 0.1,
+            transparent: true,
+            opacity: 1,
+            depthWrite: true,
           });
           const mesh = new THREE.Mesh(boxGeometry, material);
           mesh.castShadow = true;
@@ -91,6 +94,117 @@ export function createCity(scene) {
   }
 
   scene.add(group);
+
+  // Garden patch (optional soft green at focus point) - added to scene when position is set
+  const gardenPatchGeom = new THREE.PlaneGeometry(8, 8);
+  const gardenPatchMat = new THREE.MeshStandardMaterial({
+    color: 0xbbddaa,
+    roughness: 0.9,
+    metalness: 0,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+  });
+  const gardenPatch = new THREE.Mesh(gardenPatchGeom, gardenPatchMat);
+  gardenPatch.rotation.x = -Math.PI / 2;
+  gardenPatch.position.y = 0.01;
+  gardenPatch.visible = false;
+  scene.add(gardenPatch);
+
+  const gardenProps = new THREE.Group();
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a3728, roughness: 0.9, metalness: 0 });
+  const foliageMat = new THREE.MeshStandardMaterial({ color: 0x2d5a27, roughness: 0.95, metalness: 0 });
+  [[-2.2, 0, 1.8], [2.6, 0, -1.2], [-1.1, 0, -2.4]].forEach(([ox, _, oz]) => {
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 0.9, 8), trunkMat);
+    trunk.position.set(ox, 0.45, oz);
+    trunk.castShadow = true;
+    gardenProps.add(trunk);
+    const foliage = new THREE.Mesh(new THREE.ConeGeometry(0.65, 1.4, 8), foliageMat);
+    foliage.position.set(ox, 1.35, oz);
+    foliage.castShadow = true;
+    gardenProps.add(foliage);
+  });
+  gardenProps.visible = false;
+  scene.add(gardenProps);
+
+  function setGardenPatchPosition(x, z) {
+    gardenPatch.position.x = x;
+    gardenPatch.position.z = z;
+    gardenProps.position.set(x, 0, z);
+  }
+
+  /**
+   * Update city per phase so each phase has a clear, distinct look.
+   * Phase 0: full city, no fade. Phase 1: soft far fade so route stands out.
+   * Phase 2: tight focus on pod (garden). Phase 3: slightly wider (pod + street).
+   * Phase 4: reveal back to full city.
+   */
+  function updateForPhase(phaseIndex, progress, focusPoint) {
+    const ease = (t) => t * t * (3 - 2 * t);
+
+    // Per-phase radius and opacity (inner, outer, farOpacity)
+    const phaseConfig = [
+      { inner: 0, outer: 999, far: 1 },           // 0 Hero: no fade, full city
+      { inner: 0, outer: 50, far: 0.82 },         // 1 Route: soft fade at distance so flight path reads
+      { inner: 5, outer: 11, far: 0.06 },         // 2 Pod: tight garden, only pod area clear
+      { inner: 7, outer: 16, far: 0.14 },         // 3 Delivery: pod + street clear
+      { inner: 7, outer: 16, far: 0.14 }          // 4 base for reveal (lerped to 1)
+    ];
+
+    buildings.forEach((b) => {
+      const dx = b.x - focusPoint.x;
+      const dz = b.z - focusPoint.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      let opacity = 1;
+      const cfg = phaseConfig[phaseIndex];
+
+      if (phaseIndex === 0) {
+        opacity = 1;
+      } else if (phaseIndex === 1) {
+        if (dist <= cfg.inner) opacity = 1;
+        else if (dist < cfg.outer) opacity = 1 - (1 - cfg.far) * ease((dist - cfg.inner) / (cfg.outer - cfg.inner));
+        else opacity = cfg.far;
+      } else if (phaseIndex === 2 || phaseIndex === 3) {
+        if (dist <= cfg.inner) opacity = 1;
+        else if (dist <= cfg.outer) {
+          const raw = (dist - cfg.inner) / (cfg.outer - cfg.inner);
+          opacity = 1 - (1 - cfg.far) * ease(raw);
+        } else opacity = cfg.far;
+      } else if (phaseIndex === 4) {
+        const revealT = ease(Math.min(1, (progress - 0.78) / 0.22));
+        const cfg4 = phaseConfig[3];
+        let base = 1;
+        if (dist > cfg4.outer) base = cfg4.far;
+        else if (dist > cfg4.inner) {
+          const raw = (dist - cfg4.inner) / (cfg4.outer - cfg4.inner);
+          base = 1 - (1 - cfg4.far) * ease(raw);
+        }
+        opacity = base + (1 - base) * revealT;
+      }
+      b.mesh.material.opacity = Math.min(1, opacity);
+    });
+
+    const patchEase = (t) => t * t * (3 - 2 * t);
+    if (phaseIndex === 2 || phaseIndex === 3) {
+      const raw = phaseIndex === 2 ? Math.min(1, (progress - 0.38) / 0.12) : 1;
+      const t = patchEase(raw);
+      gardenPatch.visible = true;
+      gardenPatch.scale.setScalar(t);
+      gardenPatch.material.opacity = 0.6 * t;
+      gardenProps.visible = true;
+      gardenProps.scale.setScalar(t);
+    } else if (phaseIndex === 4) {
+      const t = 1 - Math.min(1, (progress - 0.78) / 0.14);
+      gardenPatch.visible = t > 0;
+      gardenPatch.material.opacity = 0.6 * t;
+      gardenPatch.scale.setScalar(Math.max(0.01, t));
+      gardenProps.visible = t > 0;
+      gardenProps.scale.setScalar(Math.max(0.01, t));
+    } else {
+      gardenPatch.visible = false;
+      gardenProps.visible = false;
+    }
+  }
 
   // Ground (clean white)
   const groundGeom = new THREE.PlaneGeometry(totalSize * 1.5, totalSize * 1.5);
@@ -167,6 +281,9 @@ export function createCity(scene) {
     buildings,
     streetPositions,
     ground,
+    gardenPatch,
+    setGardenPatchPosition,
+    updateForPhase,
     getGridSize: () => ({ GRID_SIZE: N_BLOCKS, SPACING: CELL, half: totalSize * 0.5 }),
     getStreetGridParams: () => ({ CELL, STREET_WIDTH, half: totalSize * 0.5, N_BLOCKS }),
   };

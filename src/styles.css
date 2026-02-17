@@ -278,6 +278,265 @@ body {
   height: 100%;
 }
 
+/* Story viewport: scroll-driven phases (5 viewports of scroll) */
+#story-viewport {
+  position: relative;
+  width: 100%;
+  height: 500vh;
+  overflow: hidden;
+}
+
+#story-ui {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: clamp(1.5rem, 5vw, 3rem);
+  pointer-events: none;
+}
+
+#story-ui button,
+#story-ui nav,
+#story-ui .story-step {
+  pointer-events: auto;
+}
+
+.story-hint {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0;
+  transition: opacity 0.5s ease;
+}
+
+.story-hint.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.story-hint strong {
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
+}
+
+#story-copy {
+  text-align: center;
+  max-width: 28ch;
+}
+
+.story-title {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: clamp(2rem, 6vw, 3.75rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: #fff;
+  text-shadow: 0 0 50px rgba(224, 53, 156, 0.35), 0 2px 24px rgba(0, 0, 0, 0.4);
+  margin: 0 0 0.5rem;
+}
+
+.story-subtitle {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 500;
+  font-size: clamp(1rem, 2.5vw, 1.35rem);
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
+  margin: 0;
+}
+
+#story-controls {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.story-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.25rem;
+  border-radius: 2rem;
+  border: 1px solid rgba(224, 53, 156, 0.6);
+  background: rgba(224, 53, 156, 0.2);
+  color: #fff;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.story-play:hover {
+  background: rgba(224, 53, 156, 0.35);
+  transform: scale(1.04);
+  box-shadow: 0 0 24px rgba(224, 53, 156, 0.3);
+}
+
+.story-play.playing {
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.story-play-icon {
+  font-size: 0.65rem;
+}
+
+#story-progress-wrap {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+#story-progress-line {
+  position: absolute;
+  top: 1.1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 2px;
+  width: 72%;
+  max-width: 280px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+#story-progress-line::after {
+  content: '';
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, rgba(224, 53, 156, 0.9), rgba(0, 255, 204, 0.8));
+  border-radius: 1px;
+  transition: width 0.4s ease;
+}
+
+#story-progress-wrap[data-progress="0"] #story-progress-line::after { width: 0%; }
+#story-progress-wrap[data-progress="1"] #story-progress-line::after { width: 25%; }
+#story-progress-wrap[data-progress="2"] #story-progress-line::after { width: 50%; }
+#story-progress-wrap[data-progress="3"] #story-progress-line::after { width: 75%; }
+#story-progress-wrap[data-progress="4"] #story-progress-line::after { width: 100%; }
+
+#story-steps {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 320px;
+}
+
+.story-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-family: 'Orbitron', sans-serif;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+  min-width: 2.5rem;
+  height: 2.5rem;
+  justify-content: center;
+}
+
+.story-step .story-step-label {
+  display: none;
+}
+
+@media (min-width: 480px) {
+  .story-step {
+    border-radius: 1.25rem;
+    min-width: auto;
+    height: auto;
+    padding: 0.5rem 0.75rem;
+    flex-direction: row;
+    gap: 0.35rem;
+  }
+  .story-step .story-step-label {
+    display: inline;
+    font-size: 0.7rem;
+    font-weight: 500;
+    opacity: 0.9;
+  }
+}
+
+.story-step-num {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.story-step:hover {
+  background: rgba(255, 255, 255, 0.28);
+  transform: scale(1.06);
+}
+
+.story-step.active {
+  background: rgba(224, 53, 156, 0.95);
+  box-shadow: 0 0 20px rgba(224, 53, 156, 0.5);
+}
+
+.story-next {
+  padding: 0.6rem 1.5rem;
+  border-radius: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.story-next:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.03);
+}
+
+/* Scroll story progress (legacy, hidden when using step story) */
+.scroll-story-progress {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.scroll-story-progress.visible {
+  opacity: 1;
+}
+.scroll-story-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+.scroll-story-dot.active {
+  background: rgba(224, 53, 156, 0.95);
+  box-shadow: 0 0 12px rgba(224, 53, 156, 0.6);
+  transform: scale(1.35);
+}
+
 /* Scroll sections: full viewport height each, overlay text */
 #scroll-sections {
   position: relative;
@@ -291,6 +550,13 @@ body {
   align-items: center;
   justify-content: center;
   padding: 2rem;
+}
+
+/* Pod section: title "at top of pod" — lower third so it sits above the pod in 3D view */
+.webgl-overlay[data-section="pod"] {
+  align-items: flex-end;
+  padding-bottom: 42%;
+  justify-content: center;
 }
 
 /* Over WebGL the scene is dark — force light, high-contrast overlay text */

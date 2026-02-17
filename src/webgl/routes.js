@@ -37,15 +37,25 @@ export function createPathVisual(curve, color = 0x00ffcc) {
   return new THREE.Line(geometry, material);
 }
 
-// Ground path (straight lines along streets map)
-// For this demo, we'll just fake a path from Pod to a random "House"
+// Straight line (legacy)
 export function createGroundPath(start, end) {
-  // Simple L-shape or straight line for demo
-  // In a real grid we'd use A* 
-  // Here we just do a direct line but stick to Y=0.3
-  const curve = new THREE.LineCurve3(
-    new THREE.Vector3(start.x, 0.3, start.z),
-    new THREE.Vector3(end.x, 0.3, end.z)
+  return new THREE.LineCurve3(
+    new THREE.Vector3(start.x, 0, start.z),
+    new THREE.Vector3(end.x, 0, end.z)
   );
-  return curve;
+}
+
+// Curved ground path for more natural rider movement (CatmullRom with arc)
+export function createCurvedGroundPath(start, end, arcHeight = 0) {
+  const mid = new THREE.Vector3(
+    (start.x + end.x) * 0.5 + (start.z - end.z) * 0.15,
+    0,
+    (start.z + end.z) * 0.5 + (end.x - start.x) * 0.15
+  );
+  const points = [
+    new THREE.Vector3(start.x, 0, start.z),
+    mid,
+    new THREE.Vector3(end.x, 0, end.z)
+  ];
+  return new THREE.CatmullRomCurve3(points);
 }

@@ -93,7 +93,7 @@ export class PodNetwork {
     // Let's stick to a simple glowing ring on top
     const ring = new THREE.Mesh(
       new THREE.TorusGeometry(0.5, 0.05, 8, 16),
-      glowMat
+      glowMat.clone()
     );
     ring.rotation.x = Math.PI / 2;
     ring.position.y = 1.6;
@@ -104,8 +104,15 @@ export class PodNetwork {
     this.pods.push({
       mesh: podGroup,
       position: new THREE.Vector3(x, y, z),
+      ringMesh: ring,
       id: Math.random().toString(36).substr(2, 9)
     });
+  }
+
+  setStoryPodHighlight(pod, intensity = 1) {
+    if (pod && pod.ringMesh && pod.ringMesh.material) {
+      pod.ringMesh.material.emissiveIntensity = intensity;
+    }
   }
 
   getNearestPod(position) {

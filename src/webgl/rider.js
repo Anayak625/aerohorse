@@ -45,13 +45,52 @@ export class Rider {
     wheelB.position.set(0, 0.25, -0.4);
     this.mesh.add(wheelB);
 
+    this.wheels = [wheelF, wheelB];
+    this.lastPosition = new THREE.Vector3();
+    this.package = null;
+
     // Initial scale
     this.mesh.scale.set(0.6, 0.6, 0.6);
   }
 
   spawn(position) {
     this.mesh.position.copy(position);
+    this.lastPosition.copy(position);
     this.mesh.visible = true;
     this.active = true;
+  }
+
+  setPackage(pkgMesh) {
+    if (this.package) {
+      this.mesh.remove(this.package);
+    }
+    if (pkgMesh) {
+      this.package = pkgMesh;
+      this.mesh.add(pkgMesh);
+      pkgMesh.position.set(0, 0.5, -0.5);
+    }
+  }
+
+  dropPackage() {
+    if (this.package) {
+      const pkg = this.package;
+      this.mesh.remove(pkg);
+      this.package = null;
+      const worldPos = new THREE.Vector3();
+      pkg.getWorldPosition(worldPos);
+      pkg.position.copy(worldPos);
+      pkg.rotation.set(0, 0, 0);
+      this.scene.add(pkg);
+      return pkg;
+    }
+    return null;
+  }
+
+  update(delta) {
+    if (!this.active || !this.wheels) return;
+    const dist = this.mesh.position.distanceTo(this.lastPosition);
+    this.lastPosition.copy(this.mesh.position);
+    const spin = dist * 2.5;
+    this.wheels.forEach((w) => { w.rotation.x += spin; });
   }
 }

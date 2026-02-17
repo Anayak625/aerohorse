@@ -27,32 +27,36 @@
         </div>
       </header>
 
-      <!-- WebGL canvas (fixed, full viewport) -->
-      <div id="webgl-container"></div>
-
-      <!-- Scroll overlay sections with copy -->
-      <div id="scroll-sections">
-        <section class="webgl-overlay" data-section="hero">
-          <div class="hero-content">
-            <h1 class="overlay-title">Urban delivery.<br />Reinvented.</h1>
-            <p class="overlay-subtitle">Anything · Anytime · Delivered</p>
+      <!-- Story: step-through with Play journey + progress path -->
+      <div id="story-viewport">
+        <div id="webgl-container"></div>
+        <div id="story-ui">
+          <p id="story-hint" class="story-hint">Click <strong>Play journey</strong> or choose a step below</p>
+          <div id="story-copy">
+            <h1 id="story-title" class="story-title">Urban delivery.<br />Reinvented.</h1>
+            <p id="story-subtitle" class="story-subtitle">Anything · Anytime · Delivered</p>
           </div>
-        </section>
-        <section class="webgl-overlay" data-section="route">
-          <h2 class="overlay-title overlay-title--sm">Smart routing.</h2>
-        </section>
-        <section class="webgl-overlay" data-section="pod">
-          <h2 class="overlay-title overlay-title--sm">Pods every 500m.</h2>
-        </section>
-        <section class="webgl-overlay" data-section="delivery">
-          <h2 class="overlay-title overlay-title--sm">Drone to Pod.<br>Rider to Door.</h2>
-        </section>
-        <section class="webgl-overlay" data-section="scale">
-          <h2 class="overlay-title overlay-title--sm">City-wide scale.</h2>
-        </section>
+          <div id="story-controls">
+            <button type="button" id="story-play" class="story-play">
+              <span class="story-play-icon">▶</span>
+              <span>Play journey</span>
+            </button>
+            <div id="story-progress-wrap">
+              <div id="story-progress-line" aria-hidden="true"></div>
+              <nav id="story-steps" aria-label="Story steps">
+                <button type="button" class="story-step" data-step="0" aria-current="true"><span class="story-step-num">1</span><span class="story-step-label">Intro</span></button>
+                <button type="button" class="story-step" data-step="1"><span class="story-step-num">2</span><span class="story-step-label">Fly</span></button>
+                <button type="button" class="story-step" data-step="2"><span class="story-step-num">3</span><span class="story-step-label">Land</span></button>
+                <button type="button" class="story-step" data-step="3"><span class="story-step-num">4</span><span class="story-step-label">Rider</span></button>
+                <button type="button" class="story-step" data-step="4"><span class="story-step-num">5</span><span class="story-step-label">Deliver</span></button>
+              </nav>
+            </div>
+            <button type="button" id="story-next" class="story-next">Next</button>
+          </div>
+        </div>
       </div>
 
-      <!-- 2D sections -->
+      <!-- 2D sections (scroll normally below story) -->
       <section id="solutions" class="section-2d">
         <div class="container">
           <h2 class="section-heading">Solutions</h2>

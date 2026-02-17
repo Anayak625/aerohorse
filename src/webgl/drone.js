@@ -14,28 +14,31 @@ export class Drone {
     this.createGeometry();
     this.initLights();
     
-    // Animation state
     this.isFlying = true;
+    this.flightIntensity = 0; // 0 = hover, 1 = full speed (propeller + tilt)
+    this.targetTilt = 0;       // pitch forward in radians
+    this.currentTilt = 0;
     
     parent.add(this.mesh);
   }
 
   createGeometry() {
-    // Materials
-    const bodyMat = new THREE.MeshStandardMaterial({ 
-      color: 0xffffff, 
-      roughness: 0.2, 
-      metalness: 0.5 
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.15,
+      metalness: 0.6,
+      clearcoat: 0.9,
+      clearcoatRoughness: 0.1
     });
-    const darkMat = new THREE.MeshStandardMaterial({ 
-      color: 0x1a1a1a, 
-      roughness: 0.5, 
-      metalness: 0.2 
+    const darkMat = new THREE.MeshStandardMaterial({
+      color: 0x1a1a1a,
+      roughness: 0.4,
+      metalness: 0.35
     });
     const accentMat = new THREE.MeshStandardMaterial({
       color: 0xe0359c,
       emissive: 0xe0359c,
-      emissiveIntensity: 2,
+      emissiveIntensity: 2.5,
       roughness: 0.2,
       metalness: 0
     });
@@ -170,23 +173,26 @@ export class Drone {
     this.mesh.add(light);
   }
 
+  setFlightIntensity(value) {
+    this.flightIntensity = Math.max(0, Math.min(1, value));
+  }
+
+  setTilt(pitchRad) {
+    this.targetTilt = pitchRad;
+  }
+
   update(time, delta) {
-    // Rotate propellers
+    this.currentTilt += (this.targetTilt - this.currentTilt) * Math.min(1, delta * 8);
+    this.mesh.rotation.x = this.currentTilt;
+    
     if (this.isFlying) {
-      const speed = 15;
+      const baseSpeed = 12;
+      const speed = baseSpeed + this.flightIntensity * 18;
       this.propellers.forEach((prop, i) => {
-        // Alternate rotation direction for realism
         const dir = i % 2 === 0 ? 1 : -1;
         prop.rotation.y += speed * delta * dir;
       });
     }
-
-    // Gentle hover bobbing
-    // this.mesh.position.y += Math.sin(time * 2) * 0.005;
-    
-    // Tilt based on movement (simulated)
-    // In a real physics engine we'd calculate velocity, here we'll just fake it slightly
-    // based on position changes if needed, or controlled by GSAP
   }
 
   setPackage(pkgMesh) {
