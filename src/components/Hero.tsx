@@ -1,11 +1,13 @@
 import { Suspense, useState, useCallback, useEffect, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
-import Scene3D from './Scene3D'
+import Scene3D, { type HoverTarget } from './Scene3D'
 import { TextReveal, LineReveal, FadeIn } from './TextReveal'
 
 export default function Hero() {
   const [mouse, setMouse] = useState({ normalizedX: 0, normalizedY: 0 })
   const [scrollProgress, setScrollProgress] = useState(0)
+  const [hoveredTarget, setHoveredTarget] = useState<HoverTarget>(null)
+  const [focusDroneUntil, setFocusDroneUntil] = useState(0)
   const sectionRef = useRef<HTMLElement>(null)
 
   const onMouseMove = useCallback((e: React.MouseEvent<HTMLElement>) => {
@@ -16,21 +18,32 @@ export default function Hero() {
 
   useEffect(() => {
     const onScroll = () => {
-      const progress = Math.min(window.scrollY / window.innerHeight, 1)
+      // Progress 0→1 over full hero height (220vh) so scroll fully drives drone along path
+      const heroHeight = 2.2 * window.innerHeight
+      const progress = Math.min(1, window.scrollY / heroHeight)
       setScrollProgress(progress)
     }
+    onScroll() // set initial value
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  const handleDroneClick = useCallback((clockSeconds: number) => {
+    setFocusDroneUntil(clockSeconds + 3)
   }, [])
 
   return (
     <section
       ref={sectionRef}
-      className="relative h-[200vh] w-full"
+      className="relative h-[220vh] w-full"
       onMouseMove={onMouseMove}
+      data-cursor-hover={hoveredTarget != null ? '' : undefined}
     >
       <div className="sticky top-0 h-screen w-full overflow-hidden">
-        <div className="absolute inset-0 z-0">
+        <div
+          className="absolute inset-0 z-0"
+          data-cursor-hover={hoveredTarget != null ? '' : undefined}
+        >
           <Canvas
             camera={{ position: [0, 5, 12], fov: 50 }}
             dpr={[1, 2]}
@@ -38,24 +51,34 @@ export default function Hero() {
             shadows
           >
             <Suspense fallback={null}>
-              <Scene3D mouse={mouse} scrollProgress={scrollProgress} />
+              <Scene3D
+                mouse={mouse}
+                scrollProgress={scrollProgress}
+                onHoverChange={setHoveredTarget}
+                onDroneClick={handleDroneClick}
+                focusDroneUntil={focusDroneUntil}
+              />
             </Suspense>
           </Canvas>
         </div>
         
-        {/* Content overlay */}
+        {/* Content overlay — centered on screen, drone appears above in 3D */}
         <div
-          className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-center px-8 md:px-16 lg:px-24"
-          style={{ opacity: 1 - scrollProgress * 1.5 }}
+          className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-center items-center text-center px-6 sm:px-8 md:px-12 transition-[opacity,transform] duration-500 ease-out"
+          style={{
+            opacity: Math.max(0, 1 - scrollProgress / 0.2),
+            transform: `translateY(${-Math.min(1, scrollProgress / 0.2) * 48}px)`,
+            visibility: scrollProgress >= 0.2 ? 'hidden' : 'visible',
+          }}
         >
-          <div className="max-w-5xl">
+          <div className="max-w-4xl mx-auto">
             <LineReveal delay={0.2}>
               <p className="mb-6 text-xs font-medium uppercase tracking-[0.4em] text-teal-600">
                 The future of delivery
               </p>
             </LineReveal>
             
-            <h1 className="text-6xl font-bold leading-[0.95] tracking-tight text-stone-800 md:text-8xl lg:text-9xl">
+            <h1 className="relative z-10 text-5xl font-bold leading-[0.88] tracking-tight text-stone-800 sm:text-6xl md:text-7xl lg:text-8xl [&>div]:block [&>div]:leading-[0.88] [&>div:first-child]:-mb-[0.08em] drop-shadow-[0_2px_8px_rgba(255,255,255,0.9)]" style={{ textShadow: '0 2px 12px rgba(255,255,255,0.85), 0 1px 3px rgba(0,0,0,0.06)' }}>
               <TextReveal className="block" delay={0.3} stagger={0.05}>
                 From sky
               </TextReveal>
@@ -64,14 +87,14 @@ export default function Hero() {
               </TextReveal>
             </h1>
             
-            <FadeIn delay={0.8} className="mt-10 max-w-xl">
-              <p className="text-lg text-stone-500 md:text-xl leading-relaxed">
+            <FadeIn delay={0.8} className="max-w-xl mx-auto">
+              <p className="text-base text-stone-600 md:text-lg leading-relaxed drop-shadow-sm" style={{ textShadow: '0 1px 2px rgba(255,255,255,0.8)' }}>
                 Autonomous drones deliver to smart pods every 500m. Local riders complete the final mile. 
-                <span className="text-stone-700"> Faster. Cleaner. Smarter.</span>
+                <span className="text-stone-800 font-medium"> Faster. Cleaner. Smarter.</span>
               </p>
             </FadeIn>
             
-            <FadeIn delay={1} className="mt-14 flex flex-wrap gap-5 pointer-events-auto">
+            <FadeIn delay={1} className="mt-6 flex flex-wrap gap-4 justify-center pointer-events-auto">
               <a
                 href="#journey"
                 className="group relative inline-flex items-center gap-3 overflow-hidden rounded-full bg-teal-600 px-8 py-4 text-sm font-medium text-white shadow-lg shadow-teal-600/20 transition-all duration-300 hover:bg-teal-700 hover:shadow-teal-600/30 hover:scale-105"
@@ -93,14 +116,47 @@ export default function Hero() {
           </div>
         </div>
         
+        
+
+        {/* Scroll progress bar — shows drone position along path */}
+        <div
+          className="absolute right-6 top-1/2 z-10 hidden -translate-y-1/2 md:flex flex-col items-center gap-2"
+          style={{ opacity: 0.5 + (1 - scrollProgress) * 0.5 }}
+        >
+          <span className="text-[9px] uppercase tracking-widest text-stone-400 whitespace-nowrap -rotate-90 origin-center translate-y-8">
+            Scroll to move drone
+          </span>
+          <div className="h-32 w-1 rounded-full bg-stone-200 overflow-hidden">
+            <div
+              className="w-full bg-teal-500 rounded-full transition-all duration-150 ease-out"
+              style={{ height: `${scrollProgress * 100}%`, marginTop: 'auto' }}
+            />
+          </div>
+          <span className="text-[9px] text-stone-400 tabular-nums">
+            {Math.round(scrollProgress * 100)}%
+          </span>
+        </div>
+
         {/* Scroll indicator */}
         <div
           className="absolute bottom-12 left-1/2 z-10 -translate-x-1/2 flex flex-col items-center gap-3"
-          style={{ opacity: 1 - scrollProgress * 3 }}
+          style={{ opacity: 1 - scrollProgress * 2.5 }}
         >
-          <span className="text-[10px] uppercase tracking-[0.3em] text-stone-400">Scroll to explore</span>
+          <span className="text-[10px] uppercase tracking-[0.3em] text-stone-400 text-center max-w-[200px]">
+            {hoveredTarget
+              ? 'Click drone to follow camera · Scroll moves the drone'
+              : 'Hover drone or pods · Scroll to move drone along path'}
+          </span>
           <div className="h-12 w-px bg-gradient-to-b from-stone-400 to-transparent" />
         </div>
+        
+        {/* Bottom gradient fade for smooth transition */}
+        <div 
+          className="absolute bottom-0 left-0 right-0 h-60 bg-gradient-to-t from-stone-50 via-stone-50/80 to-transparent pointer-events-none z-20"
+          style={{ 
+            opacity: Math.min(1, scrollProgress * 2),
+          }}
+        />
       </div>
     </section>
   )

@@ -2,6 +2,7 @@ import { useLenis } from './hooks/useLenis'
 import Cursor from './components/Cursor'
 import Header from './components/Header'
 import Hero from './components/Hero'
+import TransitionSection from './components/TransitionSection'
 import JourneySection from './sections/JourneySection'
 import StorySection from './sections/StorySection'
 import Benefits from './sections/Benefits'
@@ -19,6 +20,7 @@ function App() {
       <Header />
       <main>
         <Hero />
+        <TransitionSection />
         <JourneySection />
         <StorySection />
         <Benefits />

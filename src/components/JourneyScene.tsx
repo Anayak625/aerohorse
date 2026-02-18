@@ -54,23 +54,23 @@ export default function JourneyScene({ scrollProgress = 0 }: { scrollProgress: n
   return (
     <>
       <color attach="background" args={['#fafaf9']} />
-      <fog attach="fog" args={['#fafaf9', 12, 40]} />
+      <fog attach="fog" args={['#fafaf9', 20, 60]} />
       
-      <ambientLight intensity={0.8} />
-      <directionalLight position={[5, 12, 5]} intensity={1.2} color="#ffffff" />
-      <pointLight position={[0, 5, 2]} color="#0d9488" intensity={2} distance={20} />
-      <pointLight position={[4, 3, 1]} color="#64748b" intensity={1.5} distance={15} />
-      <pointLight position={[-3, 2, 0]} color="#78716c" intensity={1} distance={12} />
+      <ambientLight intensity={1} />
+      <directionalLight position={[5, 12, 5]} intensity={1.5} color="#ffffff" />
+      <pointLight position={[0, 5, 2]} color="#0d9488" intensity={3} distance={25} />
+      <pointLight position={[4, 3, 1]} color="#64748b" intensity={2} distance={20} />
+      <pointLight position={[-3, 2, 0]} color="#78716c" intensity={1.5} distance={15} />
 
       <OrbitControls
         enableZoom={true}
         enablePan={false}
         minPolarAngle={Math.PI / 6}
         maxPolarAngle={Math.PI / 2.2}
-        minDistance={4}
-        maxDistance={20}
+        minDistance={3}
+        maxDistance={15}
         autoRotate
-        autoRotateSpeed={0.5}
+        autoRotateSpeed={0.3}
       />
       
       <Sparkles count={80} scale={25} size={2.5} speed={0.4} opacity={0.3} color="#0d9488" />

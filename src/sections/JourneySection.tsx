@@ -36,23 +36,37 @@ export default function JourneySection() {
     { title: 'Final Mile', desc: 'A local rider picks up from the pod and brings it to your door.' },
   ]
 
+  // Calculate entry opacity - fade in during initial scroll
+  const entryOpacity = Math.min(1, scrollProgress * 5)
+
   return (
     <section
       id="journey"
       ref={sectionRef}
       className="relative h-[400vh] w-full"
     >
+      {/* Top gradient blend from transition section */}
+      <div 
+        className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-stone-50 to-transparent pointer-events-none z-10"
+        style={{ opacity: 1 - entryOpacity }}
+      />
+      
       <div className="sticky top-0 h-screen w-full overflow-hidden">
-        <Canvas
-          camera={{ position: [0, 4, 10], fov: 45 }}
-          dpr={[1, 2]}
-          gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
-          shadows
+        <div 
+          className="absolute inset-0"
+          style={{ opacity: entryOpacity, transition: 'opacity 0.3s ease-out' }}
         >
-          <Suspense fallback={null}>
-            <JourneyScene scrollProgress={scrollProgress} />
-          </Suspense>
-        </Canvas>
+          <Canvas
+            camera={{ position: [0, 3, 8], fov: 50 }}
+            dpr={[1, 2]}
+            gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
+            shadows
+          >
+            <Suspense fallback={null}>
+              <JourneyScene scrollProgress={scrollProgress} />
+            </Suspense>
+          </Canvas>
+        </div>
         
         {/* Progress bar */}
         <div className="absolute left-8 top-1/2 -translate-y-1/2 z-20 hidden md:block">
