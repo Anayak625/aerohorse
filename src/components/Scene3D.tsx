@@ -18,6 +18,18 @@ interface SceneProps {
   focusDroneUntil?: number
 }
 
+// Smooth step for 0→1 over [a,b]; smoothstep(a,b,x)
+function smoothStep(a: number, b: number, x: number): number {
+  const t = Math.max(0, Math.min(1, (x - a) / (b - a)))
+  return t * t * (3 - 2 * t)
+}
+
+// Scroll thresholds: drone camera view from 20% until 65%
+const DRONE_VIEW_SCROLL_START = 0.2
+const DRONE_VIEW_SCROLL_END = 0.65
+const DRONE_VIEW_BLEND_IN = 0.03   // 17%→20% smooth ramp in
+const DRONE_VIEW_BLEND_OUT = 0.03  // 62%→65% smooth ramp out
+
 export default function Scene3D({
   mouse = { normalizedX: 0, normalizedY: 0 },
   scrollProgress = 0,
@@ -28,35 +40,49 @@ export default function Scene3D({
   const groupRef = useRef<THREE.Group>(null)
   const targetCamPos = useRef(new THREE.Vector3(0, 5, 12))
   const focusTarget = useRef(new THREE.Vector3(0, 4.8, 1))
+  const cameraDroneBlend = useRef(0)
 
   useFrame((state) => {
     const cam = state.camera
     const t = state.clock.elapsedTime
-    const focusActive = t < focusDroneUntil
-    const mouseStrength = focusActive ? 0.08 : 0.4 * (1 - scrollProgress * 0.7)
+    const focusActiveClick = t < focusDroneUntil
 
-    // Smooth camera pull-back as user scrolls - creates zoom out effect
+    // Scroll-based drone view: active from 20% to 60% (while box travels to pod), smooth blend at edges
+    const scrollDroneBlend =
+      smoothStep(DRONE_VIEW_SCROLL_START - DRONE_VIEW_BLEND_IN, DRONE_VIEW_SCROLL_START, scrollProgress) *
+      (1 - smoothStep(DRONE_VIEW_SCROLL_END - DRONE_VIEW_BLEND_OUT, DRONE_VIEW_SCROLL_END, scrollProgress))
+    const targetBlend = focusActiveClick ? 1 : scrollDroneBlend
+    cameraDroneBlend.current += (targetBlend - cameraDroneBlend.current) * 0.06
+    const blend = cameraDroneBlend.current
+
+    const mouseStrength = blend > 0.5 ? 0.08 : 0.4 * (1 - scrollProgress * 0.7)
     const baseZ = 12 + scrollProgress * 8
     const baseY = 5 + scrollProgress * 4
 
-    if (focusActive) {
-      // Camera follows drone from a fixed offset (behind and above)
-      const followOffset = new THREE.Vector3(0, 3, 6)
-      const desiredCamPos = focusTarget.current.clone().add(followOffset)
-      targetCamPos.current.lerp(desiredCamPos, 0.05)
-      cam.position.lerp(targetCamPos.current, 0.08)
-      cam.lookAt(focusTarget.current.x, focusTarget.current.y - 0.3, focusTarget.current.z)
-    } else {
-      targetCamPos.current.set(
-        mouse.normalizedX * 3.5 * mouseStrength,
-        baseY + mouse.normalizedY * 2 * mouseStrength,
-        baseZ + mouse.normalizedX * 0.5 * mouseStrength
-      )
-      cam.position.lerp(targetCamPos.current, 0.08)
-      const lookY = 2 - scrollProgress * 2
-      const lookZ = scrollProgress * 5
-      cam.lookAt(mouse.normalizedX * 0.8, lookY, lookZ)
-    }
+    // Normal view target
+    const normalTargetPos = new THREE.Vector3(
+      mouse.normalizedX * 3.5 * mouseStrength,
+      baseY + mouse.normalizedY * 2 * mouseStrength,
+      baseZ + mouse.normalizedX * 0.5 * mouseStrength
+    )
+    const lookY = 2 - scrollProgress * 2
+    const lookZ = scrollProgress * 5
+    const normalLookAt = new THREE.Vector3(mouse.normalizedX * 0.8, lookY, lookZ)
+
+    // Drone-follow view target (same as when you click the drone)
+    const followOffset = new THREE.Vector3(0, 3, 6)
+    const droneCamPos = focusTarget.current.clone().add(followOffset)
+    const droneLookAt = new THREE.Vector3(
+      focusTarget.current.x,
+      focusTarget.current.y - 0.3,
+      focusTarget.current.z
+    )
+
+    // Blend between normal and drone camera for smooth transition
+    targetCamPos.current.copy(normalTargetPos).lerp(droneCamPos, blend)
+    cam.position.lerp(targetCamPos.current, 0.08)
+    const blendedLookAt = new THREE.Vector3().lerpVectors(normalLookAt, droneLookAt, blend)
+    cam.lookAt(blendedLookAt)
 
     if (groupRef.current) {
       const scale = 1 - scrollProgress * 0.15
@@ -789,25 +815,53 @@ function DroneAnimated({
   )
 }
 
-// Same parcel as drone's payload: drops from drone position (20% scroll) to pod top (80% scroll)
+// Pod base radius ~0.8, diameter ~1.6. Truck placed one diameter to the left of pod.
+const POD_RADIUS = 0.8
+const POD_DIAMETER = POD_RADIUS * 2
+
+// Same parcel as drone's payload: drops from drone position (15% scroll) to pod top (60% scroll)
+// Then travels from pod toward truck (60-65% scroll) for one pod diameter distance
 const DRONE_SCALE = 3 // match DroneAnimated baseScale so parcel is same size
 const DROP_START_SCROLL = 0.15
 const DROP_END_SCROLL = 0.6
+const TRAVEL_START_SCROLL = 0.6
+const TRAVEL_END_SCROLL = 0.65
 // Pod ring top y=0.18; parcel height 0.1*DRONE_SCALE → center at 0.18 + 0.1*DRONE_SCALE/2
 const POD_TOP_Y = 0.18 + (0.1 * DRONE_SCALE) / 2
 // Drone at (0, 5.3, 1), scale 3, package local (0, -0.17, -0.02) → world start
 const DROP_START = { x: 0, y: 5.3 + DRONE_SCALE * (-0.17), z: 1 + DRONE_SCALE * (-0.02) }
 const DROP_END = { x: 0, y: POD_TOP_Y, z: 0 }
+// Travel destination: one pod diameter in truck direction (negative X)
+const TRAVEL_END = { x: -POD_DIAMETER, y: POD_TOP_Y, z: 0 }
 
 function DroppingParcel({ scrollProgress }: { scrollProgress: number }) {
-  const visible = scrollProgress >= DROP_START_SCROLL
-  const t = visible
+  const visible = scrollProgress >= DROP_START_SCROLL && scrollProgress < TRAVEL_END_SCROLL
+  
+  // Phase 1: Drop from drone to pod (15% - 60%)
+  const dropT = visible
     ? Math.min(1, (scrollProgress - DROP_START_SCROLL) / (DROP_END_SCROLL - DROP_START_SCROLL))
     : 0
-  const tEased = t * t
-  const x = DROP_START.x + (DROP_END.x - DROP_START.x) * tEased
-  const y = DROP_START.y + (DROP_END.y - DROP_START.y) * tEased
-  const z = DROP_START.z + (DROP_END.z - DROP_START.z) * tEased
+  const dropTEased = dropT * dropT
+  
+  // Phase 2: Travel from pod toward truck (60% - 65%)
+  const travelT = scrollProgress >= TRAVEL_START_SCROLL
+    ? Math.min(1, (scrollProgress - TRAVEL_START_SCROLL) / (TRAVEL_END_SCROLL - TRAVEL_START_SCROLL))
+    : 0
+  const travelTEased = travelT * travelT * (3 - 2 * travelT) // smoothstep for smooth motion
+  
+  let x: number, y: number, z: number
+  
+  if (scrollProgress < TRAVEL_START_SCROLL) {
+    // Phase 1: Dropping to pod
+    x = DROP_START.x + (DROP_END.x - DROP_START.x) * dropTEased
+    y = DROP_START.y + (DROP_END.y - DROP_START.y) * dropTEased
+    z = DROP_START.z + (DROP_END.z - DROP_START.z) * dropTEased
+  } else {
+    // Phase 2: Traveling from pod toward truck
+    x = DROP_END.x + (TRAVEL_END.x - DROP_END.x) * travelTEased
+    y = DROP_END.y + (TRAVEL_END.y - DROP_END.y) * travelTEased
+    z = DROP_END.z + (TRAVEL_END.z - DROP_END.z) * travelTEased
+  }
 
   if (!visible) return null
   return (
@@ -830,18 +884,15 @@ function DroppingParcel({ scrollProgress }: { scrollProgress: number }) {
   )
 }
 
-// Pod base radius ~0.8; truck to the left. Gap 0.25 world units.
-const POD_LEFT_EDGE = -0.8
-const TRUCK_GAP = 0.25
-const TRUCK_TARGET_SIZE = 1.4 // max dimension in world units (match pod scale)
-const TRUCK_POSITION_X = POD_LEFT_EDGE - TRUCK_GAP - TRUCK_TARGET_SIZE / 2
+const TRUCK_POSITION_X = -POD_DIAMETER - 0.3  // one pod diameter to the left of pod center
+const TRUCK_TARGET_SIZE = 1.4
 
 const TRUCK_GLTF_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/truck/scene.gltf'
 useGLTF.preload(TRUCK_GLTF_URL)
 
 function TruckPlaceholder() {
   return (
-    <group position={[TRUCK_POSITION_X, 0.3, 0]}>
+    <group position={[TRUCK_POSITION_X, 0.3, 0]} rotation={[0, Math.PI, 0]}>
       <mesh castShadow receiveShadow>
         <boxGeometry args={[0.5, 0.25, 0.2]} />
         <meshStandardMaterial color="#1e3a5f" metalness={0.6} roughness={0.4} />
@@ -867,11 +918,12 @@ function DeliveryCar() {
     box.getCenter(center)
     const maxDim = Math.max(size.x, size.y, size.z) || 1
     const s = TRUCK_TARGET_SIZE / maxDim
-    // Place truck so its bottom sits at y=0 and its center X is at TRUCK_POSITION_X
+    // Rotation [0, Math.PI, 0] flips truck 180° so back faces pod (+X direction).
+    // Place truck center at TRUCK_POSITION_X (one pod diameter to the left).
     const pos = new THREE.Vector3(
       TRUCK_POSITION_X - center.x * s,
       -box.min.y * s,
-      -center.z * s
+      center.z * s
     )
     return {
       clonedScene: clone,
@@ -881,7 +933,7 @@ function DeliveryCar() {
   }, [scene])
 
   return (
-    <group position={[position.x, position.y, position.z]} scale={[scale, scale, scale]} rotation={[0, Math.PI / 2 + Math.PI, 0]}>
+    <group position={[position.x, position.y, position.z]} scale={[scale, scale, scale]} rotation={[0, Math.PI, 0]}>
       <primitive object={clonedScene} />
     </group>
   )

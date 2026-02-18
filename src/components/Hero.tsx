@@ -144,8 +144,8 @@ export default function Hero() {
         >
           <span className="text-[10px] uppercase tracking-[0.3em] text-stone-400 text-center max-w-[200px]">
             {hoveredTarget
-              ? 'Click drone to follow camera · Scroll moves the drone'
-              : 'Hover drone or pods · Scroll to move drone along path'}
+              ? 'Click drone to follow camera · At 20% scroll, drone view starts automatically'
+              : 'Hover drone or pods · At 20% scroll, view from drone until 65%'}
           </span>
           <div className="h-12 w-px bg-gradient-to-b from-stone-400 to-transparent" />
         </div>
