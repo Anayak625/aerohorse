@@ -116,7 +116,7 @@ export default function Scene3D({
         />
         <Pods onHoverChange={onHoverChange} />
         <Suspense fallback={<TruckPlaceholder />}>
-          <DeliveryCar />
+          <DeliveryCar scrollProgress={scrollProgress} />
         </Suspense>
         <DroppingParcel scrollProgress={scrollProgress} />
       </group>
@@ -887,8 +887,66 @@ function DroppingParcel({ scrollProgress }: { scrollProgress: number }) {
 const TRUCK_POSITION_X = -POD_DIAMETER - 0.3  // one pod diameter to the left of pod center
 const TRUCK_TARGET_SIZE = 1.4
 
+// Truck animation: starts at 70% scroll, completes by 82%
+const TRUCK_START_SCROLL = 0.70
+const TRUCK_END_SCROLL = 0.82
+
 const TRUCK_GLTF_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/truck/scene.gltf'
 useGLTF.preload(TRUCK_GLTF_URL)
+
+// Calculate truck position and rotation along simple L-shaped path
+// Original truck orientation: Math.PI (back faces +X, toward pod)
+function getTruckPathPosition(t: number): { x: number; z: number; rotation: number } {
+  const startX = TRUCK_POSITION_X
+  const startZ = 0
+  
+  // t=0: truck is stationary, original orientation (Math.PI)
+  if (t <= 0) {
+    return { x: startX, z: startZ, rotation: Math.PI }
+  }
+  
+  // 70-72% scroll: -X direction (0% - 16.7% of path t)
+  // 72-82% scroll: turn + +Z direction (16.7% - 100% of path t)
+  // So phase1 ends at t = (72-70)/(82-70) = 2/12 = 0.167
+  const phase1End = 0.167
+  const straightDistance = POD_DIAMETER
+  
+  if (t <= phase1End) {
+    // Phase 1: Straight line in -X direction (70-72% scroll)
+    const phase1T = t / phase1End
+    const x = startX - straightDistance * phase1T
+    return { x, z: startZ, rotation: Math.PI }
+  }
+  
+  const turnStartX = startX - straightDistance
+  
+  // Quick smooth turn (16.7% - 25% of path t)
+  const phase2End = 0.25
+  const turnRadius = 2
+  
+  if (t <= phase2End) {
+    // Smooth arc turn: 90 degrees to the right (toward +Z, scroll direction)
+    const phase2T = (t - phase1End) / (phase2End - phase1End)
+    const angle = phase2T * (Math.PI / 2) // 0 to PI/2 (quarter circle)
+    const x = turnStartX - turnRadius * Math.sin(angle)
+    const z = startZ + turnRadius * (1 - Math.cos(angle))
+    // Rotate from PI (facing -X) to PI + PI/2 = 3PI/2 or -PI/2 (facing +Z)
+    const rotation = Math.PI + angle
+    return { x, z, rotation }
+  }
+  
+  // Phase 3: Straight line in +Z direction (75-85% scroll)
+  const turnEndX = turnStartX - turnRadius
+  const turnEndZ = startZ + turnRadius
+  const straightLength = 15
+  
+  const phase3T = (t - phase2End) / (1 - phase2End)
+  const x = turnEndX
+  const z = turnEndZ + straightLength * phase3T
+  // Facing +Z direction: rotation = 3PI/2 or -PI/2
+  const rotation = Math.PI * 1.5
+  return { x, z, rotation }
+}
 
 function TruckPlaceholder() {
   return (
@@ -901,9 +959,11 @@ function TruckPlaceholder() {
   )
 }
 
-function DeliveryCar() {
+function DeliveryCar({ scrollProgress = 0 }: { scrollProgress?: number }) {
   const { scene } = useGLTF(TRUCK_GLTF_URL)
-  const { clonedScene, scale, position } = useMemo(() => {
+  const groupRef = useRef<THREE.Group>(null)
+  
+  const { clonedScene, scale, baseOffset } = useMemo(() => {
     const clone = scene.clone()
     clone.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
@@ -918,22 +978,41 @@ function DeliveryCar() {
     box.getCenter(center)
     const maxDim = Math.max(size.x, size.y, size.z) || 1
     const s = TRUCK_TARGET_SIZE / maxDim
-    // Rotation [0, Math.PI, 0] flips truck 180° so back faces pod (+X direction).
-    // Place truck center at TRUCK_POSITION_X (one pod diameter to the left).
-    const pos = new THREE.Vector3(
-      TRUCK_POSITION_X - center.x * s,
-      -box.min.y * s,
-      center.z * s
-    )
+    
     return {
       clonedScene: clone,
       scale: s,
-      position: pos,
+      baseOffset: {
+        x: -center.x * s,
+        y: -box.min.y * s,
+        z: center.z * s,
+      },
     }
   }, [scene])
 
+  // Calculate animated position based on scroll
+  const truckT = scrollProgress >= TRUCK_START_SCROLL
+    ? Math.min(1, (scrollProgress - TRUCK_START_SCROLL) / (TRUCK_END_SCROLL - TRUCK_START_SCROLL))
+    : 0
+  
+  const pathPos = getTruckPathPosition(truckT)
+  
+  // Apply easing for smoother motion
+  const easedT = truckT * truckT * (3 - 2 * truckT)
+  const animatedPathPos = getTruckPathPosition(easedT)
+  
+  const posX = animatedPathPos.x + baseOffset.x
+  const posY = baseOffset.y
+  const posZ = animatedPathPos.z + baseOffset.z
+  const rotationY = animatedPathPos.rotation
+
   return (
-    <group position={[position.x, position.y, position.z]} scale={[scale, scale, scale]} rotation={[0, Math.PI, 0]}>
+    <group 
+      ref={groupRef}
+      position={[posX, posY, posZ]} 
+      scale={[scale, scale, scale]} 
+      rotation={[0, rotationY, 0]}
+    >
       <primitive object={clonedScene} />
     </group>
   )

@@ -55,6 +55,9 @@ export default function JourneyScene({ scrollProgress = 0 }: { scrollProgress: n
     <>
       <color attach="background" args={['#fafaf9']} />
       <fog attach="fog" args={['#fafaf9', 20, 60]} />
+      <fog attach="fog" args={['#fafaf9', 40, 120]} />
+      <fog attach="fog" args={['#fafaf9', 60, 160]} />
+      <fog attach="fog" args={['#fafaf9', 80, 200]} />
       
       <ambientLight intensity={1} />
       <directionalLight position={[5, 12, 5]} intensity={1.5} color="#ffffff" />

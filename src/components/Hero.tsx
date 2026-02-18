@@ -35,7 +35,7 @@ export default function Hero() {
   return (
     <section
       ref={sectionRef}
-      className="relative h-[220vh] w-full"
+      className="relative h-[250vh] w-full"
       onMouseMove={onMouseMove}
       data-cursor-hover={hoveredTarget != null ? '' : undefined}
     >

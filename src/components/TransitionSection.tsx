@@ -29,7 +29,7 @@ export default function TransitionSection() {
     ? progress * 2 
     : 1 - (progress - 0.5) * 2
 
-  const textOpacity = Math.max(0, Math.min(1, fadeInOut))
+  const textOpacity = Math.max(0.15, Math.min(1, fadeInOut * 1.2))
   const bgOpacity = Math.min(1, progress * 2)
 
   return (
@@ -108,7 +108,7 @@ export default function TransitionSection() {
           </div>
           
           <h2 
-            className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-stone-800"
+            className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-stone-900"
             style={{ opacity: textOpacity }}
           >
             Follow the
@@ -116,8 +116,8 @@ export default function TransitionSection() {
           </h2>
           
           <p 
-            className="mt-6 text-lg text-stone-500 max-w-xl mx-auto"
-            style={{ opacity: textOpacity * 0.8 }}
+            className="mt-6 text-lg text-stone-600 max-w-xl mx-auto"
+            style={{ opacity: textOpacity }}
           >
             Discover how your package travels from warehouse to doorstep in three seamless steps
           </p>
