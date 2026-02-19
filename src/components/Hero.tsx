@@ -3,12 +3,34 @@ import { Canvas } from '@react-three/fiber'
 import Scene3D, { type HoverTarget } from './Scene3D'
 import { TextReveal, LineReveal, FadeIn } from './TextReveal'
 
+// Match Scene3D: same mouse strength and coefficients so text parallax is in sync with drone/camera
+const MOUSE_STRENGTH_NORMAL = 0.4
+const MOUSE_X_COEF = 3.5
+const MOUSE_Y_COEF = 2
+const LERP_FACTOR = 0.08
+const PIXELS_PER_UNIT = 18
+// 3D tilt: strong angles so text clearly feels like a plane in 3D space
+const TILT_Y_DEG = 12
+const TILT_X_DEG = 10
+const TILT_PERSPECTIVE_PX = 500
+const TILT_TRANSLATE_Z = 40
+
 export default function Hero() {
   const [mouse, setMouse] = useState({ normalizedX: 0, normalizedY: 0 })
   const [scrollProgress, setScrollProgress] = useState(0)
   const [hoveredTarget, setHoveredTarget] = useState<HoverTarget>(null)
   const [focusDroneUntil, setFocusDroneUntil] = useState(0)
   const sectionRef = useRef<HTMLElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const mouseRef = useRef(mouse)
+  const scrollRef = useRef(scrollProgress)
+  const smoothedX = useRef(0)
+  const smoothedY = useRef(0)
+  const smoothedRotateX = useRef(0)
+  const smoothedRotateY = useRef(0)
+
+  mouseRef.current = mouse
+  scrollRef.current = scrollProgress
 
   const onMouseMove = useCallback((e: React.MouseEvent<HTMLElement>) => {
     const x = (e.clientX / window.innerWidth) * 2 - 1
@@ -18,14 +40,43 @@ export default function Hero() {
 
   useEffect(() => {
     const onScroll = () => {
-      // Progress 0→1 over full hero height (220vh) so scroll fully drives drone along path
       const heroHeight = 2.2 * window.innerHeight
       const progress = Math.min(1, window.scrollY / heroHeight)
       setScrollProgress(progress)
     }
-    onScroll() // set initial value
+    onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Same lerp as Scene3D camera (0.08 per frame) so text and drone stay in sync; add 3D tilt for same-space feel
+  useEffect(() => {
+    let raf = 0
+    const tick = () => {
+      const { normalizedX, normalizedY } = mouseRef.current
+      const scroll = scrollRef.current
+      const mouseStrength = MOUSE_STRENGTH_NORMAL * (1 - scroll * 0.7)
+      const targetX = normalizedX * MOUSE_X_COEF * mouseStrength * PIXELS_PER_UNIT
+      const targetY = -normalizedY * MOUSE_Y_COEF * mouseStrength * PIXELS_PER_UNIT
+      smoothedX.current += (targetX - smoothedX.current) * LERP_FACTOR
+      smoothedY.current += (targetY - smoothedY.current) * LERP_FACTOR
+      const targetRotateY = normalizedX * TILT_Y_DEG * mouseStrength
+      const targetRotateX = normalizedY * TILT_X_DEG * mouseStrength
+      smoothedRotateX.current += (targetRotateX - smoothedRotateX.current) * LERP_FACTOR
+      smoothedRotateY.current += (targetRotateY - smoothedRotateY.current) * LERP_FACTOR
+      const scrollY = -Math.min(1, scroll / 0.2) * 48
+      const el = contentRef.current
+      if (el) {
+        const tx = smoothedX.current
+        const ty = scrollY + smoothedY.current
+        const rx = smoothedRotateX.current
+        const ry = smoothedRotateY.current
+        el.style.transform = `translate3d(${tx}px, ${ty}px, ${TILT_TRANSLATE_Z}px) rotateX(${rx}deg) rotateY(${ry}deg)`
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
   }, [])
 
   const handleDroneClick = useCallback((clockSeconds: number) => {
@@ -62,15 +113,26 @@ export default function Hero() {
           </Canvas>
         </div>
         
-        {/* Content overlay — centered on screen, drone appears above in 3D */}
+        {/* Content overlay — perspective wrapper so text tilt reads as real 3D */}
         <div
-          className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-center items-center text-center px-6 sm:px-8 md:px-12 transition-[opacity,transform] duration-500 ease-out"
+          className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-center items-center transition-[opacity,visibility] duration-500 ease-out"
           style={{
             opacity: Math.max(0, 1 - scrollProgress / 0.2),
-            transform: `translateY(${-Math.min(1, scrollProgress / 0.2) * 48}px)`,
             visibility: scrollProgress >= 0.2 ? 'hidden' : 'visible',
+            perspective: TILT_PERSPECTIVE_PX,
+            perspectiveOrigin: '50% 50%',
+            transformStyle: 'preserve-3d',
           }}
         >
+          <div
+            ref={contentRef}
+            className="flex flex-col justify-center items-center text-center px-6 sm:px-8 md:px-12 w-full min-h-0"
+            style={{
+              transformOrigin: '50% 50%',
+              backfaceVisibility: 'hidden',
+              willChange: 'transform',
+            }}
+          >
           <div className="max-w-4xl mx-auto">
             <LineReveal delay={0.2}>
               <p className="mb-6 text-xs font-medium uppercase tracking-[0.4em] text-teal-600">
@@ -113,6 +175,7 @@ export default function Hero() {
                 Partner with us
               </a>
             </FadeIn>
+          </div>
           </div>
         </div>
         

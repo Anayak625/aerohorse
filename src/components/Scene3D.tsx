@@ -41,6 +41,10 @@ const DRONE_VIEW_SCROLL_END = 0.65
 const DRONE_VIEW_BLEND_IN = 0.03   // 17%→20% smooth ramp in
 const DRONE_VIEW_BLEND_OUT = 0.03  // 62%→65% smooth ramp out
 
+const DRONE_GLTF_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/drone/scene.gltf'
+const DRONE_TARGET_SIZE = 3
+useGLTF.preload(DRONE_GLTF_URL)
+
 export default function Scene3D({
   mouse = { normalizedX: 0, normalizedY: 0 },
   scrollProgress = 0,
@@ -118,12 +122,14 @@ export default function Scene3D({
 
         <GroundPlane />
         <DataCity scrollProgress={scrollProgress} />
-        <DroneAnimated
-          scrollProgress={scrollProgress}
-          onHoverChange={onHoverChange}
-          onDroneClick={onDroneClick}
-          focusTargetRef={focusTarget}
-        />
+        <Suspense fallback={null}>
+          <DroneAnimated
+            scrollProgress={scrollProgress}
+            onHoverChange={onHoverChange}
+            onDroneClick={onDroneClick}
+            focusTargetRef={focusTarget}
+          />
+        </Suspense>
         <Pods onHoverChange={onHoverChange} />
         <Suspense fallback={<TruckPlaceholder />}>
           <DeliveryCar scrollProgress={scrollProgress} />
@@ -136,29 +142,6 @@ export default function Scene3D({
       </EffectComposer>
     </>
   )
-}
-
-// Motor physics configuration
-interface MotorState {
-  currentRPM: number
-  targetRPM: number
-  rotation: number
-  thrust: number
-  temperature: number
-}
-
-// Realistic motor physics constants
-const MOTOR_CONFIG = {
-  maxRPM: 12000,
-  idleRPM: 1200,
-  hoverRPM: 6500,
-  accelerationRate: 8000, // RPM per second
-  decelerationRate: 4000, // RPM per second (slower due to inertia)
-  thrustCoefficient: 0.00001, // Thrust = coefficient * RPM^2
-  torqueCoefficient: 0.000001,
-  momentOfInertia: 0.00005, // kg*m^2
-  thermalCoefficient: 0.0001,
-  coolingRate: 0.05,
 }
 
 function DroneAnimated({
@@ -175,653 +158,103 @@ function DroneAnimated({
   const ref = useRef<THREE.Group>(null)
   const [hovered, setHovered] = useState(false)
   const { clock } = useThree()
-  const trailRef = useRef<THREE.Points>(null)
-  const rotorRefs = useRef<THREE.Mesh[]>([])
-  const blurRefs = useRef<THREE.Mesh[]>([])
-  const motorHeatRefs = useRef<THREE.Mesh[]>([])
-  const downwashRefs = useRef<THREE.Points[]>([])
+  const { scene } = useGLTF(DRONE_GLTF_URL)
 
-  // Motor state for each of the 4 motors
-  // Motor layout: 0=Front-Left (CCW), 1=Front-Right (CW), 2=Back-Left (CW), 3=Back-Right (CCW)
-  const motorStates = useRef<MotorState[]>([
-    { currentRPM: 0, targetRPM: 0, rotation: 0, thrust: 0, temperature: 20 },
-    { currentRPM: 0, targetRPM: 0, rotation: 0, thrust: 0, temperature: 20 },
-    { currentRPM: 0, targetRPM: 0, rotation: 0, thrust: 0, temperature: 20 },
-    { currentRPM: 0, targetRPM: 0, rotation: 0, thrust: 0, temperature: 20 },
-  ])
-  
-  // Gyroscopic precession accumulator
-  const gyroEffect = useRef({ pitch: 0, roll: 0, yaw: 0 })
-  
-  // Previous frame time for delta calculation
-  const lastTime = useRef(0)
-  const isStarted = useRef(false)
-  const startupProgress = useRef(0)
+  // Refs for the 4 propellers
+  const wingsRef = useRef<THREE.Object3D[]>([])
 
-  const trailGeom = useMemo(() => {
-    const positions = new Float32Array(50 * 3)
-    const geom = new THREE.BufferGeometry()
-    geom.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-    return geom
-  }, [])
+  const { clonedScene, scale: modelScale, baseOffset } = useMemo(() => {
+    const clone = scene.clone()
+    wingsRef.current = []
 
-  // Downwash particle geometry for each motor
-  const downwashGeoms = useMemo(() => {
-    return [0, 1, 2, 3].map(() => {
-      const count = 20
-      const positions = new Float32Array(count * 3)
-      const geom = new THREE.BufferGeometry()
-      geom.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-      return geom
-    })
-  }, [])
-
-  const trailPositions = useRef<THREE.Vector3[]>([])
-  
-  // Downwash particle positions
-  const downwashParticles = useRef<{ pos: THREE.Vector3; vel: THREE.Vector3; life: number }[][]>([
-    [], [], [], []
-  ])
-
-  // Detailed propeller blade geometry with realistic airfoil profile
-  const bladeGeom = useMemo(() => {
-    const shape = new THREE.Shape()
-
-    // More realistic airfoil-shaped blades
-    const hubRadius = 0.018
-
-    shape.moveTo(hubRadius, 0.008)
-
-    // Blade 1 - with twist and taper like real props
-    shape.bezierCurveTo(0.06, 0.025, 0.15, 0.022, 0.24, 0.006)
-    shape.bezierCurveTo(0.25, 0.003, 0.252, -0.003, 0.24, -0.006)
-    shape.bezierCurveTo(0.15, -0.015, 0.06, -0.018, hubRadius, -0.008)
-
-    shape.lineTo(-hubRadius, -0.008)
-
-    // Blade 2 - mirrored
-    shape.bezierCurveTo(-0.06, -0.018, -0.15, -0.015, -0.24, -0.006)
-    shape.bezierCurveTo(-0.252, -0.003, -0.25, 0.003, -0.24, 0.006)
-    shape.bezierCurveTo(-0.15, 0.022, -0.06, 0.025, -hubRadius, 0.008)
-
-    shape.lineTo(hubRadius, 0.008)
-
-    const extrudeSettings = { 
-      depth: 0.004, 
-      bevelEnabled: true, 
-      bevelThickness: 0.0015, 
-      bevelSize: 0.0015, 
-      bevelSegments: 3 
-    }
-    return new THREE.ExtrudeGeometry(shape, extrudeSettings)
-  }, [])
-
-  // Calculate motor RPM based on flight state (pitch, roll, yaw demands)
-  const calculateMotorRPMs = (
-    baseThrottle: number,
-    pitchDemand: number,
-    rollDemand: number,
-    yawDemand: number
-  ): number[] => {
-    const base = MOTOR_CONFIG.idleRPM + baseThrottle * (MOTOR_CONFIG.hoverRPM - MOTOR_CONFIG.idleRPM)
-    
-    // Motor mixing for quadcopter X configuration
-    // FL(0), FR(1), BL(2), BR(3)
-    // Pitch: Front motors decrease, rear increase for forward pitch
-    // Roll: Left motors decrease, right increase for right roll
-    // Yaw: CW motors (1,2) increase, CCW motors (0,3) decrease for CW yaw
-    
-    const pitchMix = pitchDemand * 1500
-    const rollMix = rollDemand * 1500
-    const yawMix = yawDemand * 800
-    
-    return [
-      Math.max(0, Math.min(MOTOR_CONFIG.maxRPM, base - pitchMix - rollMix + yawMix)), // FL CCW
-      Math.max(0, Math.min(MOTOR_CONFIG.maxRPM, base - pitchMix + rollMix - yawMix)), // FR CW
-      Math.max(0, Math.min(MOTOR_CONFIG.maxRPM, base + pitchMix - rollMix - yawMix)), // BL CW
-      Math.max(0, Math.min(MOTOR_CONFIG.maxRPM, base + pitchMix + rollMix + yawMix)), // BR CCW
-    ]
-  }
-
-  useFrame((state) => {
-    if (!ref.current) return
-    
-    const currentTime = state.clock.elapsedTime
-    const deltaTime = Math.min(currentTime - lastTime.current, 0.1) // Cap delta for stability
-    lastTime.current = currentTime
-    
-    // Startup sequence - motors spool up gradually
-    if (!isStarted.current && currentTime > 0.5) {
-      isStarted.current = true
-    }
-    
-    if (isStarted.current && startupProgress.current < 1) {
-      startupProgress.current = Math.min(1, startupProgress.current + deltaTime * 0.3)
-    }
-
-    // Drone in front of camera so it's visible; Y just below camera (5) so it appears at top of view above "The future of delivery"
-    const pos = new THREE.Vector3(0, 5.3, 1)
-    const pitchDemand = 0.12
-    const rollDemand = Math.sin(currentTime * 0.3) * 0.05
-    const yawDemand = Math.sin(currentTime * 0.5) * 0.08
-    
-    // Calculate target RPMs for each motor
-    const throttle = startupProgress.current * (0.7 + Math.sin(currentTime * 2) * 0.05)
-    const targetRPMs = calculateMotorRPMs(throttle, pitchDemand, rollDemand, yawDemand)
-    
-    // Update motor physics
-    let totalGyroTorque = 0
-    motorStates.current.forEach((motor, i) => {
-      motor.targetRPM = targetRPMs[i]
-      
-      // Motor acceleration/deceleration with realistic inertia
-      const rpmDiff = motor.targetRPM - motor.currentRPM
-      const accelRate = rpmDiff > 0 ? MOTOR_CONFIG.accelerationRate : MOTOR_CONFIG.decelerationRate
-      const maxChange = accelRate * deltaTime
-      
-      if (Math.abs(rpmDiff) < maxChange) {
-        motor.currentRPM = motor.targetRPM
-      } else {
-        motor.currentRPM += Math.sign(rpmDiff) * maxChange
+    clone.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        (child as THREE.Mesh).castShadow = true
+          ; (child as THREE.Mesh).receiveShadow = true
       }
-      
-      // Calculate thrust (proportional to RPM squared)
-      motor.thrust = MOTOR_CONFIG.thrustCoefficient * motor.currentRPM * motor.currentRPM
-      
-      // Motor temperature simulation
-      const heatGeneration = MOTOR_CONFIG.thermalCoefficient * motor.currentRPM * deltaTime
-      const cooling = MOTOR_CONFIG.coolingRate * (motor.temperature - 20) * deltaTime
-      motor.temperature = Math.max(20, Math.min(120, motor.temperature + heatGeneration - cooling))
-      
-      // Update rotor rotation based on RPM
-      // Convert RPM to radians per frame: RPM * 2π / 60 * deltaTime
-      const angularVelocity = (motor.currentRPM * Math.PI * 2) / 60
-      const direction = (i === 0 || i === 3) ? 1 : -1 // CCW for 0,3, CW for 1,2
-      motor.rotation += direction * angularVelocity * deltaTime
-      
-      // Accumulate gyroscopic torque (counter-rotating pairs cancel, but imbalance creates precession)
-      totalGyroTorque += direction * motor.currentRPM * MOTOR_CONFIG.torqueCoefficient
+      // Identify wing parent nodes (Wing1, Wing2, Wing3, Wing4) - not the mesh children
+      if (/^Wing\d$/.test(child.name)) {
+        wingsRef.current.push(child)
+      }
     })
-    
-    // Apply gyroscopic precession effect
-    gyroEffect.current.yaw += totalGyroTorque * deltaTime * 0.1
-    
-    // Smooth movement with vibration from motor imbalance
-    const vibrationAmplitude = 0.002 * (motorStates.current.reduce((sum, m) => sum + m.currentRPM, 0) / 4 / MOTOR_CONFIG.maxRPM)
-    const vibration = new THREE.Vector3(
-      Math.sin(currentTime * 120) * vibrationAmplitude,
-      Math.sin(currentTime * 150 + 1) * vibrationAmplitude,
-      Math.sin(currentTime * 130 + 2) * vibrationAmplitude
-    )
-    
+
+    const box = new THREE.Box3().setFromObject(clone)
+    const size = new THREE.Vector3()
+    const center = new THREE.Vector3()
+    box.getSize(size)
+    box.getCenter(center)
+    const maxDim = Math.max(size.x, size.y, size.z) || 1
+    const s = DRONE_TARGET_SIZE / maxDim
+    return {
+      clonedScene: clone,
+      scale: s,
+      baseOffset: {
+        x: -center.x * s,
+        y: -center.y * s,
+        z: -center.z * s,
+      },
+    }
+  }, [scene])
+
+
+  useFrame((state, delta) => {
+    if (!ref.current) return
+    const currentTime = state.clock.elapsedTime
+
+    // Spin propellers - rotate around local Z axis (due to model orientation)
+    // Delta is the time since last frame, use it for frame-rate independent animation
+    wingsRef.current.forEach((wing, i) => {
+      // Alternate direction for adjacent propellers (realistic counter-rotation)
+      const direction = i % 2 === 0 ? 1 : -1
+      wing.rotation.z += 25 * direction * delta // fast spinning
+    })
+
+    // Drone in front of camera so it's visible; baseOffset centers the model at this position
+    const pos = new THREE.Vector3(0, 5.3, 1)
+    pos.x += baseOffset.x
+    pos.y += baseOffset.y
+    pos.z += baseOffset.z
+    pos.y += Math.sin(currentTime * 3) * 0.03 // Subtle hover bob
+
     ref.current.position.copy(pos)
-    ref.current.position.add(vibration)
-    ref.current.position.y += Math.sin(currentTime * 3) * 0.03 // Subtle hover bob
 
     if (focusTargetRef) focusTargetRef.current.copy(ref.current.position)
 
-    // Base scale to make drone bigger; hover adds a slight pop
-    const baseScale = 3
-    const targetScale = baseScale * (hovered ? 1.12 : 1)
+    const targetScale = modelScale * (hovered ? 1.12 : 1)
     const s = ref.current.scale.x + (targetScale - ref.current.scale.x) * 0.12
     ref.current.scale.setScalar(s)
 
-    // Orientation: face forward (toward +Z) with gentle tilt
     ref.current.lookAt(0, 4, 5)
-    ref.current.rotation.z = rollDemand * 0.8 + gyroEffect.current.yaw * 0.01
+    const rollDemand = Math.sin(currentTime * 0.3) * 0.05
+    const pitchDemand = 0.12
+    ref.current.rotation.z = rollDemand * 0.8
     ref.current.rotation.x = pitchDemand * 0.5
-
-    // Update rotor visuals
-    rotorRefs.current.forEach((rotor, i) => {
-      if (rotor) {
-        const motor = motorStates.current[i]
-        rotor.rotation.y = motor.rotation
-        
-        // Blade pitch variation based on thrust (collective pitch simulation)
-        const bladePitch = 0.1 + (motor.currentRPM / MOTOR_CONFIG.maxRPM) * 0.15
-        rotor.rotation.x = bladePitch
-      }
-    })
-
-    // Update blur discs based on RPM
-    blurRefs.current.forEach((blur, i) => {
-      if (blur) {
-        const motor = motorStates.current[i]
-        const rpmRatio = motor.currentRPM / MOTOR_CONFIG.maxRPM
-        
-        // Blur opacity increases with RPM
-        blur.material.opacity = 0.02 + rpmRatio * 0.12
-        
-        // Scale blur disc slightly based on RPM (tip flex simulation)
-        const flexScale = 1 + rpmRatio * 0.02
-        blur.scale.set(flexScale, flexScale, 1)
-        
-        // Subtle color shift based on motor temperature
-        const tempRatio = (motor.temperature - 20) / 100
-        blur.material.color.setRGB(1, 1 - tempRatio * 0.3, 1 - tempRatio * 0.5)
-      }
-    })
-    
-    // Update motor heat glow
-    motorHeatRefs.current.forEach((heat, i) => {
-      if (heat) {
-        const motor = motorStates.current[i]
-        const tempRatio = (motor.temperature - 20) / 100
-        heat.material.opacity = tempRatio * 0.3
-        heat.material.emissiveIntensity = tempRatio * 2
-      }
-    })
-    
-    // Update downwash particles
-    motorStates.current.forEach((motor, i) => {
-      const particles = downwashParticles.current[i]
-      const rpmRatio = motor.currentRPM / MOTOR_CONFIG.maxRPM
-      
-      // Spawn new particles based on thrust
-      if (rpmRatio > 0.1 && Math.random() < rpmRatio * 0.5) {
-        const armConfig = [
-          { x: 0.15, z: 0.2 },
-          { x: -0.15, z: 0.2 },
-          { x: 0.15, z: -0.2 },
-          { x: -0.15, z: -0.2 },
-        ][i]
-        
-        particles.push({
-          pos: new THREE.Vector3(
-            pos.x + armConfig.x + (Math.random() - 0.5) * 0.1,
-            pos.y - 0.1,
-            pos.z + armConfig.z + (Math.random() - 0.5) * 0.1
-          ),
-          vel: new THREE.Vector3(
-            (Math.random() - 0.5) * 0.5,
-            -2 - rpmRatio * 3,
-            (Math.random() - 0.5) * 0.5
-          ),
-          life: 1
-        })
-      }
-      
-      // Update existing particles
-      for (let j = particles.length - 1; j >= 0; j--) {
-        const p = particles[j]
-        p.pos.add(p.vel.clone().multiplyScalar(deltaTime))
-        p.vel.y += 2 * deltaTime // Air resistance
-        p.vel.multiplyScalar(0.98) // Drag
-        p.life -= deltaTime * 2
-        
-        if (p.life <= 0) {
-          particles.splice(j, 1)
-        }
-      }
-      
-      // Update geometry
-      if (downwashRefs.current[i] && downwashGeoms[i]) {
-        const positions = downwashGeoms[i].attributes.position.array as Float32Array
-        for (let j = 0; j < 20; j++) {
-          const p = particles[j]
-          if (p) {
-            positions[j * 3] = p.pos.x
-            positions[j * 3 + 1] = p.pos.y
-            positions[j * 3 + 2] = p.pos.z
-          } else {
-            positions[j * 3] = 0
-            positions[j * 3 + 1] = -1000
-            positions[j * 3 + 2] = 0
-          }
-        }
-        downwashGeoms[i].attributes.position.needsUpdate = true
-      }
-    })
-
-    // Trail
-    if (trailPositions.current) {
-      trailPositions.current.unshift(ref.current.position.clone())
-      if (trailPositions.current.length > 50) trailPositions.current.pop()
-
-      if (trailRef.current && trailGeom) {
-        const positions = trailGeom.attributes.position.array as Float32Array
-        for (let i = 0; i < 50; i++) {
-          const p = trailPositions.current[i] || ref.current.position
-          positions[i * 3] = p.x
-          positions[i * 3 + 1] = p.y
-          positions[i * 3 + 2] = p.z
-        }
-        trailGeom.attributes.position.needsUpdate = true
-      }
-    }
   })
 
-  // Foldable Drone Config (Mavic-like) - Sleeker Dimensions
-  const bodyWidth = 0.12 // Slimmer body
-  // Arm positions - FL(0), FR(1), BL(2), BR(3)
-  const armConfigs = [
-    { pos: [bodyWidth / 2 + 0.14, 0.01, 0.26], rot: -Math.PI / 6, isFront: true, isRight: false, motorDir: 1 }, // Front Left CCW
-    { pos: [-(bodyWidth / 2 + 0.14), 0.01, 0.26], rot: Math.PI / 6, isFront: true, isRight: true, motorDir: -1 },  // Front Right CW
-    { pos: [bodyWidth / 2 + 0.14, 0.02, -0.26], rot: Math.PI / 6, isFront: false, isRight: false, motorDir: -1 },  // Back Left CW
-    { pos: [-(bodyWidth / 2 + 0.14), 0.02, -0.26], rot: -Math.PI / 6, isFront: false, isRight: true, motorDir: 1 }, // Back Right CCW
-  ]
-
-  // Drone Material
-  const bodyMaterial = <meshStandardMaterial color="#475569" roughness={0.7} metalness={0.2} />
-  const darkMaterial = <meshStandardMaterial color="#1e293b" roughness={0.8} metalness={0.1} />
-
   return (
-    <>
-      <Float speed={2} rotationIntensity={0.15} floatIntensity={0.15}>
-        <group
-          ref={ref}
-          onPointerOver={(e) => {
-            e.stopPropagation()
-            setHovered(true)
-            onHoverChange?.('drone')
-          }}
-          onPointerOut={() => {
-            setHovered(false)
-            onHoverChange?.(null)
-          }}
-          onClick={(e) => {
-            e.stopPropagation()
-            onDroneClick?.(clock.getElapsedTime())
-          }}
-        >
-          {/* Invisible hit area for raycasting (groups don't receive pointer in R3F) */}
-          <mesh position={[0, 0, 0]} visible={false}>
-            <boxGeometry args={[2.5, 1.5, 2.5]} />
-          </mesh>
-
-          {/* --- FUSELAGE --- */}
-          <group scale={[1, 0.8, 1]} rotation={[0, Math.PI, 0]}>
-
-            {/* Main Central Block */}
-            <mesh position={[0, 0, 0]} castShadow receiveShadow>
-              <boxGeometry args={[0.12, 0.06, 0.35]} />
-              {bodyMaterial}
-            </mesh>
-
-            {/* Top Shell / Battery */}
-            <mesh position={[0, 0.04, -0.04]} castShadow>
-              <boxGeometry args={[0.10, 0.03, 0.25]} />
-              <meshStandardMaterial color="#334155" roughness={0.6} />
-            </mesh>
-            
-            {/* Battery indicator LEDs */}
-            {[-0.03, -0.01, 0.01, 0.03].map((x, idx) => (
-              <mesh key={idx} position={[x, 0.056, -0.04]}>
-                <boxGeometry args={[0.012, 0.002, 0.008]} />
-                <meshBasicMaterial color={idx < 3 ? "#22c55e" : "#78716c"} />
-              </mesh>
-            ))}
-
-            {/* Tapered Nose (Front) */}
-            <mesh position={[0, -0.01, 0.19]} rotation={[Math.PI / 6, 0, 0]}>
-              <boxGeometry args={[0.10, 0.05, 0.08]} />
-              {bodyMaterial}
-            </mesh>
-
-            {/* Rear Vent/Taper */}
-            <mesh position={[0, 0.01, -0.19]} rotation={[-0.15, 0, 0]}>
-              <boxGeometry args={[0.10, 0.05, 0.08]} />
-              {bodyMaterial}
-            </mesh>
-            
-            {/* ESC Vents - showing heat dissipation */}
-            {[-0.04, 0.04].map((x, idx) => (
-              <group key={idx} position={[x, 0.03, -0.15]}>
-                {[0, 0.015, 0.03].map((z, i) => (
-                  <mesh key={i} position={[0, 0, z]}>
-                    <boxGeometry args={[0.02, 0.005, 0.008]} />
-                    <meshStandardMaterial color="#0f172a" />
-                  </mesh>
-                ))}
-              </group>
-            ))}
-
-            {/* Side intakes */}
-            <mesh position={[0.065, 0, 0]}>
-              <boxGeometry args={[0.015, 0.03, 0.15]} />
-              {darkMaterial}
-            </mesh>
-            <mesh position={[-0.065, 0, 0]}>
-              <boxGeometry args={[0.015, 0.03, 0.15]} />
-              {darkMaterial}
-            </mesh>
-          </group>
-
-          {/* --- ARMS & MOTORS --- */}
-          {armConfigs.map((config, i) => (
-            <group key={i} position={[config.pos[0] > 0 ? 0.06 : -0.06, 0, config.pos[2] > 0 ? 0.08 : -0.08]}>
-              {/* Arm Bar with internal wiring detail */}
-              <mesh
-                position={[config.pos[0] * 0.45, config.isFront ? 0 : 0.01, config.pos[2] * 0.45]}
-                rotation={[0, config.isFront ? (config.isRight ? -0.5 : 0.5) : (config.isRight ? 0.5 : -0.5), 0]}
-              >
-                <boxGeometry args={[0.22, 0.02, 0.03]} />
-                {bodyMaterial}
-              </mesh>
-              
-              {/* Wire routing on arm */}
-              <mesh
-                position={[config.pos[0] * 0.45, (config.isFront ? 0 : 0.01) + 0.012, config.pos[2] * 0.45]}
-                rotation={[0, config.isFront ? (config.isRight ? -0.5 : 0.5) : (config.isRight ? 0.5 : -0.5), 0]}
-              >
-                <boxGeometry args={[0.18, 0.003, 0.008]} />
-                <meshStandardMaterial color="#1a1a1a" />
-              </mesh>
-
-              {/* Motor Mount at end of arm */}
-              <group position={[config.pos[0] * 0.9, config.isFront ? 0 : 0.01, config.pos[2] * 0.9]}>
-                {/* Motor Bell Housing - Brushless motor detail */}
-                <mesh position={[0, 0.015, 0]}>
-                  <cylinderGeometry args={[0.028, 0.026, 0.035, 16]} />
-                  <meshStandardMaterial color="#1a1a1a" metalness={0.7} roughness={0.3} />
-                </mesh>
-                
-                {/* Motor Stator (visible through gaps) */}
-                <mesh position={[0, 0.015, 0]}>
-                  <cylinderGeometry args={[0.018, 0.018, 0.03, 12]} />
-                  <meshStandardMaterial color="#c2410c" metalness={0.4} roughness={0.6} />
-                </mesh>
-                
-                {/* Motor Shaft */}
-                <mesh position={[0, 0.038, 0]}>
-                  <cylinderGeometry args={[0.003, 0.003, 0.015, 8]} />
-                  <meshStandardMaterial color="#a1a1aa" metalness={0.9} roughness={0.1} />
-                </mesh>
-                
-                {/* Motor Heat Glow (temperature visualization) */}
-                <mesh 
-                  ref={el => { if (el) motorHeatRefs.current[i] = el }}
-                  position={[0, 0.015, 0]}
-                >
-                  <cylinderGeometry args={[0.032, 0.032, 0.04, 16]} />
-                  <meshBasicMaterial color="#f97316" transparent opacity={0} />
-                </mesh>
-
-                {/* Landing Gear Leg (Front Arms Only) */}
-                {config.isFront && (
-                  <group position={[0, -0.08, 0]}>
-                    <mesh position={[0, 0, 0]}>
-                      <cylinderGeometry args={[0.008, 0.006, 0.12, 8]} />
-                      {bodyMaterial}
-                    </mesh>
-                    <mesh position={[0, -0.06, 0]}>
-                      <sphereGeometry args={[0.01, 8, 8]} />
-                      <meshStandardMaterial color="#1a1a1a" />
-                    </mesh>
-                    {/* Nav Light with proper aviation colors */}
-                    <mesh position={[0, -0.02, 0.01]}>
-                      <sphereGeometry args={[0.006, 8, 8]} />
-                      <meshBasicMaterial color={config.isRight ? "#ef4444" : "#22c55e"} />
-                      <pointLight color={config.isRight ? "#ef4444" : "#22c55e"} distance={0.4} intensity={0.5} />
-                    </mesh>
-                  </group>
-                )}
-
-                {/* Rear Anti-collision strobe */}
-                {!config.isFront && (
-                  <mesh position={[0, 0, 0.03]}>
-                    <sphereGeometry args={[0.006, 8, 8]} />
-                    <meshBasicMaterial color="white" />
-                    <pointLight color="white" distance={0.25} intensity={0.5} />
-                  </mesh>
-                )}
-
-                {/* Propeller Assembly */}
-                <group position={[0, 0.045, 0]}>
-                  {/* Propeller Blade with realistic spin */}
-                  <mesh
-                    ref={el => { if (el) rotorRefs.current[i] = el }}
-                    geometry={bladeGeom}
-                    castShadow
-                  >
-                    <meshStandardMaterial 
-                      color={config.motorDir === 1 ? "#0f172a" : "#1e3a5f"} 
-                      metalness={0.15} 
-                      roughness={0.45} 
-                    />
-                  </mesh>
-                  
-                  {/* Prop Hub/Nut with direction indicator */}
-                  <mesh position={[0, 0.006, 0]}>
-                    <cylinderGeometry args={[0.008, 0.007, 0.01, 8]} />
-                    <meshStandardMaterial 
-                      color={config.motorDir === 1 ? "#dc2626" : "#1d4ed8"} 
-                      metalness={0.8} 
-                    />
-                  </mesh>
-                  
-                  {/* Motion Blur Disc - opacity controlled by RPM */}
-                  <mesh
-                    ref={el => { if (el) blurRefs.current[i] = el }}
-                    rotation={[-Math.PI / 2, 0, 0]}
-                    position={[0, 0.003, 0]}
-                  >
-                    <ringGeometry args={[0.02, 0.26, 48]} />
-                    <meshBasicMaterial color="#ffffff" opacity={0.02} transparent side={THREE.DoubleSide} />
-                  </mesh>
-                  
-                  {/* Secondary blur layer for more realistic effect */}
-                  <mesh
-                    rotation={[-Math.PI / 2, 0, 0]}
-                    position={[0, 0.004, 0]}
-                  >
-                    <ringGeometry args={[0.15, 0.25, 48]} />
-                    <meshBasicMaterial color="#94a3b8" opacity={0.03} transparent side={THREE.DoubleSide} />
-                  </mesh>
-                </group>
-              </group>
-            </group>
-          ))}
-
-          {/* --- GIMBAL & CAMERA --- */}
-          <group position={[0, -0.08, 0.24]}>
-            {/* 3-Axis Gimbal */}
-            <mesh position={[0, 0.03, 0]}>
-              <boxGeometry args={[0.05, 0.008, 0.02]} />
-              {darkMaterial}
-            </mesh>
-            <mesh position={[0.025, 0.015, 0]} rotation={[0, 0, Math.PI / 2]}>
-              <boxGeometry args={[0.03, 0.008, 0.02]} />
-              {darkMaterial}
-            </mesh>
-            
-            {/* Gimbal Motors (tiny servos) */}
-            {[[-0.02, 0.025, 0], [0.02, 0.025, 0]].map((pos, idx) => (
-              <mesh key={idx} position={pos as [number, number, number]}>
-                <cylinderGeometry args={[0.004, 0.004, 0.008, 8]} />
-                <meshStandardMaterial color="#374151" metalness={0.6} />
-              </mesh>
-            ))}
-
-            {/* Camera Housing */}
-            <group position={[0, 0, 0.01]}>
-              <mesh>
-                <boxGeometry args={[0.04, 0.035, 0.045]} />
-                <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.2} />
-              </mesh>
-              {/* Lens Assembly */}
-              <mesh position={[0, 0, 0.024]} rotation={[Math.PI / 2, 0, 0]}>
-                <cylinderGeometry args={[0.016, 0.016, 0.006, 16]} />
-                <meshStandardMaterial color="#000" metalness={0.9} roughness={0.1} />
-              </mesh>
-              <mesh position={[0, 0, 0.028]} rotation={[Math.PI / 2, 0, 0]}>
-                <circleGeometry args={[0.013, 16]} />
-                <meshBasicMaterial color="#1e40af" transparent opacity={0.4} />
-              </mesh>
-              {/* IR sensors */}
-              {[[-0.015, 0.012, 0.023], [0.015, 0.012, 0.023]].map((pos, idx) => (
-                <mesh key={idx} position={pos as [number, number, number]}>
-                  <sphereGeometry args={[0.003, 8, 8]} />
-                  <meshBasicMaterial color="#7c3aed" />
-                </mesh>
-              ))}
-            </group>
-          </group>
-
-          {/* --- PAYLOAD --- */}
-          <group position={[0, -0.12, -0.02]}>
-            {/* Payload Release Mechanism */}
-            <mesh position={[0, 0.04, 0]}>
-              <boxGeometry args={[0.08, 0.015, 0.08]} />
-              <meshStandardMaterial color="#333" metalness={0.5} />
-            </mesh>
-            {/* Servo for release */}
-            <mesh position={[0.035, 0.04, 0]}>
-              <boxGeometry args={[0.015, 0.012, 0.025]} />
-              <meshStandardMaterial color="#1f2937" />
-            </mesh>
-            {/* Package — hidden once dropped (scroll >= 15%), same parcel animates in world space */}
-            {scrollProgress < 0.15 && (
-              <group position={[0, -0.05, 0]}>
-                <mesh>
-                  <boxGeometry args={[0.14, 0.1, 0.16]} />
-                  <meshStandardMaterial color="#f97316" />
-                </mesh>
-                <mesh position={[0, 0, 0]} scale={[1.02, 1.02, 0.2]}>
-                  <boxGeometry args={[0.08, 0.08, 0.08]} />
-                  <meshBasicMaterial color="#d97706" />
-                </mesh>
-                {[[-0.03, 0], [0.03, 0], [0, -0.03], [0, 0.03]].map((offset, idx) => (
-                  <mesh key={idx} position={[offset[0], 0.06, offset[1]]}>
-                    <cylinderGeometry args={[0.001, 0.001, 0.06, 4]} />
-                    <meshBasicMaterial color="#000" />
-                  </mesh>
-                ))}
-              </group>
-            )}
-          </group>
-
-          {/* --- GPS/Compass Module --- */}
-          <mesh position={[0, 0.06, -0.12]}>
-            <cylinderGeometry args={[0.025, 0.025, 0.008, 16]} />
-            <meshStandardMaterial color="#1f2937" metalness={0.3} />
-          </mesh>
-          <mesh position={[0, 0.065, -0.12]}>
-            <cylinderGeometry args={[0.018, 0.018, 0.003, 16]} />
-            <meshStandardMaterial color="#374151" metalness={0.5} />
-          </mesh>
-
-        </group>
-      </Float>
-
-      {/* Downwash Particles - visualize rotor wash */}
-      {downwashGeoms.map((geom, i) => (
-        <points key={i} ref={el => { if (el) downwashRefs.current[i] = el }} geometry={geom}>
-          <pointsMaterial 
-            color="#94a3b8" 
-            size={0.015} 
-            transparent 
-            opacity={0.3} 
-            sizeAttenuation 
-          />
-        </points>
-      ))}
-
-      {/* Trail */}
-      <points ref={trailRef} geometry={trailGeom}>
-        <pointsMaterial color="#0d9488" size={0.06} transparent opacity={0.5} sizeAttenuation />
-      </points>
-    </>
+    <Float speed={2} rotationIntensity={0.15} floatIntensity={0.15}>
+      <group
+        ref={ref}
+        onPointerOver={(e) => {
+          e.stopPropagation()
+          setHovered(true)
+          onHoverChange?.('drone')
+        }}
+        onPointerOut={() => {
+          setHovered(false)
+          onHoverChange?.(null)
+        }}
+        onClick={(e) => {
+          e.stopPropagation()
+          onDroneClick?.(clock.getElapsedTime())
+        }}
+      >
+        <mesh position={[0, 0, 0]} visible={false}>
+          <boxGeometry args={[2.5, 1.5, 2.5]} />
+        </mesh>
+        <primitive object={clonedScene} />
+      </group>
+    </Float>
   )
 }
 
@@ -846,21 +279,21 @@ const TRAVEL_END = { x: -POD_DIAMETER, y: POD_TOP_Y, z: 0 }
 
 function DroppingParcel({ scrollProgress }: { scrollProgress: number }) {
   const visible = scrollProgress >= DROP_START_SCROLL && scrollProgress < TRAVEL_END_SCROLL
-  
+
   // Phase 1: Drop from drone to pod (15% - 60%)
   const dropT = visible
     ? Math.min(1, (scrollProgress - DROP_START_SCROLL) / (DROP_END_SCROLL - DROP_START_SCROLL))
     : 0
   const dropTEased = dropT * dropT
-  
+
   // Phase 2: Travel from pod toward truck (60% - 65%)
   const travelT = scrollProgress >= TRAVEL_START_SCROLL
     ? Math.min(1, (scrollProgress - TRAVEL_START_SCROLL) / (TRAVEL_END_SCROLL - TRAVEL_START_SCROLL))
     : 0
   const travelTEased = travelT * travelT * (3 - 2 * travelT) // smoothstep for smooth motion
-  
+
   let x: number, y: number, z: number
-  
+
   if (scrollProgress < TRAVEL_START_SCROLL) {
     // Phase 1: Dropping to pod
     x = DROP_START.x + (DROP_END.x - DROP_START.x) * dropTEased
@@ -909,31 +342,31 @@ useGLTF.preload(TRUCK_GLTF_URL)
 function getTruckPathPosition(t: number): { x: number; z: number; rotation: number } {
   const startX = TRUCK_POSITION_X
   const startZ = 0
-  
+
   // t=0: truck is stationary, original orientation (Math.PI)
   if (t <= 0) {
     return { x: startX, z: startZ, rotation: Math.PI }
   }
-  
+
   // 70-72% scroll: -X direction (0% - 16.7% of path t)
   // 72-82% scroll: turn + +Z direction (16.7% - 100% of path t)
   // So phase1 ends at t = (72-70)/(82-70) = 2/12 = 0.167
   const phase1End = 0.167
   const straightDistance = POD_DIAMETER
-  
+
   if (t <= phase1End) {
     // Phase 1: Straight line in -X direction (70-72% scroll)
     const phase1T = t / phase1End
     const x = startX - straightDistance * phase1T
     return { x, z: startZ, rotation: Math.PI }
   }
-  
+
   const turnStartX = startX - straightDistance
-  
+
   // Quick smooth turn (16.7% - 25% of path t)
   const phase2End = 0.25
   const turnRadius = 2
-  
+
   if (t <= phase2End) {
     // Smooth arc turn: 90 degrees to the right (toward +Z, scroll direction)
     const phase2T = (t - phase1End) / (phase2End - phase1End)
@@ -944,12 +377,12 @@ function getTruckPathPosition(t: number): { x: number; z: number; rotation: numb
     const rotation = Math.PI + angle
     return { x, z, rotation }
   }
-  
+
   // Phase 3: Straight line in +Z direction (75-85% scroll)
   const turnEndX = turnStartX - turnRadius
   const turnEndZ = startZ + turnRadius
   const straightLength = 15
-  
+
   const phase3T = (t - phase2End) / (1 - phase2End)
   const x = turnEndX
   const z = turnEndZ + straightLength * phase3T
@@ -972,13 +405,13 @@ function TruckPlaceholder() {
 function DeliveryCar({ scrollProgress = 0 }: { scrollProgress?: number }) {
   const { scene } = useGLTF(TRUCK_GLTF_URL)
   const groupRef = useRef<THREE.Group>(null)
-  
+
   const { clonedScene, scale, baseOffset } = useMemo(() => {
     const clone = scene.clone()
     clone.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         (child as THREE.Mesh).castShadow = true
-        ;(child as THREE.Mesh).receiveShadow = true
+          ; (child as THREE.Mesh).receiveShadow = true
       }
     })
     const box = new THREE.Box3().setFromObject(clone)
@@ -988,7 +421,7 @@ function DeliveryCar({ scrollProgress = 0 }: { scrollProgress?: number }) {
     box.getCenter(center)
     const maxDim = Math.max(size.x, size.y, size.z) || 1
     const s = TRUCK_TARGET_SIZE / maxDim
-    
+
     return {
       clonedScene: clone,
       scale: s,
@@ -1004,23 +437,23 @@ function DeliveryCar({ scrollProgress = 0 }: { scrollProgress?: number }) {
   const truckT = scrollProgress >= TRUCK_START_SCROLL
     ? Math.min(1, (scrollProgress - TRUCK_START_SCROLL) / (TRUCK_END_SCROLL - TRUCK_START_SCROLL))
     : 0
-  
+
   const pathPos = getTruckPathPosition(truckT)
-  
+
   // Apply easing for smoother motion
   const easedT = truckT * truckT * (3 - 2 * truckT)
   const animatedPathPos = getTruckPathPosition(easedT)
-  
+
   const posX = animatedPathPos.x + baseOffset.x
   const posY = baseOffset.y
   const posZ = animatedPathPos.z + baseOffset.z
   const rotationY = animatedPathPos.rotation
 
   return (
-    <group 
+    <group
       ref={groupRef}
-      position={[posX, posY, posZ]} 
-      scale={[scale, scale, scale]} 
+      position={[posX, posY, posZ]}
+      scale={[scale, scale, scale]}
       rotation={[0, rotationY, 0]}
     >
       <primitive object={clonedScene} />
@@ -1054,10 +487,10 @@ function Pod({
     }
     const pulse = hovered ? 0.5 + Math.sin(state.clock.elapsedTime * 8) * 0.15 : 0.85
     if (ringRef.current?.material) {
-      ;(ringRef.current.material as THREE.MeshBasicMaterial).opacity = pulse
+      ; (ringRef.current.material as THREE.MeshBasicMaterial).opacity = pulse
     }
     if (glowRef.current?.material) {
-      ;(glowRef.current.material as THREE.MeshBasicMaterial).opacity = hovered ? 1 : 0.9
+      ; (glowRef.current.material as THREE.MeshBasicMaterial).opacity = hovered ? 1 : 0.9
     }
   })
 
