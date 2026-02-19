@@ -10,6 +10,17 @@ const GRID_SIZE = 25
 
 export type HoverTarget = 'drone' | 'pod' | null
 
+// --- Data City: one unified city where buildings encode weather + delivery data ---
+type WeatherType = 'sunny' | 'rain' | 'snow' | 'cloudy' | 'fog'
+interface BuildingData {
+  gridX: number
+  gridZ: number
+  districtId: number
+  weather: WeatherType
+  deliveryActivity: number // 0–1, drives height + glow
+  temperature: number     // 0–1, warm–cool for tint
+}
+
 interface SceneProps {
   mouse?: { normalizedX: number; normalizedY: number }
   scrollProgress?: number
@@ -106,8 +117,7 @@ export default function Scene3D({
         <Sparkles count={50} scale={30} size={2.5} speed={0.2} opacity={0.2} color="#a8a29e" />
 
         <GroundPlane />
-        <CityGrid />
-        <CityBlocks />
+        <DataCity scrollProgress={scrollProgress} />
         <DroneAnimated
           scrollProgress={scrollProgress}
           onHoverChange={onHoverChange}
@@ -1098,52 +1108,53 @@ function Pod({
   )
 }
 
-function CityBlocks() {
-  const blocks = useMemo(() => {
-    const out: { pos: [number, number, number]; size: [number, number, number]; glow: boolean }[] = []
-    const seed = 42
-    const random = (i: number) => {
-      const x = Math.sin(seed + i * 9999) * 10000
-      return x - Math.floor(x)
-    }
-    let i = 0
-    for (let x = -GRID_SIZE; x <= GRID_SIZE; x += 3.5) {
-      for (let z = -GRID_SIZE; z <= GRID_SIZE; z += 3.5) {
-        const dist = Math.sqrt(x * x + z * z)
-        if (dist > 6 && dist < 22 && random(i) > 0.35) {
-          const h = 0.4 + random(i + 1) * 2.8
-          out.push({
-            pos: [x + random(i + 2) * 1.2, h / 2, z + random(i + 3) * 1.2],
-            size: [0.9 + random(i + 4) * 0.7, h, 0.9 + random(i + 5) * 0.7],
-            glow: random(i + 6) > 0.88
-          })
-        }
-        i++
-      }
-    }
-    return out
-  }, [])
-
-  return (
-    <group>
-      {blocks.map((b, i) => (
-        <mesh key={i} position={b.pos}>
-          <boxGeometry args={b.size} />
-          <meshStandardMaterial
-            color={b.glow ? '#e7e5e4' : '#d6d3d1'}
-            emissive={b.glow ? '#0d9488' : '#000000'}
-            emissiveIntensity={b.glow ? 0.1 : 0}
-            metalness={0.3}
-            roughness={0.8}
-          />
-        </mesh>
-      ))}
-    </group>
-  )
+// One unified city: layout is a single grid of building slots; each building encodes weather + delivery data
+const CITY_RING_INNER = 6
+const CITY_RING_OUTER = 22
+const CITY_STEP = 3
+const SEED = 42
+function seeded(i: number) {
+  const x = Math.sin(SEED + i * 9999) * 10000
+  return x - Math.floor(x)
 }
 
-function CityGrid() {
-  const [verts, indices] = useMemo(() => {
+function buildCityLayout(): BuildingData[] {
+  const out: BuildingData[] = []
+  let idx = 0
+  for (let x = -GRID_SIZE; x <= GRID_SIZE; x += CITY_STEP) {
+    for (let z = -GRID_SIZE; z <= GRID_SIZE; z += CITY_STEP) {
+      const dist = Math.sqrt(x * x + z * z)
+      if (dist < CITY_RING_INNER || dist > CITY_RING_OUTER) continue
+      if (seeded(idx) > 0.32) {
+        const districtId = Math.floor((Math.atan2(z, x) + Math.PI) / (Math.PI / 2)) % 4
+        out.push({
+          gridX: x,
+          gridZ: z,
+          districtId,
+          weather: 'sunny',
+          deliveryActivity: 0.3 + seeded(idx + 1) * 0.65,
+          temperature: 0.4 + seeded(idx + 2) * 0.4,
+        })
+      }
+      idx++
+    }
+  }
+  return out
+}
+
+const WEATHER_CYCLE: WeatherType[] = ['sunny', 'cloudy', 'rain', 'fog', 'snow', 'cloudy', 'sunny']
+function getWeatherForScroll(scrollProgress: number, districtId: number): WeatherType {
+  const phase = (scrollProgress * 1.2 + districtId * 0.15) % 1
+  const index = Math.floor(phase * (WEATHER_CYCLE.length - 1))
+  return WEATHER_CYCLE[Math.min(index, WEATHER_CYCLE.length - 1)]
+}
+
+function DataCity({ scrollProgress = 0 }: { scrollProgress?: number }) {
+  const { clock } = useThree()
+  const t = clock.getElapsedTime()
+  const layout = useMemo(() => buildCityLayout(), [])
+
+  const gridGeom = useMemo(() => {
     const step = 2.5
     const points: number[] = []
     const idx: number[] = []
@@ -1156,20 +1167,176 @@ function CityGrid() {
       idx.push(i, i + 1)
       i += 2
     }
-    return [new Float32Array(points), new Uint16Array(idx)]
+    const g = new THREE.BufferGeometry()
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(points), 3))
+    g.setIndex(new THREE.BufferAttribute(new Uint16Array(idx), 1))
+    return g
   }, [])
+
+  return (
+    <group>
+      <lineSegments geometry={gridGeom}>
+        <lineBasicMaterial color="#0d9488" transparent opacity={0.15} />
+      </lineSegments>
+      {layout.map((b, i) => {
+        const weather = getWeatherForScroll(scrollProgress, b.districtId)
+        const activity = b.deliveryActivity * (0.7 + 0.3 * Math.sin(t * 0.5 + i * 0.7))
+        const height = 0.5 + activity * 3.2
+        const wx = 0.85 + seeded(i + 10) * 0.6
+        const wz = 0.85 + seeded(i + 11) * 0.6
+        const px = b.gridX + (seeded(i + 20) - 0.5) * 1.2
+        const pz = b.gridZ + (seeded(i + 21) - 0.5) * 1.2
+        const pos: [number, number, number] = [px, height / 2, pz]
+        const color = weatherToColor(weather, b.temperature)
+        const emissive = activity > 0.7 ? '#0d9488' : '#000000'
+        const emissiveIntensity = activity > 0.7 ? 0.08 + 0.06 * Math.sin(t * 2 + i) : 0
+        const showDataStrip = activity > 0.55
+        return (
+          <group key={i} position={pos}>
+            <mesh castShadow receiveShadow>
+              <boxGeometry args={[wx, height, wz]} />
+              <meshStandardMaterial
+                color={color}
+                emissive={emissive}
+                emissiveIntensity={emissiveIntensity}
+                metalness={0.25}
+                roughness={0.82}
+              />
+            </mesh>
+            {showDataStrip && (
+              <mesh position={[0, height * 0.15, wz / 2 + 0.01]} rotation={[0, 0, 0]}>
+                <planeGeometry args={[wx * 0.7, height * 0.12]} />
+                <meshBasicMaterial
+                  color="#0d9488"
+                  transparent
+                  opacity={0.4 + 0.25 * Math.sin(t * 2 + i * 0.7)}
+                />
+              </mesh>
+            )}
+            <WeatherOnRoof weather={weather} height={height} t={t} index={i} />
+          </group>
+        )
+      })}
+      <WeatherParticles scrollProgress={scrollProgress} />
+    </group>
+  )
+}
+
+function weatherToColor(weather: WeatherType, temp: number): string {
+  switch (weather) {
+    case 'sunny':
+      return temp > 0.5 ? '#f5e6d3' : '#e8e4df'
+    case 'rain':
+      return '#b8c5d4'
+    case 'snow':
+      return '#e2e8ef'
+    case 'fog':
+      return '#c9c6c1'
+    case 'cloudy':
+      return '#d4d1cc'
+    default:
+      return '#d6d3d1'
+  }
+}
+
+function WeatherOnRoof({ weather, height, t, index }: { weather: WeatherType; height: number; t: number; index: number }) {
+  const y = height / 2 + 0.02
+  const pulse = 0.92 + 0.08 * Math.sin(t * 1.5 + index * 0.5)
+  if (weather === 'sunny') {
+    return (
+      <group position={[0, y, 0]}>
+        <mesh>
+          <circleGeometry args={[0.12 * pulse, 16]} />
+          <meshBasicMaterial color="#fcd34d" />
+        </mesh>
+      </group>
+    )
+  }
+  if (weather === 'cloudy') {
+    return (
+      <group position={[0, y, 0]} scale={[0.2, 0.08, 0.15]}>
+        <mesh>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshBasicMaterial color="#94a3b8" />
+        </mesh>
+      </group>
+    )
+  }
+  if (weather === 'rain') {
+    return (
+      <group position={[0, y, 0]}>
+        {[0, 1, 2].map((i) => (
+          <mesh key={i} position={[(i - 1) * 0.08, (Math.sin(t * 3 + i) * 0.02), 0]}>
+            <boxGeometry args={[0.02, 0.06, 0.02]} />
+            <meshBasicMaterial color="#64748b" transparent opacity={0.8} />
+          </mesh>
+        ))}
+      </group>
+    )
+  }
+  if (weather === 'snow') {
+    return (
+      <group position={[0, y, 0]}>
+        <mesh>
+          <boxGeometry args={[0.15, 0.04, 0.15]} />
+          <meshBasicMaterial color="#f1f5f9" />
+        </mesh>
+      </group>
+    )
+  }
+  if (weather === 'fog') {
+    return (
+      <group position={[0, y + 0.03, 0]}>
+        <mesh>
+          <planeGeometry args={[0.2, 0.1]} />
+          <meshBasicMaterial color="#94a3b8" transparent opacity={0.4} />
+        </mesh>
+      </group>
+    )
+  }
+  return null
+}
+
+function WeatherParticles({ scrollProgress }: { scrollProgress: number }) {
+  const count = 120
+  const meshRef = useRef<THREE.Points>(null)
+  const weather = getWeatherForScroll(scrollProgress, 0)
+  const isRain = weather === 'rain'
+  const isSnow = weather === 'snow'
 
   const geom = useMemo(() => {
     const g = new THREE.BufferGeometry()
-    g.setAttribute('position', new THREE.BufferAttribute(verts, 3))
-    g.setIndex(new THREE.BufferAttribute(indices, 1))
+    const pos = new Float32Array(count * 3)
+    for (let i = 0; i < count; i++) {
+      pos[i * 3] = (Math.random() - 0.5) * 50
+      pos[i * 3 + 1] = Math.random() * 35
+      pos[i * 3 + 2] = (Math.random() - 0.5) * 50
+    }
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3))
     return g
-  }, [verts, indices])
+  }, [])
 
+  useFrame(() => {
+    if (!meshRef.current || (!isRain && !isSnow)) return
+    const pos = geom.attributes.position.array as Float32Array
+    for (let i = 0; i < count; i++) {
+      pos[i * 3 + 1] -= (isSnow ? 0.08 : 0.25) * 0.016
+      if (pos[i * 3 + 1] < -2) pos[i * 3 + 1] += 37
+    }
+    geom.attributes.position.needsUpdate = true
+  })
+
+  if (!isRain && !isSnow) return null
   return (
-    <lineSegments geometry={geom}>
-      <lineBasicMaterial color="#0d9488" transparent opacity={0.15} />
-    </lineSegments>
+    <points ref={meshRef} geometry={geom}>
+      <pointsMaterial
+        size={isSnow ? 0.15 : 0.06}
+        color={isSnow ? '#f1f5f9' : '#94a3b8'}
+        transparent
+        opacity={isSnow ? 0.6 : 0.5}
+        sizeAttenuation
+      />
+    </points>
   )
 }
 

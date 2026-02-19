@@ -92,14 +92,9 @@ export default function TransitionSection() {
       >
         <div 
           className="text-center max-w-3xl px-8"
-          style={{ 
-            opacity: textOpacity,
-            transform: `translateY(${(0.5 - progress) * 50}px) scale(${0.9 + fadeInOut * 0.1})`
-          }}
         >
           <div 
             className="mb-6 inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50/80 px-4 py-2 backdrop-blur-sm"
-            style={{ opacity: textOpacity }}
           >
             <div className="h-2 w-2 rounded-full bg-teal-500 animate-pulse" />
             <span className="text-xs font-medium uppercase tracking-wider text-teal-700">
@@ -109,7 +104,6 @@ export default function TransitionSection() {
           
           <h2 
             className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-stone-900"
-            style={{ opacity: textOpacity }}
           >
             Follow the
             <span className="block gradient-text">Journey</span>
@@ -117,7 +111,6 @@ export default function TransitionSection() {
           
           <p 
             className="mt-6 text-lg text-stone-600 max-w-xl mx-auto"
-            style={{ opacity: textOpacity }}
           >
             Discover how your package travels from warehouse to doorstep in three seamless steps
           </p>
@@ -125,7 +118,6 @@ export default function TransitionSection() {
           {/* Scroll indicator */}
           <div 
             className="mt-12 flex flex-col items-center gap-3"
-            style={{ opacity: textOpacity * 0.7 }}
           >
             <div className="flex items-center gap-2">
               {[0, 1, 2].map((i) => (
