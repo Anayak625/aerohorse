@@ -12,6 +12,22 @@ import Technology from './sections/Technology'
 import CTA from './sections/CTA'
 import Footer from './components/Footer'
 
+// Stick scrolling: when truck reaches end (0.65), a chunk of scroll only drives parcel drop (0.65→0.88)
+const JOURNEY_TRUCK_END = 0.65
+const PARCEL_DROP_END = 0.88
+const STICK_SCROLL_START = 0.42 // raw scroll ratio where we enter "truck at end" stick
+const STICK_SCROLL_END = 0.72   // raw scroll ratio where parcel drop finishes
+
+function stickScrollToProgress(raw: number): number {
+  if (raw <= STICK_SCROLL_START) {
+    return (raw / STICK_SCROLL_START) * JOURNEY_TRUCK_END
+  }
+  if (raw <= STICK_SCROLL_END) {
+    return JOURNEY_TRUCK_END + ((raw - STICK_SCROLL_START) / (STICK_SCROLL_END - STICK_SCROLL_START)) * (PARCEL_DROP_END - JOURNEY_TRUCK_END)
+  }
+  return PARCEL_DROP_END + ((raw - STICK_SCROLL_END) / (1 - STICK_SCROLL_END)) * (1 - PARCEL_DROP_END)
+}
+
 function JourneySection() {
   const sectionRef = useRef<HTMLElement>(null)
   const [scrollProgress, setScrollProgress] = useState(0)
@@ -23,9 +39,10 @@ function JourneySection() {
       const rect = el.getBoundingClientRect()
       const viewportHeight = window.innerHeight
       const sectionHeight = rect.height
-      
+
       if (rect.top < viewportHeight && rect.bottom > 0) {
-        const progress = Math.max(0, Math.min(1, (viewportHeight - rect.top) / (sectionHeight + viewportHeight)))
+        const raw = Math.max(0, Math.min(1, (viewportHeight - rect.top) / (sectionHeight + viewportHeight)))
+        const progress = stickScrollToProgress(raw)
         setScrollProgress(progress)
       }
     }
@@ -34,11 +51,22 @@ function JourneySection() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  const narrativePhase =
+    scrollProgress < 0.35 ? 0 : scrollProgress < 0.6 ? 1 : 2
+  const narrativeLines = [
+    'The truck leaves the hub. Engine on, route set.',
+    'Through the city. Your package is in the back, moving with the traffic.',
+    'The parcel leaves the truck. It reaches the building. Delivery done.',
+  ]
+  const phaseLabels = ['Hub', 'Transit', 'Delivery']
+  // Crossfade: show current and next line for smooth transition
+  const narrativeOpacity = Math.min(1, scrollProgress * 4)
+
   return (
     <section
       ref={sectionRef}
       id="journey"
-      className="relative h-[200vh] w-full bg-stone-50"
+      className="relative h-[280vh] w-full bg-stone-50"
     >
       <div className="sticky top-0 h-screen w-full overflow-hidden">
         <Canvas
@@ -50,6 +78,90 @@ function JourneySection() {
             <JourneyScene scrollProgress={scrollProgress} />
           </Suspense>
         </Canvas>
+
+        {/* Story arc: Hub — Transit — Delivery */}
+        <div
+          className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none px-6 pb-10 md:px-12 md:pb-14"
+          aria-live="polite"
+        >
+          <div className="max-w-2xl border-l-2 border-teal-500/30 pl-5 md:pl-6">
+            {/* Step counter */}
+            <p
+              className="text-[10px] font-medium uppercase tracking-[0.3em] text-stone-400 mb-4 transition-opacity duration-500"
+              style={{ opacity: narrativeOpacity }}
+            >
+              Step {narrativePhase + 1} of 3 · The work
+            </p>
+
+            {/* Phase labels with connecting line */}
+            <div className="mb-6 flex items-center gap-2">
+              {phaseLabels.map((label, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span
+                    className={`text-xs font-semibold uppercase tracking-widest transition-all duration-500 ${
+                      narrativePhase === i
+                        ? 'text-teal-600'
+                        : narrativePhase > i
+                          ? 'text-teal-500/70'
+                          : 'text-stone-300'
+                    }`}
+                  >
+                    {label}
+                  </span>
+                  {i < phaseLabels.length - 1 && (
+                    <div className="w-8 md:w-12 h-px bg-stone-200 overflow-hidden">
+                      <div
+                        className="h-full bg-teal-500 transition-all duration-700 ease-out"
+                        style={{
+                          width: narrativePhase > i ? '100%' : '0%',
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Narrative line with crossfade */}
+            <div className="relative min-h-[4.5rem] md:min-h-[3.5rem]">
+              {narrativeLines.map((line, i) => (
+                <p
+                  key={i}
+                  className="absolute left-0 right-0 top-0 text-base md:text-lg text-stone-600 leading-relaxed transition-all duration-500"
+                  style={{
+                    opacity: narrativePhase === i ? narrativeOpacity : 0,
+                    transform:
+                      narrativePhase === i
+                        ? 'translateY(0)'
+                        : narrativePhase > i
+                          ? 'translateY(-10px)'
+                          : 'translateY(10px)',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  {line}
+                </p>
+              ))}
+            </div>
+
+            {/* Story progress: filled path */}
+            <div className="mt-5 flex items-center gap-1">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="h-1 flex-1 max-w-20 rounded-full bg-stone-200 overflow-hidden"
+                >
+                  <div
+                    className="h-full bg-gradient-to-r from-teal-400 to-teal-600 rounded-full transition-all duration-700 ease-out"
+                    style={{
+                      width: narrativePhase >= i ? '100%' : '0%',
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   )

@@ -1,23 +1,25 @@
 import { useRef, useEffect, useState } from 'react'
+import { Suspense } from 'react'
+import TransitionTruck from './TransitionTruck'
 
 export default function TransitionSection() {
-  const sectionRef = useRef<HTMLElement>(null)
-  const [progress, setProgress] = useState(0)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const [scrollState, setScrollState] = useState({ enterProgress: 0, truckProgress: 0 })
 
   useEffect(() => {
-    const el = sectionRef.current
+    const el = wrapperRef.current
     if (!el) return
 
     const onScroll = () => {
       const rect = el.getBoundingClientRect()
-      const viewportHeight = window.innerHeight
+      const vh = window.innerHeight
       const top = rect.top
-      const height = rect.height
 
-      if (top < viewportHeight && top + height > 0) {
-        const p = 1 - (top + height - viewportHeight) / (height + viewportHeight)
-        setProgress(Math.max(0, Math.min(1, p)))
-      }
+      // Section scrolling into view: enterProgress 0→1 (for content/background visibility).
+      const enterProgress = top >= vh ? 0 : top <= 0 ? 1 : (vh - top) / vh
+      // Truck moves ONLY when section is stuck (top <= 0). 0→1 as we scroll 100vh while stuck.
+      const truckProgress = top > 0 ? 0 : Math.min(1, -top / vh)
+      setScrollState({ enterProgress, truckProgress })
     }
 
     onScroll()
@@ -25,26 +27,28 @@ export default function TransitionSection() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const fadeInOut = progress < 0.5 
-    ? progress * 2 
-    : 1 - (progress - 0.5) * 2
-
-  const textOpacity = Math.max(0.15, Math.min(1, fadeInOut * 1.2))
-  const bgOpacity = Math.min(1, progress * 2)
+  const { enterProgress, truckProgress } = scrollState
+  const fadeInOut = truckProgress < 0.5 ? truckProgress * 2 : 1 - (truckProgress - 0.5) * 2
+  const bgOpacity = Math.min(1, enterProgress * 2)
+  const truckLayerOpacity = truckProgress < 0.08 ? truckProgress / 0.08 : truckProgress > 0.92 ? (1 - truckProgress) / 0.08 : 1
 
   return (
-    <section
-      ref={sectionRef}
-      className="relative h-[100vh] w-full overflow-hidden"
+    <div
+      ref={wrapperRef}
+      className="relative w-full"
+      style={{ height: '200vh' }}
     >
+      <section
+        className="sticky top-0 left-0 right-0 h-screen w-full overflow-hidden"
+      >
       {/* Gradient overlay for smooth blend */}
       <div 
-        className="absolute inset-0 bg-gradient-to-b from-stone-50 via-white to-stone-50"
+        className="absolute inset-0 z-0 bg-gradient-to-b from-stone-50 via-white to-stone-50"
         style={{ opacity: bgOpacity }}
       />
       
       {/* Animated teal accent lines */}
-      <div className="absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0 z-0 overflow-hidden">
         {[...Array(5)].map((_, i) => (
           <div
             key={i}
@@ -53,7 +57,7 @@ export default function TransitionSection() {
               top: `${20 + i * 15}%`,
               left: '-10%',
               right: '-10%',
-              transform: `translateX(${(progress - 0.5) * (i % 2 === 0 ? 100 : -100)}%)`,
+              transform: `translateX(${(truckProgress - 0.5) * (i % 2 === 0 ? 100 : -100)}%)`,
               opacity: fadeInOut * 0.6,
               transition: 'transform 0.1s ease-out'
             }}
@@ -62,7 +66,7 @@ export default function TransitionSection() {
       </div>
 
       {/* Floating particles effect */}
-      <div className="absolute inset-0 pointer-events-none">
+      <div className="absolute inset-0 z-0 pointer-events-none">
         {[...Array(20)].map((_, i) => {
           const baseX = (i * 17) % 100
           const baseY = (i * 23) % 100
@@ -78,7 +82,7 @@ export default function TransitionSection() {
                 width: size,
                 height: size,
                 opacity: fadeInOut * (0.2 + (i % 5) * 0.1),
-                transform: `translateY(${(progress - 0.5) * -200 + Math.sin(delay) * 50}px) scale(${0.5 + progress * 0.5})`,
+                transform: `translateY(${(truckProgress - 0.5) * -200 + Math.sin(delay) * 50}px) scale(${0.5 + truckProgress * 0.5})`,
                 transition: 'transform 0.15s ease-out, opacity 0.2s ease-out'
               }}
             />
@@ -88,49 +92,87 @@ export default function TransitionSection() {
 
       {/* Centered transition content */}
       <div 
-        className="sticky top-0 h-screen w-full flex items-center justify-center"
+        className="sticky top-0 h-screen w-full flex items-center justify-center relative z-10"
       >
         <div 
           className="text-center max-w-3xl px-8"
         >
           <div 
-            className="mb-6 inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50/80 px-4 py-2 backdrop-blur-sm"
+            className="mb-6 inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50/80 px-4 py-2 backdrop-blur-sm transition-all duration-700"
+            style={{
+              opacity: enterProgress > 0.1 ? 1 : 0,
+              transform: enterProgress > 0.1 ? 'translateY(0)' : 'translateY(8px)',
+            }}
           >
-            <div className="h-2 w-2 rounded-full bg-teal-500 animate-pulse" />
+            <span className="text-[10px] font-semibold text-teal-600/80 tracking-[0.2em]">
+              CHAPTER 1
+            </span>
+            <span className="text-stone-300">·</span>
+            <div className="h-1.5 w-1.5 rounded-full bg-teal-500 animate-pulse" />
             <span className="text-xs font-medium uppercase tracking-wider text-teal-700">
-              Interactive Experience
+              Scroll to begin
             </span>
           </div>
           
           <h2 
-            className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-stone-900"
+            className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-stone-900 transition-all duration-700"
+            style={{
+              opacity: enterProgress > 0.2 ? 1 : 0,
+              transform: enterProgress > 0.2 ? 'translateY(0)' : 'translateY(12px)',
+            }}
           >
-            Follow the
-            <span className="block gradient-text">Journey</span>
+            One package.
+            <span 
+              className="block gradient-text mt-1"
+              style={{
+                opacity: enterProgress > 0.35 ? 1 : 0,
+                transform: enterProgress > 0.35 ? 'translateY(0)' : 'translateY(8px)',
+                transition: 'opacity 0.6s ease-out, transform 0.6s ease-out',
+              }}
+            >
+              One story.
+            </span>
           </h2>
           
           <p 
-            className="mt-6 text-lg text-stone-600 max-w-xl mx-auto"
+            className="mt-6 text-lg text-stone-600 max-w-xl mx-auto italic transition-all duration-700"
+            style={{
+              opacity: enterProgress > 0.5 ? 1 : 0,
+              transform: enterProgress > 0.5 ? 'translateY(0)' : 'translateY(10px)',
+            }}
           >
-            Discover how your package travels from warehouse to doorstep in three seamless steps
+            From hub to city to your door—the road, the ride, the moment it arrives.
           </p>
 
-          {/* Scroll indicator */}
+          {/* Story progress bars with labels — fill as truck moves (when stuck) */}
           <div 
-            className="mt-12 flex flex-col items-center gap-3"
+            className="mt-14 flex flex-col items-center gap-4 relative z-10 transition-all duration-500"
+            style={{
+              opacity: enterProgress > 0.4 ? 1 : 0,
+            }}
           >
-            <div className="flex items-center gap-2">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="h-1.5 w-8 rounded-full bg-stone-200 overflow-hidden"
-                >
-                  <div 
-                    className="h-full bg-teal-500 rounded-full transition-all duration-500"
+            <div className="flex items-center gap-4 md:gap-6">
+              {[
+                { label: 'Begin', threshold: 0.3 },
+                { label: 'Watch', threshold: 0.5 },
+                { label: 'Go', threshold: 0.7 },
+              ].map(({ label, threshold }, i) => (
+                <div key={i} className="flex flex-col items-center gap-2">
+                  <div className="h-1.5 w-10 rounded-full bg-stone-200 overflow-hidden">
+                    <div 
+                    className="h-full bg-teal-500 rounded-full transition-all duration-500 ease-out"
                     style={{ 
-                      width: progress > 0.3 + i * 0.2 ? '100%' : '0%'
+                      width: truckProgress > threshold ? '100%' : '0%',
                     }}
                   />
+                  </div>
+                  <span 
+                    className={`text-[10px] uppercase tracking-[0.2em] transition-colors duration-300 ${
+                      truckProgress > threshold ? 'text-teal-600' : 'text-stone-300'
+                    }`}
+                  >
+                    {label}
+                  </span>
                 </div>
               ))}
             </div>
@@ -141,11 +183,26 @@ export default function TransitionSection() {
         </div>
       </div>
 
+      {/* Truck (GLTF) passing from left to right — above gradient so it's visible */}
+      <div
+        className="absolute inset-0 z-[5] pointer-events-none"
+        style={{
+          opacity: truckLayerOpacity,
+          pointerEvents: 'none',
+        }}
+        aria-hidden
+      >
+        <Suspense fallback={null}>
+          <TransitionTruck progress={truckProgress} />
+        </Suspense>
+      </div>
+
       {/* Bottom gradient blend into journey section */}
       <div 
         className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-stone-50 to-transparent pointer-events-none"
-        style={{ opacity: Math.max(0, (progress - 0.6) * 2.5) }}
+        style={{ opacity: Math.max(0, (truckProgress - 0.6) * 2.5) }}
       />
     </section>
+    </div>
   )
 }
