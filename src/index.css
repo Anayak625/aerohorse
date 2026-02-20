@@ -103,13 +103,168 @@ body {
   background: #a8a29e;
 }
 
+/* Custom Cursor - High Performance */
+.cursor-container {
+  --x: 0px;
+  --y: 0px;
+  --stretch: 1;
+  --squish: 1;
+  --angle: 0deg;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  pointer-events: none;
+  transform: translate(var(--x), var(--y));
+  will-change: transform;
+}
+
+.cursor-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) rotate(var(--angle)) scaleX(var(--stretch)) scaleY(var(--squish));
+  transition: width 0.25s cubic-bezier(0.23, 1, 0.32, 1), 
+              height 0.25s cubic-bezier(0.23, 1, 0.32, 1),
+              opacity 0.2s ease;
+  box-shadow: 0 0 12px rgba(20, 184, 166, 0.6);
+}
+
+.cursor-ring {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  border: 1.5px solid rgba(168, 162, 158, 0.4);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) rotate(var(--angle)) scaleX(var(--stretch)) scaleY(var(--squish));
+  transition: width 0.4s cubic-bezier(0.23, 1, 0.32, 1), 
+              height 0.4s cubic-bezier(0.23, 1, 0.32, 1),
+              border-color 0.3s ease,
+              background 0.3s ease,
+              opacity 0.3s ease;
+}
+
+.cursor-glow {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  background: radial-gradient(circle, rgba(20, 184, 166, 0.15) 0%, transparent 70%);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 0.4s ease, width 0.4s ease, height 0.4s ease;
+}
+
+/* Hover state */
+.cursor-container[data-hover="true"] .cursor-dot {
+  width: 6px;
+  height: 6px;
+  opacity: 1;
+}
+
+.cursor-container[data-hover="true"] .cursor-ring {
+  width: 56px;
+  height: 56px;
+  border-color: rgba(20, 184, 166, 0.6);
+  background: rgba(20, 184, 166, 0.08);
+}
+
+.cursor-container[data-hover="true"] .cursor-glow {
+  width: 80px;
+  height: 80px;
+  opacity: 1;
+}
+
+/* Click state */
+.cursor-container[data-clicking="true"] .cursor-dot {
+  transform: translate(-50%, -50%) scale(0.6);
+}
+
+.cursor-container[data-clicking="true"] .cursor-ring {
+  width: 28px;
+  height: 28px;
+  border-color: rgba(20, 184, 166, 0.8);
+  background: rgba(20, 184, 166, 0.15);
+}
+
+.cursor-container[data-clicking="true"] .cursor-glow {
+  width: 40px;
+  height: 40px;
+  opacity: 0.8;
+}
+
 /* Hide cursor on touch devices */
 @media (pointer: coarse) {
-  .cursor-dot,
-  .cursor-follower {
+  .cursor-container {
     display: none !important;
   }
   * {
     cursor: auto !important;
   }
+}
+
+/* Delivery Receipt pulse */
+.receipt-pulse {
+  animation: receiptPulse 2s ease-in-out infinite;
+}
+
+@keyframes receiptPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Pod Network */
+.pod-pulse-ring {
+  animation: podPulseRing 2s ease-out infinite;
+}
+
+@keyframes podPulseRing {
+  0% { r: 1.5; opacity: 0.6; }
+  100% { r: 4; opacity: 0; }
+}
+
+.animate-slideIn {
+  animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.pod-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.pod-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pod-scroll::-webkit-scrollbar-thumb {
+  background: #d6d3d1;
+  border-radius: 2px;
+}
+
+.pod-scroll::-webkit-scrollbar-thumb:hover {
+  background: #a8a29e;
+}
+
+/* Leaflet pod markers: no default icon background */
+.pod-marker-icon.leaflet-div-icon {
+  background: none !important;
+  border: none !important;
+}
+
+.pod-map-container .leaflet-control-zoom {
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  border-radius: 8px;
+  overflow: hidden;
 }

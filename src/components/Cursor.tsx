@@ -1,51 +1,106 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 
 export default function Cursor() {
   const cursorRef = useRef<HTMLDivElement>(null)
-  const followerRef = useRef<HTMLDivElement>(null)
-  const [isHovering, setIsHovering] = useState(false)
-  const [isClicking, setIsClicking] = useState(false)
-  const pos = useRef({ x: 0, y: 0 })
-  const target = useRef({ x: 0, y: 0 })
-  const lastHover = useRef(false)
+  const state = useRef({
+    x: 0,
+    y: 0,
+    targetX: 0,
+    targetY: 0,
+    hover: false,
+    clicking: false,
+    velocity: { x: 0, y: 0 },
+    lastX: 0,
+    lastY: 0,
+  })
 
   useEffect(() => {
+    const cursor = cursorRef.current
+    if (!cursor) return
+
+    const s = state.current
+    let hoveredEl: Element | null = null
+    let checkHoverThrottle = 0
+
     const onMouseMove = (e: MouseEvent) => {
-      target.current = { x: e.clientX, y: e.clientY }
+      s.targetX = e.clientX
+      s.targetY = e.clientY
     }
 
-    const onMouseDown = () => setIsClicking(true)
-    const onMouseUp = () => setIsClicking(false)
+    const onMouseOver = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest?.('a, button, [data-cursor-hover]')
+      if (target && target !== hoveredEl) {
+        hoveredEl = target
+        s.hover = true
+        cursor.dataset.hover = 'true'
+      }
+    }
 
-    document.addEventListener('mousemove', onMouseMove)
+    const onMouseOut = (e: MouseEvent) => {
+      const related = e.relatedTarget as HTMLElement | null
+      if (!related?.closest?.('a, button, [data-cursor-hover]')) {
+        hoveredEl = null
+        s.hover = false
+        cursor.dataset.hover = 'false'
+      }
+    }
+
+    const onMouseDown = () => {
+      s.clicking = true
+      cursor.dataset.clicking = 'true'
+    }
+
+    const onMouseUp = () => {
+      s.clicking = false
+      cursor.dataset.clicking = 'false'
+    }
+
+    document.addEventListener('mousemove', onMouseMove, { passive: true })
+    document.addEventListener('mouseover', onMouseOver, { passive: true })
+    document.addEventListener('mouseout', onMouseOut, { passive: true })
     document.addEventListener('mousedown', onMouseDown)
     document.addEventListener('mouseup', onMouseUp)
 
     let raf: number
     const animate = () => {
-      pos.current.x += (target.current.x - pos.current.x) * 0.15
-      pos.current.y += (target.current.y - pos.current.y) * 0.15
+      const lerp = 0.18
+      s.x += (s.targetX - s.x) * lerp
+      s.y += (s.targetY - s.y) * lerp
 
-      // Re-check hover every frame so 3D hover (data-cursor-hover set from React state) updates cursor
-      const el = document.elementFromPoint(target.current.x, target.current.y) as HTMLElement | null
-      const hovering = !!el?.closest('a, button, [data-cursor-hover]')
-      if (lastHover.current !== hovering) {
-        lastHover.current = hovering
-        setIsHovering(hovering)
+      s.velocity.x = s.x - s.lastX
+      s.velocity.y = s.y - s.lastY
+      s.lastX = s.x
+      s.lastY = s.y
+
+      const speed = Math.sqrt(s.velocity.x ** 2 + s.velocity.y ** 2)
+      const stretch = Math.min(speed * 0.15, 0.6)
+      const angle = Math.atan2(s.velocity.y, s.velocity.x) * (180 / Math.PI)
+
+      cursor.style.setProperty('--x', `${s.x}px`)
+      cursor.style.setProperty('--y', `${s.y}px`)
+      cursor.style.setProperty('--stretch', `${1 + stretch}`)
+      cursor.style.setProperty('--squish', `${1 - stretch * 0.3}`)
+      cursor.style.setProperty('--angle', `${angle}deg`)
+
+      checkHoverThrottle++
+      if (checkHoverThrottle > 10) {
+        checkHoverThrottle = 0
+        const el = document.elementFromPoint(s.targetX, s.targetY)
+        const isHover = !!el?.closest('a, button, [data-cursor-hover]')
+        if (isHover !== s.hover) {
+          s.hover = isHover
+          cursor.dataset.hover = String(isHover)
+        }
       }
 
-      if (cursorRef.current) {
-        cursorRef.current.style.transform = `translate(${target.current.x}px, ${target.current.y}px)`
-      }
-      if (followerRef.current) {
-        followerRef.current.style.transform = `translate(${pos.current.x}px, ${pos.current.y}px)`
-      }
       raf = requestAnimationFrame(animate)
     }
     animate()
 
     return () => {
       document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseover', onMouseOver)
+      document.removeEventListener('mouseout', onMouseOut)
       document.removeEventListener('mousedown', onMouseDown)
       document.removeEventListener('mouseup', onMouseUp)
       cancelAnimationFrame(raf)
@@ -53,27 +108,15 @@ export default function Cursor() {
   }, [])
 
   return (
-    <>
-      <div
-        ref={cursorRef}
-        className={`pointer-events-none fixed left-0 top-0 z-[9999] -translate-x-1/2 -translate-y-1/2 transition-all duration-150 ${
-          isHovering ? 'scale-0' : isClicking ? 'scale-75' : 'scale-100'
-        }`}
-      >
-        <div className="h-2 w-2 rounded-full bg-teal-500" />
-      </div>
-      <div
-        ref={followerRef}
-        className={`pointer-events-none fixed left-0 top-0 z-[9998] -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ${
-          isHovering ? 'scale-150 opacity-100' : isClicking ? 'scale-90 opacity-60' : 'scale-100 opacity-40'
-        }`}
-      >
-        <div
-          className={`flex items-center justify-center rounded-full border transition-all duration-300 ${
-            isHovering ? 'h-16 w-16 border-teal-500 bg-teal-500/10' : 'h-10 w-10 border-stone-400/50'
-          }`}
-        />
-      </div>
-    </>
+    <div
+      ref={cursorRef}
+      data-hover="false"
+      data-clicking="false"
+      className="cursor-container"
+    >
+      <div className="cursor-dot" />
+      <div className="cursor-ring" />
+      <div className="cursor-glow" />
+    </div>
   )
 }

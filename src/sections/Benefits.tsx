@@ -31,7 +31,7 @@ export default function Benefits() {
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-teal-500/5 to-transparent" />
       
-      <div className="relative mx-auto max-w-7xl px-8 md:px-12 lg:px-16">
+      <div className="relative mx-auto px-8 md:px-12 lg:px-16">
         <div className="mb-20 md:mb-28 lg:mb-36 max-w-3xl">
           <FadeIn>
             <p className="mb-6 text-xs font-medium uppercase tracking-[0.4em] text-teal-600">

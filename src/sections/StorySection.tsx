@@ -35,7 +35,7 @@ const steps = [
 export default function StorySection() {
   return (
     <section id="how-it-works" className="relative py-32 md:py-48 lg:py-64 bg-white">
-      <div className="mx-auto max-w-7xl px-8 md:px-12 lg:px-16">
+      <div className="mx-auto px-8 md:px-12 lg:px-16">
         <div className="mb-24 md:mb-32 lg:mb-40">
           <FadeIn>
             <p className="mb-6 text-xs font-medium uppercase tracking-[0.4em] text-teal-600">

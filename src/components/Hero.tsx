@@ -17,20 +17,21 @@ const TILT_TRANSLATE_Z = 40
 
 export default function Hero() {
   const [mouse, setMouse] = useState({ normalizedX: 0, normalizedY: 0 })
-  const [scrollProgress, setScrollProgress] = useState(0)
+  const [scrollState, setScrollState] = useState({ enterProgress: 0, sceneProgress: 0 })
   const [hoveredTarget, setHoveredTarget] = useState<HoverTarget>(null)
   const [focusDroneUntil, setFocusDroneUntil] = useState(0)
   const sectionRef = useRef<HTMLElement>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const mouseRef = useRef(mouse)
-  const scrollRef = useRef(scrollProgress)
+  const scrollRef = useRef(scrollState.sceneProgress)
   const smoothedX = useRef(0)
   const smoothedY = useRef(0)
   const smoothedRotateX = useRef(0)
   const smoothedRotateY = useRef(0)
 
   mouseRef.current = mouse
-  scrollRef.current = scrollProgress
+  scrollRef.current = scrollState.sceneProgress
 
   const onMouseMove = useCallback((e: React.MouseEvent<HTMLElement>) => {
     const x = (e.clientX / window.innerWidth) * 2 - 1
@@ -39,15 +40,28 @@ export default function Hero() {
   }, [])
 
   useEffect(() => {
+    const el = wrapperRef.current
+    if (!el) return
+
     const onScroll = () => {
-      const heroHeight = 2.2 * window.innerHeight
-      const progress = Math.min(1, window.scrollY / heroHeight)
-      setScrollProgress(progress)
+      const vh = window.innerHeight
+      const scrollY = window.scrollY
+      // Total scrollable distance in the hero wrapper (400vh - 100vh = 300vh)
+      const scrollDistance = vh * 3
+
+      // enterProgress: always 1 for hero since it's at top
+      const enterProgress = 1
+      // sceneProgress: 0→1 as we scroll through the 300vh distance
+      // This makes the drone/scene animation directly tied to scroll position
+      const sceneProgress = Math.min(1, scrollY / scrollDistance)
+      setScrollState({ enterProgress, sceneProgress })
     }
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  const { sceneProgress } = scrollState
 
   // Same lerp as Scene3D camera (0.08 per frame) so text and drone stay in sync; add 3D tilt for same-space feel
   useEffect(() => {
@@ -84,13 +98,17 @@ export default function Hero() {
   }, [])
 
   return (
+    <div
+      ref={wrapperRef}
+      className="relative w-full"
+      style={{ height: '400vh' }}
+    >
     <section
       ref={sectionRef}
-      className="relative h-[250vh] w-full"
+      className="sticky top-0 left-0 right-0 h-screen w-full overflow-hidden"
       onMouseMove={onMouseMove}
       data-cursor-hover={hoveredTarget != null ? '' : undefined}
     >
-      <div className="sticky top-0 h-screen w-full overflow-hidden">
         <div
           className="absolute inset-0 z-0"
           data-cursor-hover={hoveredTarget != null ? '' : undefined}
@@ -104,7 +122,7 @@ export default function Hero() {
             <Suspense fallback={null}>
               <Scene3D
                 mouse={mouse}
-                scrollProgress={scrollProgress}
+                scrollProgress={sceneProgress}
                 onHoverChange={setHoveredTarget}
                 onDroneClick={handleDroneClick}
                 focusDroneUntil={focusDroneUntil}
@@ -117,8 +135,8 @@ export default function Hero() {
         <div
           className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-center items-center transition-[opacity,visibility] duration-500 ease-out"
           style={{
-            opacity: Math.max(0, 1 - scrollProgress / 0.2),
-            visibility: scrollProgress >= 0.2 ? 'hidden' : 'visible',
+            opacity: Math.max(0, 1 - sceneProgress / 0.2),
+            visibility: sceneProgress >= 0.2 ? 'hidden' : 'visible',
             perspective: TILT_PERSPECTIVE_PX,
             perspectiveOrigin: '50% 50%',
             transformStyle: 'preserve-3d',
@@ -184,31 +202,29 @@ export default function Hero() {
         {/* Scroll progress bar — shows drone position along path */}
         <div
           className="absolute right-6 top-1/2 z-10 hidden -translate-y-1/2 md:flex flex-col items-center gap-2"
-          style={{ opacity: 0.5 + (1 - scrollProgress) * 0.5 }}
+          style={{ opacity: 0.5 + (1 - sceneProgress) * 0.5 }}
         >
-          <span className="text-[9px] uppercase tracking-widest text-stone-400 whitespace-nowrap -rotate-90 origin-center translate-y-8">
-            Scroll to move drone
-          </span>
+
           <div className="h-32 w-1 rounded-full bg-stone-200 overflow-hidden">
             <div
               className="w-full bg-teal-500 rounded-full transition-all duration-150 ease-out"
-              style={{ height: `${scrollProgress * 100}%`, marginTop: 'auto' }}
+              style={{ height: `${sceneProgress * 100}%`, marginTop: 'auto' }}
             />
           </div>
           <span className="text-[9px] text-stone-400 tabular-nums">
-            {Math.round(scrollProgress * 100)}%
+            {Math.round(sceneProgress * 100)}%
           </span>
         </div>
 
         {/* Scroll indicator */}
         <div
           className="absolute bottom-12 left-1/2 z-10 -translate-x-1/2 flex flex-col items-center gap-3"
-          style={{ opacity: 1 - scrollProgress * 2.5 }}
+          style={{ opacity: 1 - sceneProgress * 2.5 }}
         >
           <span className="text-[10px] uppercase tracking-[0.3em] text-stone-400 text-center max-w-[200px]">
             {hoveredTarget
-              ? 'Click drone to follow camera · At 20% scroll, drone view starts automatically'
-              : 'Hover drone or pods · At 20% scroll, view from drone until 65%'}
+              ? 'Scroll'
+              : 'Scroll'}
           </span>
           <div className="h-12 w-px bg-gradient-to-b from-stone-400 to-transparent" />
         </div>
@@ -217,10 +233,10 @@ export default function Hero() {
         <div 
           className="absolute bottom-0 left-0 right-0 h-60 bg-gradient-to-t from-stone-50 via-stone-50/80 to-transparent pointer-events-none z-20"
           style={{ 
-            opacity: Math.min(1, scrollProgress * 2),
+            opacity: Math.min(1, sceneProgress * 2),
           }}
         />
-      </div>
     </section>
+    </div>
   )
 }

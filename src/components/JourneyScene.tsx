@@ -2,10 +2,11 @@
 // @ts-nocheck
 import { useRef, useEffect, useMemo } from 'react'
 import { useThree, useFrame } from '@react-three/fiber'
-import { OrbitControls, useGLTF, Sparkles, Html } from '@react-three/drei'
+import { OrbitControls, useGLTF, Sparkles, Html, RoundedBox, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 
 const TRUCK_GLTF_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/truck/scene.gltf'
+const LOGO_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/aerohorse-logo.png'
 const TRUCK_TARGET_SIZE = 1.2
 const JOURNEY_TRUCK_START = 0.4
 const JOURNEY_TRUCK_END = 0.65
@@ -20,8 +21,8 @@ const PARCEL_GROUND_Y = 0.3
 const PARCEL_ARC_HEIGHT = 1.3 // peak height of projectile arc (up then down)
 const PARCEL_FRONT_OFFSET_Z = 1.8 // move toward camera when dropped so user can see it
 
-const CAMERA_DISTANCE_MIN = 8
-const CAMERA_DISTANCE_MAX = 22
+const CAMERA_DISTANCE_MIN = 5
+const CAMERA_DISTANCE_MAX = 14
 
 // Cinematic view when parcel lands: zoom into parcel, lower angle
 const CINEMATIC_START = 0.78   // start blending to cinematic as parcel lands
@@ -189,6 +190,7 @@ function Parcel({
   truckY: number
   truckZ: number
 }) {
+  const logoTexture = useTexture(LOGO_URL)
   const t = scrollProgress <= JOURNEY_TRUCK_START
     ? 0
     : scrollProgress >= JOURNEY_TRUCK_END
@@ -198,6 +200,13 @@ function Parcel({
   const endX = TRUCK_END_X - PARCEL_BACK_OFFSET
 
   let x: number, y: number, z: number
+  let rotationX = 0, rotationZ = 0
+  let bounceY = 0
+  let scale = 1
+
+  const isDroppingPhase = scrollProgress >= DROP_START && scrollProgress < DROP_FALL_END
+  const landed = scrollProgress >= DROP_FALL_END
+  
   if (scrollProgress < DROP_START) {
     // Stay on truck
     x = truckX - PARCEL_BACK_OFFSET
@@ -206,41 +215,113 @@ function Parcel({
   } else if (scrollProgress < DROP_FALL_END) {
     // Projectile: up then down (parabolic arc), and move to front of view
     const fallT = (scrollProgress - DROP_START) / (DROP_FALL_END - DROP_START)
-    const fallEased = fallT * fallT * (3 - 2 * fallT) // smooth 0..1
+    const fallEased = fallT * fallT * (3 - 2 * fallT)
     const d = PARCEL_GROUND_Y - onTruckY
     const arcA = 2 * d - 4 * PARCEL_ARC_HEIGHT
     const arcB = 4 * PARCEL_ARC_HEIGHT + d
     x = endX
     z = truckZ + fallEased * PARCEL_FRONT_OFFSET_Z
     y = arcA * fallEased * fallEased + arcB * fallEased + onTruckY
+    
+    // Tumbling rotation during drop
+    rotationX = fallT * Math.PI * 2.5
+    rotationZ = fallT * Math.PI * 1.2
+    
+    // Slight scale pulse during flight
+    scale = 1 + Math.sin(fallT * Math.PI) * 0.08
   } else {
     // Rest on ground, in front of truck for visibility
     x = endX
-    y = PARCEL_GROUND_Y
     z = truckZ + PARCEL_FRONT_OFFSET_Z
+    
+    // Bounce effect after landing
+    const landT = Math.min(1, (scrollProgress - DROP_FALL_END) / 0.08)
+    const bounceDecay = Math.exp(-landT * 6)
+    bounceY = Math.sin(landT * Math.PI * 3) * 0.15 * bounceDecay
+    
+    // Squash and stretch on bounce
+    const squashT = Math.sin(landT * Math.PI * 3) * bounceDecay
+    scale = 1 + squashT * 0.1
+    
+    y = PARCEL_GROUND_Y + bounceY
   }
 
   const visible = t > 0.05
-  const landed = scrollProgress >= DROP_FALL_END
   const landProgress = landed ? Math.min(1, (scrollProgress - DROP_FALL_END) / (1 - DROP_FALL_END)) : 0
+
+  const boxWidth = 0.14
+  const boxHeight = 0.1
+  const boxDepth = 0.16
+  const logoSize = 0.06
+
+  // Glow intensity increases as parcel falls and pulses when landed
+  const glowIntensity = isDroppingPhase 
+    ? 0.3 + ((scrollProgress - DROP_START) / (DROP_FALL_END - DROP_START)) * 0.5
+    : landed 
+      ? 0.6 + Math.sin(landProgress * Math.PI * 4) * 0.2 * (1 - landProgress)
+      : 0
 
   if (!visible) return null
   return (
     <group position={[x, y, z]}>
-      <mesh castShadow receiveShadow>
-        <boxGeometry args={[0.14, 0.1, 0.16]} />
-        <meshStandardMaterial color="#f97316" />
-      </mesh>
-      <mesh position={[0, 0, 0]} scale={[1.02, 1.02, 0.2]}>
-        <boxGeometry args={[0.08, 0.08, 0.08]} />
-        <meshBasicMaterial color="#d97706" />
-      </mesh>
-      {[[-0.03, 0], [0.03, 0], [0, -0.03], [0, 0.03]].map((offset, idx) => (
-        <mesh key={idx} position={[offset[0], 0.06, offset[1]]}>
-          <cylinderGeometry args={[0.001, 0.001, 0.06, 4]} />
-          <meshBasicMaterial color="#000" />
+      <group rotation={[rotationX, 0, rotationZ]} scale={scale}>
+        {/* Main parcel with rounded edges */}
+        <RoundedBox
+          args={[boxWidth, boxHeight, boxDepth]}
+          radius={0.015}
+          smoothness={4}
+          castShadow
+          receiveShadow
+        >
+          <meshStandardMaterial 
+            color="#f97316" 
+            emissive="#f97316"
+            emissiveIntensity={glowIntensity}
+          />
+        </RoundedBox>
+
+        {/* Logo on front side (+Z) */}
+        <mesh position={[0, 0, boxDepth / 2 + 0.001]}>
+          <planeGeometry args={[logoSize, logoSize]} />
+          <meshBasicMaterial map={logoTexture} transparent />
         </mesh>
-      ))}
+
+        {/* Logo on back side (-Z) */}
+        <mesh position={[0, 0, -boxDepth / 2 - 0.001]} rotation={[0, Math.PI, 0]}>
+          <planeGeometry args={[logoSize, logoSize]} />
+          <meshBasicMaterial map={logoTexture} transparent />
+        </mesh>
+
+        {/* Logo on right side (+X) */}
+        <mesh position={[boxWidth / 2 + 0.001, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+          <planeGeometry args={[logoSize, logoSize]} />
+          <meshBasicMaterial map={logoTexture} transparent />
+        </mesh>
+
+        {/* Logo on left side (-X) */}
+        <mesh position={[-boxWidth / 2 - 0.001, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+          <planeGeometry args={[logoSize, logoSize]} />
+          <meshBasicMaterial map={logoTexture} transparent />
+        </mesh>
+
+        {/* Tape strip on top */}
+        <mesh position={[0, boxHeight / 2 + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[0.02, boxDepth * 0.8]} />
+          <meshBasicMaterial color="#d97706" />
+        </mesh>
+      </group>
+
+      {/* Trail effect during drop */}
+      {isDroppingPhase && (
+        <Sparkles
+          count={15}
+          scale={0.5}
+          size={0.8}
+          speed={1.5}
+          color="#f97316"
+          opacity={0.6}
+        />
+      )}
 
       {/* Landing celebration: ripple + sparkles + "Delivered" pop */}
       {landed && (
@@ -251,53 +332,127 @@ function Parcel({
 }
 
 function LandingCelebration({ landProgress }: { landProgress: number }) {
-  // Impact ripple: expands and fades in first 40% of land progress
-  const rippleT = Math.min(1, landProgress / 0.4)
-  const rippleScale = rippleT * 2.5
-  const rippleOpacity = (1 - rippleT) * 0.6
-  // Badge pop: elastic feel between 15% and 50% of land progress
-  const badgeT = landProgress < 0.15 ? 0 : Math.min(1, (landProgress - 0.15) / 0.35)
+  // Multiple ripples with staggered timing for impact effect
+  const ripple1T = Math.min(1, landProgress / 0.25)
+  const ripple2T = Math.min(1, Math.max(0, (landProgress - 0.08)) / 0.3)
+  const ripple3T = Math.min(1, Math.max(0, (landProgress - 0.15)) / 0.35)
+  
+  const ripple1Scale = ripple1T * 1.8
+  const ripple2Scale = ripple2T * 2.5
+  const ripple3Scale = ripple3T * 3.2
+  
+  const ripple1Opacity = (1 - ripple1T) * 0.8
+  const ripple2Opacity = (1 - ripple2T) * 0.5
+  const ripple3Opacity = (1 - ripple3T) * 0.3
+  
+  // Badge pop: elastic feel between 10% and 40% of land progress
+  const badgeT = landProgress < 0.1 ? 0 : Math.min(1, (landProgress - 0.1) / 0.3)
   const badgeScale = badgeT < 1 ? 1 - Math.pow(1 - badgeT, 3) : 1
-  const badgeOvershoot = badgeT < 1 ? 1 + (1 - Math.pow(1 - badgeT, 2)) * 0.25 : 1
-  const badgeOpacity = Math.min(1, badgeT * 2)
-  // Sparkles fade in over first 30%
-  const sparkleOpacity = Math.min(1, landProgress / 0.3) * 0.8
+  const badgeOvershoot = badgeT < 1 ? 1 + (1 - Math.pow(1 - badgeT, 2)) * 0.35 : 1
+  const badgeOpacity = Math.min(1, badgeT * 2.5)
+  
+  // Sparkles burst immediately then fade
+  const sparkleOpacity = landProgress < 0.5 
+    ? Math.min(1, landProgress / 0.1) 
+    : Math.max(0, 1 - (landProgress - 0.5) / 0.5)
+  
+  // Rising particles effect
+  const particleRise = Math.min(1, landProgress / 0.6)
 
   return (
     <group>
-      {/* Ground ripple — ring that expands and fades */}
-      {rippleOpacity > 0.01 && (
-        <mesh
-          position={[0, -0.05, 0]}
-          rotation={[-Math.PI / 2, 0, 0]}
-          scale={[rippleScale, 1, rippleScale]}
-        >
-          <ringGeometry args={[0.2, 0.5, 32]} />
+      {/* Ground impact flash */}
+      {landProgress < 0.15 && (
+        <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[0.4 + landProgress * 2, 32]} />
           <meshBasicMaterial
-            color="#0d9488"
+            color="#fcd34d"
             transparent
-            opacity={rippleOpacity}
+            opacity={(1 - landProgress / 0.15) * 0.4}
             side={THREE.DoubleSide}
           />
         </mesh>
       )}
 
-      {/* Sparkles around the parcel */}
+      {/* Primary impact ripple - teal */}
+      {ripple1Opacity > 0.01 && (
+        <mesh
+          position={[0, 0.02, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          scale={[ripple1Scale, 1, ripple1Scale]}
+        >
+          <ringGeometry args={[0.15, 0.35, 32]} />
+          <meshBasicMaterial
+            color="#0d9488"
+            transparent
+            opacity={ripple1Opacity}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      )}
+
+      {/* Secondary ripple - orange */}
+      {ripple2Opacity > 0.01 && (
+        <mesh
+          position={[0, 0.015, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          scale={[ripple2Scale, 1, ripple2Scale]}
+        >
+          <ringGeometry args={[0.2, 0.4, 32]} />
+          <meshBasicMaterial
+            color="#f97316"
+            transparent
+            opacity={ripple2Opacity}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      )}
+
+      {/* Tertiary ripple - teal outer */}
+      {ripple3Opacity > 0.01 && (
+        <mesh
+          position={[0, 0.01, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          scale={[ripple3Scale, 1, ripple3Scale]}
+        >
+          <ringGeometry args={[0.25, 0.45, 32]} />
+          <meshBasicMaterial
+            color="#14b8a6"
+            transparent
+            opacity={ripple3Opacity}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      )}
+
+      {/* Burst sparkles - orange */}
+      <Sparkles
+        count={60}
+        scale={1.5 + particleRise * 0.5}
+        size={2}
+        speed={0.8}
+        color="#f97316"
+        opacity={sparkleOpacity * 0.9}
+      />
+      
+      {/* Secondary sparkles - teal */}
       <Sparkles
         count={40}
-        scale={1.2}
+        scale={2 + particleRise * 0.8}
         size={1.5}
-        speed={0.4}
-        color="#f97316"
-        opacity={sparkleOpacity}
-      />
-      <Sparkles
-        count={25}
-        scale={1.5}
-        size={1}
-        speed={0.2}
+        speed={0.5}
         color="#0d9488"
         opacity={sparkleOpacity * 0.7}
+      />
+      
+      {/* Golden accent sparkles */}
+      <Sparkles
+        count={25}
+        scale={1.2}
+        size={1.8}
+        speed={0.3}
+        color="#fcd34d"
+        opacity={sparkleOpacity * 0.6}
       />
 
       {/* "Delivered" badge that pops in */}

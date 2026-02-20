@@ -2,7 +2,7 @@
 // @ts-nocheck
 import { useRef, useMemo, useState, Suspense } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Float, Sparkles, useGLTF } from '@react-three/drei'
+import { Float, Sparkles, useGLTF, RoundedBox, useTexture } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import * as THREE from 'three'
 
@@ -160,17 +160,36 @@ function DroneAnimated({
   const { clock } = useThree()
   const { scene } = useGLTF(DRONE_GLTF_URL)
 
+  // Entrance animation state
+  const entranceProgress = useRef(0)
+  const entranceDelay = 0.4 // seconds delay before animation starts (matches text delay)
+  const entranceDuration = 1.2 // seconds for full animation
+
   // Refs for the 4 propellers
   const wingsRef = useRef<THREE.Object3D[]>([])
+
+  // Store references to all drone materials for opacity animation
+  const droneMaterials = useRef<THREE.Material[]>([])
 
   const { clonedScene, scale: modelScale, baseOffset } = useMemo(() => {
     const clone = scene.clone()
     wingsRef.current = []
+    droneMaterials.current = []
 
     clone.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         (child as THREE.Mesh).castShadow = true
           ; (child as THREE.Mesh).receiveShadow = true
+        // Make materials transparent for fade-in animation
+        const mesh = child as THREE.Mesh
+        if (mesh.material) {
+          const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+          materials.forEach((mat) => {
+            mat.transparent = true
+            mat.opacity = 0 // Start invisible
+            droneMaterials.current.push(mat)
+          })
+        }
       }
       // Identify wing parent nodes (Wing1, Wing2, Wing3, Wing4) - not the mesh children
       if (/^Wing\d$/.test(child.name)) {
@@ -201,6 +220,17 @@ function DroneAnimated({
     if (!ref.current) return
     const currentTime = state.clock.elapsedTime
 
+    // Entrance animation: delay then smooth ease-out over duration
+    if (entranceProgress.current < 1) {
+      const timeSinceStart = currentTime
+      if (timeSinceStart > entranceDelay) {
+        const t = Math.min(1, (timeSinceStart - entranceDelay) / entranceDuration)
+        // Ease-out cubic for smooth deceleration
+        entranceProgress.current = 1 - Math.pow(1 - t, 3)
+      }
+    }
+    const entrance = entranceProgress.current
+
     // Spin propellers - rotate around local Z axis (due to model orientation)
     // Delta is the time since last frame, use it for frame-rate independent animation
     wingsRef.current.forEach((wing, i) => {
@@ -210,17 +240,23 @@ function DroneAnimated({
     })
 
     // Drone in front of camera so it's visible; baseOffset centers the model at this position
+    // Entrance: fly in from below and in front (toward the viewer)
+    const entranceOffsetY = (1 - entrance) * -6 // starts 6 units below
+    const entranceOffsetZ = (1 - entrance) * 8 // starts 8 units in front (toward camera)
+    
     const pos = new THREE.Vector3(0, 5.3, 1)
     pos.x += baseOffset.x
-    pos.y += baseOffset.y
-    pos.z += baseOffset.z
-    pos.y += Math.sin(currentTime * 3) * 0.03 // Subtle hover bob
+    pos.y += baseOffset.y + entranceOffsetY
+    pos.z += baseOffset.z + entranceOffsetZ
+    pos.y += Math.sin(currentTime * 3) * 0.03 * entrance // Subtle hover bob (fade in with entrance)
 
     ref.current.position.copy(pos)
 
     if (focusTargetRef) focusTargetRef.current.copy(ref.current.position)
 
-    const targetScale = modelScale * (hovered ? 1.12 : 1)
+    // Scale includes entrance animation (starts at 0.3, grows to full size)
+    const entranceScale = 0.3 + entrance * 0.7
+    const targetScale = modelScale * entranceScale * (hovered ? 1.12 : 1)
     const s = ref.current.scale.x + (targetScale - ref.current.scale.x) * 0.12
     ref.current.scale.setScalar(s)
 
@@ -229,6 +265,11 @@ function DroneAnimated({
     const pitchDemand = 0.12
     ref.current.rotation.z = rollDemand * 0.8
     ref.current.rotation.x = pitchDemand * 0.5
+
+    // Fade in drone materials
+    droneMaterials.current.forEach((mat) => {
+      mat.opacity = entrance
+    })
   })
 
   return (
@@ -277,8 +318,11 @@ const DROP_END = { x: 0, y: POD_TOP_Y, z: 0 }
 // Travel destination: one pod diameter in truck direction (negative X)
 const TRAVEL_END = { x: -POD_DIAMETER, y: POD_TOP_Y, z: 0 }
 
+const LOGO_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/aerohorse-logo.png'
+
 function DroppingParcel({ scrollProgress }: { scrollProgress: number }) {
   const visible = scrollProgress >= DROP_START_SCROLL && scrollProgress < TRAVEL_END_SCROLL
+  const logoTexture = useTexture(LOGO_URL)
 
   // Phase 1: Drop from drone to pod (15% - 60%)
   const dropT = visible
@@ -307,16 +351,56 @@ function DroppingParcel({ scrollProgress }: { scrollProgress: number }) {
   }
 
   if (!visible) return null
+
+  const boxWidth = 0.14
+  const boxHeight = 0.1
+  const boxDepth = 0.16
+  const logoSize = 0.06
+
   return (
     <group position={[x, y, z]} scale={DRONE_SCALE}>
-      <mesh castShadow receiveShadow>
-        <boxGeometry args={[0.14, 0.1, 0.16]} />
+      {/* Main parcel with rounded edges */}
+      <RoundedBox
+        args={[boxWidth, boxHeight, boxDepth]}
+        radius={0.015}
+        smoothness={4}
+        castShadow
+        receiveShadow
+      >
         <meshStandardMaterial color="#f97316" />
+      </RoundedBox>
+
+      {/* Logo on front side (+Z) */}
+      <mesh position={[0, 0, boxDepth / 2 + 0.001]}>
+        <planeGeometry args={[logoSize, logoSize]} />
+        <meshBasicMaterial map={logoTexture} transparent />
       </mesh>
-      <mesh position={[0, 0, 0]} scale={[1.02, 1.02, 0.2]}>
-        <boxGeometry args={[0.08, 0.08, 0.08]} />
+
+      {/* Logo on back side (-Z) */}
+      <mesh position={[0, 0, -boxDepth / 2 - 0.001]} rotation={[0, Math.PI, 0]}>
+        <planeGeometry args={[logoSize, logoSize]} />
+        <meshBasicMaterial map={logoTexture} transparent />
+      </mesh>
+
+      {/* Logo on right side (+X) */}
+      <mesh position={[boxWidth / 2 + 0.001, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <planeGeometry args={[logoSize, logoSize]} />
+        <meshBasicMaterial map={logoTexture} transparent />
+      </mesh>
+
+      {/* Logo on left side (-X) */}
+      <mesh position={[-boxWidth / 2 - 0.001, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+        <planeGeometry args={[logoSize, logoSize]} />
+        <meshBasicMaterial map={logoTexture} transparent />
+      </mesh>
+
+      {/* Tape strips */}
+      <mesh position={[0, boxHeight / 2 + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[0.02, boxDepth * 0.8]} />
         <meshBasicMaterial color="#d97706" />
       </mesh>
+
+      {/* Strings */}
       {[[-0.03, 0], [0.03, 0], [0, -0.03], [0, 0.03]].map((offset, idx) => (
         <mesh key={idx} position={[offset[0], 0.06, offset[1]]}>
           <cylinderGeometry args={[0.001, 0.001, 0.06, 4]} />
@@ -330,9 +414,9 @@ function DroppingParcel({ scrollProgress }: { scrollProgress: number }) {
 const TRUCK_POSITION_X = -POD_DIAMETER - 0.3  // one pod diameter to the left of pod center
 const TRUCK_TARGET_SIZE = 1.4
 
-// Truck animation: starts at 70% scroll, completes by 82%
+// Truck animation: starts at 72% scroll, completes by 100%
 const TRUCK_START_SCROLL = 0.70
-const TRUCK_END_SCROLL = 0.82
+const TRUCK_END_SCROLL = 1.0
 
 const TRUCK_GLTF_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/truck/scene.gltf'
 useGLTF.preload(TRUCK_GLTF_URL)

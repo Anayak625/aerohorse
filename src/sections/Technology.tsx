@@ -10,7 +10,7 @@ const features = [
 export default function Technology() {
   return (
     <section className="relative py-32 md:py-48 lg:py-64 overflow-hidden bg-white">
-      <div className="mx-auto max-w-7xl px-8 md:px-12 lg:px-16">
+      <div className="mx-auto px-8 md:px-12 lg:px-16">
         <div className="grid gap-16 lg:grid-cols-2 lg:gap-24 lg:items-center">
           <div>
             <FadeIn>

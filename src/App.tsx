@@ -1,22 +1,24 @@
 import { Suspense, useState, useEffect, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { useLenis } from './hooks/useLenis'
+import { LenisProvider } from './context/LenisContext'
 import Cursor from './components/Cursor'
 import Header from './components/Header'
 import Hero from './components/Hero'
 import TransitionSection from './components/TransitionSection'
 import JourneyScene from './components/JourneyScene'
+import DeliveryReceipt from './components/DeliveryReceipt'
 import StorySection from './sections/StorySection'
 import Benefits from './sections/Benefits'
 import Technology from './sections/Technology'
+import PodNetwork from './sections/PodNetwork'
 import CTA from './sections/CTA'
 import Footer from './components/Footer'
 
-// Stick scrolling: when truck reaches end (0.65), a chunk of scroll only drives parcel drop (0.65→0.88)
+// Parcel lands early in section so "landed" + receipt get most of the scroll; How it works appears only after.
 const JOURNEY_TRUCK_END = 0.65
 const PARCEL_DROP_END = 0.88
-const STICK_SCROLL_START = 0.42 // raw scroll ratio where we enter "truck at end" stick
-const STICK_SCROLL_END = 0.72   // raw scroll ratio where parcel drop finishes
+const STICK_SCROLL_START = 0.32 // raw scroll where truck reaches end
+const STICK_SCROLL_END = 0.42   // parcel lands here; raw 0.42→1 = long hold on receipt view
 
 function stickScrollToProgress(raw: number): number {
   if (raw <= STICK_SCROLL_START) {
@@ -66,7 +68,7 @@ function JourneySection() {
     <section
       ref={sectionRef}
       id="journey"
-      className="relative h-[280vh] w-full bg-stone-50"
+      className="relative h-[420vh] w-full bg-stone-50"
     >
       <div className="sticky top-0 h-screen w-full overflow-hidden">
         <Canvas
@@ -78,6 +80,9 @@ function JourneySection() {
             <JourneyScene scrollProgress={scrollProgress} />
           </Suspense>
         </Canvas>
+
+        {/* Delivery Receipt - materializes when parcel lands */}
+        <DeliveryReceipt scrollProgress={scrollProgress} />
 
         {/* Story arc: Hub — Transit — Delivery */}
         <div
@@ -168,10 +173,8 @@ function JourneySection() {
 }
 
 function App() {
-  useLenis()
-
   return (
-    <>
+    <LenisProvider>
       <Cursor />
       <div className="noise-overlay" aria-hidden />
       <Header />
@@ -182,10 +185,11 @@ function App() {
         <StorySection />
         <Benefits />
         <Technology />
+        <PodNetwork />
         <CTA />
       </main>
       <Footer />
-    </>
+    </LenisProvider>
   )
 }
 
