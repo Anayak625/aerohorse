@@ -1,7 +1,11 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+
+const DELIVERED_DURATION_MS = 700
 
 export default function Cursor() {
   const cursorRef = useRef<HTMLDivElement>(null)
+  const [delivered, setDelivered] = useState(false)
+  const deliveredTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const state = useRef({
     x: 0,
     y: 0,
@@ -51,6 +55,14 @@ export default function Cursor() {
     }
 
     const onMouseUp = () => {
+      if (s.hover) {
+        if (deliveredTimeoutRef.current) clearTimeout(deliveredTimeoutRef.current)
+        setDelivered(true)
+        deliveredTimeoutRef.current = setTimeout(() => {
+          setDelivered(false)
+          deliveredTimeoutRef.current = null
+        }, DELIVERED_DURATION_MS)
+      }
       s.clicking = false
       cursor.dataset.clicking = 'false'
     }
@@ -98,6 +110,7 @@ export default function Cursor() {
     animate()
 
     return () => {
+      if (deliveredTimeoutRef.current) clearTimeout(deliveredTimeoutRef.current)
       document.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('mouseover', onMouseOver)
       document.removeEventListener('mouseout', onMouseOut)
@@ -112,11 +125,26 @@ export default function Cursor() {
       ref={cursorRef}
       data-hover="false"
       data-clicking="false"
+      data-delivered={delivered ? 'true' : 'false'}
       className="cursor-container"
     >
       <div className="cursor-dot" />
       <div className="cursor-ring" />
       <div className="cursor-glow" />
+      {/* Package icon: shown on hover over clickable elements */}
+      <div className="cursor-package" aria-hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+          <line x1="12" y1="22.08" x2="12" y2="12" />
+        </svg>
+      </div>
+      {/* Delivered state: checkmark after click */}
+      <div className="cursor-delivered" aria-hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 6L9 17l-5-5" />
+        </svg>
+      </div>
     </div>
   )
 }

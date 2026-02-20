@@ -157,10 +157,54 @@ body {
   transition: opacity 0.4s ease, width 0.4s ease, height 0.4s ease;
 }
 
-/* Hover state */
+/* Package icon: delivery cursor on hover */
+.cursor-package {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 28px;
+  height: 28px;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s cubic-bezier(0.23, 1, 0.32, 1), transform 0.25s cubic-bezier(0.23, 1, 0.32, 1);
+  color: #0d9488;
+}
+
+.cursor-package svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+/* Delivered checkmark: shown after click on interactive element */
+.cursor-delivered {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 32px;
+  height: 32px;
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  pointer-events: none;
+  color: #0d9488;
+  transition: opacity 0.2s ease, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.cursor-delivered svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 4px rgba(13, 148, 136, 0.3));
+}
+
+/* Hover state: show package, expand ring */
 .cursor-container[data-hover="true"] .cursor-dot {
   width: 6px;
   height: 6px;
+  opacity: 0;
+}
+
+.cursor-container[data-hover="true"] .cursor-package {
   opacity: 1;
 }
 
@@ -182,6 +226,10 @@ body {
   transform: translate(-50%, -50%) scale(0.6);
 }
 
+.cursor-container[data-clicking="true"] .cursor-package {
+  transform: translate(-50%, -50%) scale(0.85);
+}
+
 .cursor-container[data-clicking="true"] .cursor-ring {
   width: 28px;
   height: 28px;
@@ -193,6 +241,25 @@ body {
   width: 40px;
   height: 40px;
   opacity: 0.8;
+}
+
+/* Delivered state: checkmark pop, hide package/dot */
+.cursor-container[data-delivered="true"] .cursor-dot,
+.cursor-container[data-delivered="true"] .cursor-package {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cursor-container[data-delivered="true"] .cursor-delivered {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.cursor-container[data-delivered="true"] .cursor-ring {
+  width: 48px;
+  height: 48px;
+  border-color: rgba(20, 184, 166, 0.5);
+  background: rgba(20, 184, 166, 0.12);
 }
 
 /* Hide cursor on touch devices */
