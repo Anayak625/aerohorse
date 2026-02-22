@@ -2,6 +2,7 @@ import { Suspense, useState, useCallback, useEffect, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
 import Scene3D, { type HoverTarget } from './Scene3D'
 import { TextReveal, LineReveal, FadeIn } from './TextReveal'
+import { useThrottledScrollProgress } from '../hooks/useScrollProgress'
 
 // Match Scene3D: same mouse strength and coefficients so text parallax is in sync with drone/camera
 const MOUSE_STRENGTH_NORMAL = 0.4
@@ -17,51 +18,31 @@ const TILT_TRANSLATE_Z = 40
 
 export default function Hero() {
   const [mouse, setMouse] = useState({ normalizedX: 0, normalizedY: 0 })
-  const [scrollState, setScrollState] = useState({ enterProgress: 0, sceneProgress: 0 })
+  const sceneProgress = useThrottledScrollProgress(
+    () => Math.min(1, window.scrollY / (window.innerHeight * 3)),
+    0.004,
+    []
+  )
   const [hoveredTarget, setHoveredTarget] = useState<HoverTarget>(null)
   const [focusDroneUntil, setFocusDroneUntil] = useState(0)
   const sectionRef = useRef<HTMLElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const mouseRef = useRef(mouse)
-  const scrollRef = useRef(scrollState.sceneProgress)
+  const scrollRef = useRef(sceneProgress)
   const smoothedX = useRef(0)
   const smoothedY = useRef(0)
   const smoothedRotateX = useRef(0)
   const smoothedRotateY = useRef(0)
 
   mouseRef.current = mouse
-  scrollRef.current = scrollState.sceneProgress
+  scrollRef.current = sceneProgress
 
   const onMouseMove = useCallback((e: React.MouseEvent<HTMLElement>) => {
     const x = (e.clientX / window.innerWidth) * 2 - 1
     const y = -(e.clientY / window.innerHeight) * 2 + 1
     setMouse({ normalizedX: x, normalizedY: y })
   }, [])
-
-  useEffect(() => {
-    const el = wrapperRef.current
-    if (!el) return
-
-    const onScroll = () => {
-      const vh = window.innerHeight
-      const scrollY = window.scrollY
-      // Total scrollable distance in the hero wrapper (400vh - 100vh = 300vh)
-      const scrollDistance = vh * 3
-
-      // enterProgress: always 1 for hero since it's at top
-      const enterProgress = 1
-      // sceneProgress: 0→1 as we scroll through the 300vh distance
-      // This makes the drone/scene animation directly tied to scroll position
-      const sceneProgress = Math.min(1, scrollY / scrollDistance)
-      setScrollState({ enterProgress, sceneProgress })
-    }
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
-
-  const { sceneProgress } = scrollState
 
   // Same lerp as Scene3D camera (0.08 per frame) so text and drone stay in sync; add 3D tilt for same-space feel
   useEffect(() => {
@@ -115,7 +96,7 @@ export default function Hero() {
         >
           <Canvas
             camera={{ position: [0, 5, 12], fov: 50 }}
-            dpr={[1, 2]}
+            dpr={[1, 1.5]}
             gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
             shadows
           >

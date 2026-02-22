@@ -17,13 +17,26 @@ export function useLenis() {
     lenisRef.current = lenis
     document.documentElement.classList.add('lenis')
 
+    let rafId = 0
     function raf(time: number) {
       lenis.raf(time)
-      requestAnimationFrame(raf)
+      rafId = requestAnimationFrame(raf)
     }
-    requestAnimationFrame(raf)
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(rafId)
+        rafId = 0
+      } else {
+        rafId = requestAnimationFrame(raf)
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    rafId = requestAnimationFrame(raf)
 
     return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      cancelAnimationFrame(rafId)
       lenis.destroy()
       document.documentElement.classList.remove('lenis')
       lenisRef.current = null

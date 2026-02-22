@@ -1,31 +1,24 @@
-import { useRef, useEffect, useState } from 'react'
+import { useRef } from 'react'
 import { Suspense } from 'react'
 import TransitionTruck from './TransitionTruck'
+import { useThrottledScrollProgress } from '../hooks/useScrollProgress'
 
 export default function TransitionSection() {
   const wrapperRef = useRef<HTMLDivElement>(null)
-  const [scrollState, setScrollState] = useState({ enterProgress: 0, truckProgress: 0 })
-
-  useEffect(() => {
-    const el = wrapperRef.current
-    if (!el) return
-
-    const onScroll = () => {
+  const scrollState = useThrottledScrollProgress(
+    () => {
+      const el = wrapperRef.current
+      if (!el) return { enterProgress: 0, truckProgress: 0 }
       const rect = el.getBoundingClientRect()
       const vh = window.innerHeight
       const top = rect.top
-
-      // Section scrolling into view: enterProgress 0→1 (for content/background visibility).
       const enterProgress = top >= vh ? 0 : top <= 0 ? 1 : (vh - top) / vh
-      // Truck moves ONLY when section is stuck (top <= 0). 0→1 as we scroll 100vh while stuck.
       const truckProgress = top > 0 ? 0 : Math.min(1, -top / vh)
-      setScrollState({ enterProgress, truckProgress })
-    }
-
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+      return { enterProgress, truckProgress }
+    },
+    0.004,
+    []
+  )
 
   const { enterProgress, truckProgress } = scrollState
   const fadeInOut = truckProgress < 0.5 ? truckProgress * 2 : 1 - (truckProgress - 0.5) * 2

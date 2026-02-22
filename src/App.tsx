@@ -1,4 +1,4 @@
-import { Suspense, useState, useEffect, useRef } from 'react'
+import { Suspense, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { LenisProvider } from './context/LenisContext'
 import Cursor from './components/Cursor'
@@ -13,6 +13,7 @@ import Technology from './sections/Technology'
 import PodNetwork from './sections/PodNetwork'
 import CTA from './sections/CTA'
 import Footer from './components/Footer'
+import { useThrottledScrollProgress } from './hooks/useScrollProgress'
 
 // Parcel lands early in section so "landed" + receipt get most of the scroll; How it works appears only after.
 const JOURNEY_TRUCK_END = 0.65
@@ -32,26 +33,20 @@ function stickScrollToProgress(raw: number): number {
 
 function JourneySection() {
   const sectionRef = useRef<HTMLElement>(null)
-  const [scrollProgress, setScrollProgress] = useState(0)
-
-  useEffect(() => {
-    const onScroll = () => {
+  const scrollProgress = useThrottledScrollProgress(
+    () => {
       const el = sectionRef.current
-      if (!el) return
+      if (!el) return 0
       const rect = el.getBoundingClientRect()
       const viewportHeight = window.innerHeight
       const sectionHeight = rect.height
-
-      if (rect.top < viewportHeight && rect.bottom > 0) {
-        const raw = Math.max(0, Math.min(1, (viewportHeight - rect.top) / (sectionHeight + viewportHeight)))
-        const progress = stickScrollToProgress(raw)
-        setScrollProgress(progress)
-      }
-    }
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+      if (rect.top >= viewportHeight || rect.bottom <= 0) return 0
+      const raw = Math.max(0, Math.min(1, (viewportHeight - rect.top) / (sectionHeight + viewportHeight)))
+      return stickScrollToProgress(raw)
+    },
+    0.004,
+    []
+  )
 
   const narrativePhase =
     scrollProgress < 0.35 ? 0 : scrollProgress < 0.6 ? 1 : 2
@@ -73,7 +68,7 @@ function JourneySection() {
       <div className="sticky top-0 h-screen w-full overflow-hidden">
         <Canvas
           camera={{ position: [0, 6, 12], fov: 50 }}
-          dpr={[1, 2]}
+          dpr={[1, 1.5]}
           gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
         >
           <Suspense fallback={null}>

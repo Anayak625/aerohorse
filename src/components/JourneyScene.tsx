@@ -314,7 +314,7 @@ function Parcel({
       {/* Trail effect during drop */}
       {isDroppingPhase && (
         <Sparkles
-          count={15}
+          count={10}
           scale={0.5}
           size={0.8}
           speed={1.5}
@@ -427,7 +427,7 @@ function LandingCelebration({ landProgress }: { landProgress: number }) {
 
       {/* Burst sparkles - orange */}
       <Sparkles
-        count={60}
+        count={35}
         scale={1.5 + particleRise * 0.5}
         size={2}
         speed={0.8}
@@ -437,7 +437,7 @@ function LandingCelebration({ landProgress }: { landProgress: number }) {
       
       {/* Secondary sparkles - teal */}
       <Sparkles
-        count={40}
+        count={22}
         scale={2 + particleRise * 0.8}
         size={1.5}
         speed={0.5}
@@ -447,7 +447,7 @@ function LandingCelebration({ landProgress }: { landProgress: number }) {
       
       {/* Golden accent sparkles */}
       <Sparkles
-        count={25}
+        count={14}
         scale={1.2}
         size={1.8}
         speed={0.3}

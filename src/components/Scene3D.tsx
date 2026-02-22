@@ -57,6 +57,14 @@ export default function Scene3D({
   const focusTarget = useRef(new THREE.Vector3(0, 4.8, 1))
   const cameraDroneBlend = useRef(0)
 
+  // Reuse vectors to avoid per-frame allocations
+  const normalTargetPos = useRef(new THREE.Vector3())
+  const normalLookAt = useRef(new THREE.Vector3())
+  const droneCamPos = useRef(new THREE.Vector3())
+  const droneLookAt = useRef(new THREE.Vector3())
+  const blendedLookAt = useRef(new THREE.Vector3())
+  const followOffset = useMemo(() => new THREE.Vector3(0, 3, 6), [])
+
   useFrame((state) => {
     const cam = state.camera
     const t = state.clock.elapsedTime
@@ -74,30 +82,29 @@ export default function Scene3D({
     const baseZ = 12 + scrollProgress * 8
     const baseY = 5 + scrollProgress * 4
 
-    // Normal view target
-    const normalTargetPos = new THREE.Vector3(
+    // Normal view target (reuse refs)
+    normalTargetPos.current.set(
       mouse.normalizedX * 3.5 * mouseStrength,
       baseY + mouse.normalizedY * 2 * mouseStrength,
       baseZ + mouse.normalizedX * 0.5 * mouseStrength
     )
     const lookY = 2 - scrollProgress * 2
     const lookZ = scrollProgress * 5
-    const normalLookAt = new THREE.Vector3(mouse.normalizedX * 0.8, lookY, lookZ)
+    normalLookAt.current.set(mouse.normalizedX * 0.8, lookY, lookZ)
 
-    // Drone-follow view target (same as when you click the drone)
-    const followOffset = new THREE.Vector3(0, 3, 6)
-    const droneCamPos = focusTarget.current.clone().add(followOffset)
-    const droneLookAt = new THREE.Vector3(
+    // Drone-follow view target
+    droneCamPos.current.copy(focusTarget.current).add(followOffset)
+    droneLookAt.current.set(
       focusTarget.current.x,
       focusTarget.current.y - 0.3,
       focusTarget.current.z
     )
 
     // Blend between normal and drone camera for smooth transition
-    targetCamPos.current.copy(normalTargetPos).lerp(droneCamPos, blend)
+    targetCamPos.current.copy(normalTargetPos.current).lerp(droneCamPos.current, blend)
     cam.position.lerp(targetCamPos.current, 0.08)
-    const blendedLookAt = new THREE.Vector3().lerpVectors(normalLookAt, droneLookAt, blend)
-    cam.lookAt(blendedLookAt)
+    blendedLookAt.current.lerpVectors(normalLookAt.current, droneLookAt.current, blend)
+    cam.lookAt(blendedLookAt.current)
 
     if (groupRef.current) {
       const scale = 1 - scrollProgress * 0.15
@@ -117,8 +124,8 @@ export default function Scene3D({
       <pointLight position={[8, 4, 2]} color="#78716c" intensity={0.8} distance={18} />
 
       <group ref={groupRef}>
-        <Sparkles count={100} scale={35} size={2} speed={0.3} opacity={0.3} color="#0d9488" />
-        <Sparkles count={50} scale={30} size={2.5} speed={0.2} opacity={0.2} color="#a8a29e" />
+        <Sparkles count={45} scale={35} size={2} speed={0.3} opacity={0.3} color="#0d9488" />
+        <Sparkles count={25} scale={30} size={2.5} speed={0.2} opacity={0.2} color="#a8a29e" />
 
         <GroundPlane />
         <DataCity scrollProgress={scrollProgress} />
@@ -137,8 +144,8 @@ export default function Scene3D({
         <DroppingParcel scrollProgress={scrollProgress} />
       </group>
 
-      <EffectComposer>
-        <Bloom luminanceThreshold={0.5} luminanceSmoothing={0.9} intensity={0.6} />
+      <EffectComposer multisampling={0}>
+        <Bloom luminanceThreshold={0.55} luminanceSmoothing={0.9} intensity={0.5} mipmapBlur />
       </EffectComposer>
     </>
   )
@@ -667,8 +674,6 @@ function getWeatherForScroll(scrollProgress: number, districtId: number): Weathe
 }
 
 function DataCity({ scrollProgress = 0 }: { scrollProgress?: number }) {
-  const { clock } = useThree()
-  const t = clock.getElapsedTime()
   const layout = useMemo(() => buildCityLayout(), [])
 
   const gridGeom = useMemo(() => {
@@ -697,7 +702,8 @@ function DataCity({ scrollProgress = 0 }: { scrollProgress?: number }) {
       </lineSegments>
       {layout.map((b, i) => {
         const weather = getWeatherForScroll(scrollProgress, b.districtId)
-        const activity = b.deliveryActivity * (0.7 + 0.3 * Math.sin(t * 0.5 + i * 0.7))
+        // Static activity/height — no up-down growth animation
+        const activity = b.deliveryActivity
         const height = 0.5 + activity * 3.2
         const wx = 0.85 + seeded(i + 10) * 0.6
         const wz = 0.85 + seeded(i + 11) * 0.6
@@ -706,7 +712,7 @@ function DataCity({ scrollProgress = 0 }: { scrollProgress?: number }) {
         const pos: [number, number, number] = [px, height / 2, pz]
         const color = weatherToColor(weather, b.temperature)
         const emissive = activity > 0.7 ? '#0d9488' : '#000000'
-        const emissiveIntensity = activity > 0.7 ? 0.08 + 0.06 * Math.sin(t * 2 + i) : 0
+        const emissiveIntensity = activity > 0.7 ? 0.1 : 0
         const showDataStrip = activity > 0.55
         return (
           <group key={i} position={pos}>
@@ -723,14 +729,10 @@ function DataCity({ scrollProgress = 0 }: { scrollProgress?: number }) {
             {showDataStrip && (
               <mesh position={[0, height * 0.15, wz / 2 + 0.01]} rotation={[0, 0, 0]}>
                 <planeGeometry args={[wx * 0.7, height * 0.12]} />
-                <meshBasicMaterial
-                  color="#0d9488"
-                  transparent
-                  opacity={0.4 + 0.25 * Math.sin(t * 2 + i * 0.7)}
-                />
+                <meshBasicMaterial color="#0d9488" transparent opacity={0.5} />
               </mesh>
             )}
-            <WeatherOnRoof weather={weather} height={height} t={t} index={i} />
+            <WeatherOnRoof weather={weather} height={height} index={i} />
           </group>
         )
       })}
@@ -756,14 +758,13 @@ function weatherToColor(weather: WeatherType, temp: number): string {
   }
 }
 
-function WeatherOnRoof({ weather, height, t, index }: { weather: WeatherType; height: number; t: number; index: number }) {
+function WeatherOnRoof({ weather, height, index }: { weather: WeatherType; height: number; index: number }) {
   const y = height / 2 + 0.02
-  const pulse = 0.92 + 0.08 * Math.sin(t * 1.5 + index * 0.5)
   if (weather === 'sunny') {
     return (
       <group position={[0, y, 0]}>
         <mesh>
-          <circleGeometry args={[0.12 * pulse, 16]} />
+          <circleGeometry args={[0.12, 16]} />
           <meshBasicMaterial color="#fcd34d" />
         </mesh>
       </group>
@@ -783,7 +784,7 @@ function WeatherOnRoof({ weather, height, t, index }: { weather: WeatherType; he
     return (
       <group position={[0, y, 0]}>
         {[0, 1, 2].map((i) => (
-          <mesh key={i} position={[(i - 1) * 0.08, (Math.sin(t * 3 + i) * 0.02), 0]}>
+          <mesh key={i} position={[(i - 1) * 0.08, 0, 0]}>
             <boxGeometry args={[0.02, 0.06, 0.02]} />
             <meshBasicMaterial color="#64748b" transparent opacity={0.8} />
           </mesh>
