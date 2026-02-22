@@ -74,8 +74,6 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
       className="absolute left-4 right-4 md:left-auto md:right-12 md:bottom-auto md:top-1/2 md:-translate-y-1/2 z-20 pointer-events-auto"
       style={{
         ...(isMobile ? { bottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' } : {}),
-      }}
-      style={{
         opacity: eased,
         transform: isMobile
           ? `scale(${0.9 + eased * 0.1})`
