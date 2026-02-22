@@ -135,7 +135,7 @@ export default function Hero() {
           <div className="max-w-4xl mx-auto">
             <LineReveal delay={0.2}>
               <p className="mb-6 text-xs font-medium uppercase tracking-[0.4em] text-teal-600">
-                The future of delivery
+                Delivery, reimagined
               </p>
             </LineReveal>
             
@@ -150,8 +150,8 @@ export default function Hero() {
             
             <FadeIn delay={0.8} className="max-w-xl mx-auto">
               <p className="text-base text-stone-600 md:text-lg leading-relaxed drop-shadow-sm" style={{ textShadow: '0 1px 2px rgba(255,255,255,0.8)' }}>
-                Autonomous drones deliver to smart pods every 500m. Local riders complete the final mile. 
-                <span className="text-stone-800 font-medium"> Faster. Cleaner. Smarter.</span>
+                Drones drop to smart pods every 500m. Local riders handle the last mile. 
+                <span className="text-stone-800 font-medium"> Less traffic. Less carbon. More speed.</span>
               </p>
             </FadeIn>
             
@@ -161,7 +161,7 @@ export default function Hero() {
                 className="group relative inline-flex items-center justify-center gap-3 overflow-hidden rounded-full bg-teal-600 px-6 py-3.5 sm:px-8 sm:py-4 text-sm font-medium text-white shadow-lg shadow-teal-600/20 transition-all duration-300 hover:bg-teal-700 hover:shadow-teal-600/30 hover:scale-105 min-h-[44px]"
                 data-cursor-hover
               >
-                <span className="relative z-10">Experience the journey</span>
+                <span className="relative z-10">See how it works</span>
                 <svg className="h-4 w-4 transition-transform group-hover:translate-x-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
@@ -171,7 +171,7 @@ export default function Hero() {
                 className="inline-flex items-center justify-center rounded-full border border-stone-300 bg-white/80 px-6 py-3.5 sm:px-8 sm:py-4 text-sm font-medium text-stone-700 transition-all duration-300 hover:border-stone-400 hover:bg-white hover:scale-105 min-h-[44px]"
                 data-cursor-hover
               >
-                Partner with us
+                Get in touch
               </a>
             </FadeIn>
           </div>

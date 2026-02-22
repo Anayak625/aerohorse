@@ -10,23 +10,23 @@ export default function CTA() {
       <div className="relative mx-auto max-w-5xl px-4 sm:px-6 text-center md:px-12">
         <FadeIn>
           <p className="mb-6 text-xs font-medium uppercase tracking-[0.4em] text-teal-600">
-            Get started
+            Let's talk
           </p>
         </FadeIn>
         
         <h2 className="text-4xl font-bold tracking-tight text-stone-800 sm:text-5xl md:text-7xl lg:text-8xl">
           <TextReveal delay={0.1} stagger={0.03}>
-            Ready to ship with
+            Ready to ship smarter?
           </TextReveal>
           <TextReveal className="gradient-text" delay={0.4} stagger={0.03}>
-            Aerohorse?
+            We're here.
           </TextReveal>
         </h2>
         
         <FadeIn delay={0.6} className="mt-4 sm:mt-6 md:mt-8 mx-auto max-w-2xl">
           <p className="text-base sm:text-lg md:text-xl text-stone-500 leading-relaxed">
-            Partner with us for last-mile delivery, or get in touch to bring smart pods to your city. 
-            The future of logistics is here.
+            Partner with us for last-mile delivery or explore bringing smart pods to your city. 
+            Less congestion, lower emissions, faster drops.
           </p>
         </FadeIn>
         
@@ -36,7 +36,7 @@ export default function CTA() {
             className="group relative inline-flex items-center justify-center gap-3 overflow-hidden rounded-full bg-teal-600 px-6 py-4 sm:px-10 sm:py-5 text-sm font-semibold text-white shadow-lg shadow-teal-600/20 transition-all duration-300 hover:bg-teal-700 hover:scale-105 min-h-[44px]"
             data-cursor-hover
           >
-            <span>Contact sales</span>
+            <span>Talk to sales</span>
             <svg className="h-4 w-4 transition-transform group-hover:translate-x-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
             </svg>
@@ -46,13 +46,13 @@ export default function CTA() {
             className="inline-flex items-center justify-center rounded-full border border-stone-300 bg-white px-6 py-4 sm:px-10 sm:py-5 text-sm font-semibold text-stone-700 transition-all duration-300 hover:border-stone-400 hover:shadow-md hover:scale-105 min-h-[44px]"
             data-cursor-hover
           >
-            Explore the journey
+            See the journey
           </a>
         </FadeIn>
         
         {/* Trust indicators */}
         <FadeIn delay={1} className="mt-12 sm:mt-16 md:mt-20 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3 sm:gap-6 md:gap-8 text-stone-400">
-          <span className="text-xs sm:text-sm">Trusted by forward-thinking companies</span>
+          <span className="text-xs sm:text-sm">Trusted by brands that care about speed and sustainability</span>
           <div className="flex flex-wrap justify-center gap-4 sm:gap-6 md:gap-8">
             {['TechCorp', 'LogiFlow', 'UrbanAir'].map((name) => (
               <span key={name} className="text-sm font-medium text-stone-500">{name}</span>

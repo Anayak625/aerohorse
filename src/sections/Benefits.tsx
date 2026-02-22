@@ -16,22 +16,22 @@ const benefits = [
   {
     stat: '< 30',
     unit: 'min',
-    title: 'Faster delivery',
-    description: 'Pods every 500m mean the last mile is short. Same-day and next-day, without the road gridlock.',
+    title: 'Door-to-door in under 30',
+    description: 'Pods every 500m keep the last mile short. Same-day and next-day, without sitting in traffic.',
     color: 'teal',
   },
   {
     stat: '60',
     unit: '%',
-    title: 'Less emissions',
-    description: 'Drones and riders replace heavy trucks. Cleaner air, quieter streets, smaller carbon footprint.',
+    title: 'Up to 60% less carbon',
+    description: 'Drones and riders replace heavy trucks. Cleaner air, quieter streets, a smaller footprint.',
     color: 'slate',
   },
   {
     stat: '100',
     unit: '%',
-    title: 'Real-time tracking',
-    description: 'Track your package from warehouse to your door. Know exactly when it arrives.',
+    title: 'Track every step',
+    description: 'From warehouse to your door—see where it is and get a clear ETA so you’re never left guessing.',
     color: 'stone',
   },
 ]
@@ -46,15 +46,15 @@ export default function Benefits() {
         <div className="mb-12 sm:mb-16 md:mb-28 lg:mb-36 max-w-3xl">
           <FadeIn>
             <p className="mb-4 sm:mb-6 text-xs font-medium uppercase tracking-[0.4em] text-teal-600">
-              Why Aerohorse
+              Why choose us
             </p>
           </FadeIn>
           <h2 className="text-4xl font-bold tracking-tight text-stone-800 sm:text-5xl md:text-7xl lg:text-8xl">
             <TextReveal delay={0.1} stagger={0.04}>
-              Built for speed.
+              Fast for you.
             </TextReveal>
             <TextReveal className="text-stone-400" delay={0.3} stagger={0.04}>
-              Designed for scale.
+              Lighter on the planet.
             </TextReveal>
           </h2>
         </div>
@@ -149,7 +149,7 @@ function CarbonSavedStrip() {
         <span className="text-stone-500 text-base sm:text-lg">saved by Aerohorse deliveries this month.</span>
       </div>
       <p className="text-xs text-stone-400 sm:text-right">
-        Estimated from drone + rider miles vs. traditional delivery.
+        Based on drone + rider miles vs. traditional truck delivery.
       </p>
     </div>
   )

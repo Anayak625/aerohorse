@@ -11,14 +11,14 @@ export default function Footer() {
               <span className="text-lg font-bold tracking-tight text-stone-800">Aerohorse</span>
             </div>
             <p className="mt-4 max-w-sm text-stone-500 leading-relaxed">
-              The future of last-mile delivery. Autonomous drones, smart pods, local riders—faster, cleaner, smarter.
+              Last-mile delivery, reimagined. Drones, smart pods, and local riders—faster, cleaner, and built to scale.
             </p>
           </div>
           
           <div>
-            <h4 className="text-sm font-semibold text-stone-800">Product</h4>
+            <h4 className="text-sm font-semibold text-stone-800">Explore</h4>
             <ul className="mt-4 space-y-3">
-              {['Journey', 'How it works', 'Technology', 'Pricing'].map((link) => (
+              {['The journey', 'How it works', 'Technology', 'Pricing'].map((link) => (
                 <li key={link}>
                   <a href="#" className="text-sm text-stone-500 transition-colors hover:text-stone-900" data-cursor-hover>
                     {link}
@@ -31,7 +31,7 @@ export default function Footer() {
           <div>
             <h4 className="text-sm font-semibold text-stone-800">Company</h4>
             <ul className="mt-4 space-y-3">
-              {['About', 'Careers', 'Blog', 'Contact'].map((link) => (
+              {['About us', 'Careers', 'Blog', 'Contact'].map((link) => (
                 <li key={link}>
                   <a href="#" className="text-sm text-stone-500 transition-colors hover:text-stone-900" data-cursor-hover>
                     {link}

@@ -51,11 +51,11 @@ function JourneySection() {
   const narrativePhase =
     scrollProgress < 0.35 ? 0 : scrollProgress < 0.6 ? 1 : 2
   const narrativeLines = [
-    'The truck leaves the hub. Engine on, route set.',
-    'Through the city. Your package is in the back, moving with the traffic.',
-    'The parcel leaves the truck. It reaches the building. Delivery done.',
+    'The truck leaves the hub. Engine on, route locked in.',
+    'Across the city. Your package is in the back, rolling with the flow.',
+    'Parcel off the truck. Into the building. Delivered.',
   ]
-  const phaseLabels = ['Hub', 'Transit', 'Delivery']
+  const phaseLabels = ['Hub', 'En route', 'Delivered']
   // Crossfade: show current and next line for smooth transition
   const narrativeOpacity = Math.min(1, scrollProgress * 4)
 
@@ -90,7 +90,7 @@ function JourneySection() {
               className="text-[10px] font-medium uppercase tracking-[0.3em] text-stone-400 mb-4 transition-opacity duration-500"
               style={{ opacity: narrativeOpacity }}
             >
-              Step {narrativePhase + 1} of 3 · The work
+              Step {narrativePhase + 1} of 3 · Your delivery
             </p>
 
             {/* Phase labels with connecting line */}

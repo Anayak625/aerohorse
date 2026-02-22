@@ -18,30 +18,41 @@ interface DeliveryReceiptProps {
 }
 
 const RECEIPT_APPEAR = 0.88
-const RECEIPT_FULL = 0.95
+const RECEIPT_FULL = 0.96 // scroll range for internal content (route, stats, etc.)
 
 export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps) {
   const ref = useRef<HTMLDivElement>(null)
   const [animatedTime, setAnimatedTime] = useState(0)
   const [animatedDist, setAnimatedDist] = useState(0)
   const [animatedCO2, setAnimatedCO2] = useState(0)
+  const countUpStartedRef = useRef(false)
   const isMobile = useMediaQuery('(max-width: 768px)')
 
   const visible = scrollProgress >= RECEIPT_APPEAR
-  const progress = Math.min(1, Math.max(0, (scrollProgress - RECEIPT_APPEAR) / (RECEIPT_FULL - RECEIPT_APPEAR)))
-  const eased = progress * progress * (3 - 2 * progress)
+  // Internal content (route, stats, footer) driven by scroll within receipt zone
+  const contentProgress = visible
+    ? Math.min(1, Math.max(0, (scrollProgress - RECEIPT_APPEAR) / (RECEIPT_FULL - RECEIPT_APPEAR)))
+    : 0
+  const eased = contentProgress * contentProgress * (3 - 2 * contentProgress)
 
   useEffect(() => {
     if (!visible) {
+      countUpStartedRef.current = false
       setAnimatedTime(0)
       setAnimatedDist(0)
       setAnimatedCO2(0)
       return
     }
-    const duration = 1200
+  }, [visible])
+
+  // Stats count-up runs once when scroll progress crosses threshold (scroll-driven trigger)
+  useEffect(() => {
+    if (!visible || eased < 0.25) return
+    if (countUpStartedRef.current) return
+    countUpStartedRef.current = true
+    const duration = 800
     const start = Date.now()
     let raf: number
-
     const animate = () => {
       const elapsed = Date.now() - start
       const t = Math.min(elapsed / duration, 1)
@@ -53,7 +64,7 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
     }
     raf = requestAnimationFrame(animate)
     return () => cancelAnimationFrame(raf)
-  }, [visible])
+  }, [visible, eased])
 
   const routeSteps = useMemo(
     () => [
@@ -66,6 +77,16 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
     []
   )
 
+  const [show, setShow] = useState(false)
+  useEffect(() => {
+    if (!visible) {
+      setShow(false)
+      return
+    }
+    const frame = requestAnimationFrame(() => setShow(true))
+    return () => cancelAnimationFrame(frame)
+  }, [visible])
+
   if (!visible) return null
 
   return (
@@ -74,14 +95,18 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
       className="absolute left-4 right-4 md:left-auto md:right-12 md:bottom-auto md:top-1/2 md:-translate-y-1/2 z-20 pointer-events-auto"
       style={{
         ...(isMobile ? { bottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' } : {}),
-        opacity: eased,
+        opacity: show ? 1 : 0,
         transform: isMobile
-          ? `scale(${0.9 + eased * 0.1})`
-          : `translateY(-50%) translateX(${(1 - eased) * 60}px) scale(${0.9 + eased * 0.1})`,
-        transition: 'none',
+          ? `scale(${show ? 1 : 0.94}) translateZ(0)`
+          : `translateY(-50%) translateX(${show ? 0 : 32}px) scale(${show ? 1 : 0.94}) translateZ(0)`,
+        transition: 'opacity 0.28s ease-out, transform 0.28s ease-out',
+        willChange: 'transform, opacity',
       }}
     >
-      <div className="receipt-card w-full max-w-[300px] md:max-w-none md:w-[340px] overflow-hidden rounded-3xl border border-stone-200/60 bg-white/80 shadow-2xl shadow-stone-900/10 backdrop-blur-xl mx-auto md:mx-0">
+      <div
+        className="receipt-card w-full max-w-[300px] md:max-w-none md:w-[340px] overflow-hidden rounded-3xl border border-stone-200/60 bg-white/80 shadow-2xl shadow-stone-900/10 backdrop-blur-xl mx-auto md:mx-0"
+        style={{ contain: 'layout style paint' }}
+      >
         {/* Header stripe */}
         <div className="relative overflow-hidden bg-gradient-to-r from-teal-600 to-teal-500 px-6 py-5">
           <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10" />
@@ -89,18 +114,17 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-teal-100">
-                Delivery complete
+                You're all set
               </p>
               <p className="mt-1 text-lg font-bold text-white">
-                Receipt
+                Delivery summary
               </p>
             </div>
             <div
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm transition-transform duration-500 ease-out"
               style={{
-                transform: `scale(${eased > 0.6 ? 1 : 0})`,
-                transition: 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                transitionDelay: '0.3s',
+                transform: eased > 0.6 ? 'scale(1)' : 'scale(0)',
+                transitionDelay: eased > 0.6 ? '0.2s' : '0s',
               }}
             >
               <svg
@@ -116,21 +140,22 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
           </div>
         </div>
 
-        {/* Stats grid */}
+        {/* Stats grid — scroll-driven reveal */}
         <div className="grid grid-cols-3 gap-px bg-stone-100">
           {[
-            { value: `${animatedTime}`, unit: 'min', label: 'Delivery time' },
-            { value: `${animatedDist}`, unit: 'km', label: 'Distance' },
-            { value: `${animatedCO2}`, unit: 'kg', label: 'CO₂ saved' },
-          ].map((stat, i) => (
+            { value: `${animatedTime}`, unit: 'min', label: 'Door-to-door' },
+            { value: `${animatedDist}`, unit: 'km', label: 'Distance covered' },
+            { value: `${animatedCO2}`, unit: 'kg', label: 'Carbon saved' },
+          ].map((stat, i) => {
+            const statVisible = eased > 0.3 + i * 0.15
+            return (
             <div
               key={stat.label}
-              className="bg-white px-4 py-4 text-center"
+              className="bg-white px-4 py-4 text-center transition-all duration-400 ease-out"
               style={{
-                opacity: eased > 0.3 + i * 0.15 ? 1 : 0,
-                transform: `translateY(${eased > 0.3 + i * 0.15 ? 0 : 12}px)`,
-                transition: 'all 0.5s ease-out',
-                transitionDelay: `${0.2 + i * 0.1}s`,
+                opacity: statVisible ? 1 : 0,
+                transform: statVisible ? 'translateY(0)' : 'translateY(10px)',
+                transitionDelay: statVisible ? `${0.1 + i * 0.08}s` : '0s',
               }}
             >
               <div className="flex items-baseline justify-center gap-0.5">
@@ -141,13 +166,14 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
                 {stat.label}
               </p>
             </div>
-          ))}
+            )
+          })}
         </div>
 
         {/* Route visualization */}
         <div className="px-6 py-5">
           <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-400">
-            Route
+            How it got there
           </p>
           <div className="relative">
             {routeSteps.map((step, i) => {
@@ -157,10 +183,10 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
 
               return (
                 <div key={step.label} className="flex items-start gap-3" style={{ marginBottom: isLast ? 0 : 16 }}>
-                  {/* Timeline dot + line */}
+                  {/* Timeline dot + line — scroll-driven */}
                   <div className="relative flex flex-col items-center">
                     <div
-                      className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full border-2 transition-all duration-500 ${
+                      className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full border-2 transition-all duration-400 ${
                         stepVisible
                           ? isLast
                             ? 'border-teal-500 bg-teal-500'
@@ -168,9 +194,8 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
                           : 'border-stone-200 bg-white'
                       }`}
                       style={{
-                        transform: `scale(${stepVisible ? 1 : 0.6})`,
-                        transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                        transitionDelay: `${stepDelay}s`,
+                        transform: stepVisible ? 'scale(1)' : 'scale(0.6)',
+                        transitionDelay: stepVisible ? `${stepDelay * 0.3}s` : '0s',
                       }}
                     >
                       <RouteIcon type={step.icon} active={stepVisible} isLast={isLast} />
@@ -178,10 +203,10 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
                     {!isLast && (
                       <div className="relative h-4 w-0.5 bg-stone-100">
                         <div
-                          className="absolute inset-x-0 top-0 bg-teal-400 transition-all duration-500"
+                          className="absolute inset-x-0 top-0 bg-teal-400 transition-all duration-400"
                           style={{
                             height: stepVisible ? '100%' : '0%',
-                            transitionDelay: `${stepDelay + 0.1}s`,
+                            transitionDelay: stepVisible ? `${stepDelay * 0.3 + 0.05}s` : '0s',
                           }}
                         />
                       </div>
@@ -190,12 +215,11 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
 
                   {/* Step label */}
                   <div
-                    className="flex flex-1 items-center justify-between pt-1"
+                    className="flex flex-1 items-center justify-between pt-1 transition-all duration-400 ease-out"
                     style={{
                       opacity: stepVisible ? 1 : 0,
-                      transform: `translateX(${stepVisible ? 0 : 10}px)`,
-                      transition: 'all 0.4s ease-out',
-                      transitionDelay: `${stepDelay + 0.05}s`,
+                      transform: stepVisible ? 'translateX(0)' : 'translateX(10px)',
+                      transitionDelay: stepVisible ? `${stepDelay * 0.3 + 0.02}s` : '0s',
                     }}
                   >
                     <span className={`text-sm font-medium ${isLast ? 'text-teal-600' : 'text-stone-700'}`}>
@@ -209,13 +233,12 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Footer — scroll-driven */}
         <div
-          className="border-t border-stone-100 px-6 py-4"
+          className="border-t border-stone-100 px-6 py-4 transition-opacity duration-400 ease-out"
           style={{
             opacity: eased > 0.8 ? 1 : 0,
-            transition: 'opacity 0.5s ease-out',
-            transitionDelay: '0.7s',
+            transitionDelay: eased > 0.8 ? '0.15s' : '0s',
           }}
         >
           <div className="flex items-center justify-between">

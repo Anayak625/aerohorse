@@ -350,21 +350,20 @@ export default function PodNetwork() {
         <div className="mb-10 sm:mb-14 md:mb-24 lg:mb-32">
           <FadeIn>
             <p className="mb-4 sm:mb-6 text-xs font-medium uppercase tracking-[0.4em] text-teal-600">
-              Pod Network
+              Live network
             </p>
           </FadeIn>
           <h2 className="text-4xl font-bold tracking-tight text-stone-800 sm:text-5xl md:text-7xl lg:text-8xl">
             <TextReveal delay={0.1} stagger={0.04}>
-              Live in Goa.
+              Goa&apos;s smart pods.
             </TextReveal>
             <TextReveal className="text-stone-400" delay={0.3} stagger={0.04}>
-              Always on.
+              Live status, real locations.
             </TextReveal>
           </h2>
           <FadeIn delay={0.5} className="mt-4 sm:mt-6 md:mt-8 max-w-2xl">
             <p className="text-base sm:text-lg md:text-xl text-stone-500 leading-relaxed">
-              10 smart pods across Goa&apos;s key corridors. Temperature-controlled,
-              real-time monitored. Click a pod on the map or open in Google Maps.
+              10 temperature-controlled pods across Goa&apos;s key areas. Click a pod for live status or open in Google Maps.
             </p>
           </FadeIn>
         </div>
@@ -373,9 +372,9 @@ export default function PodNetwork() {
         <FadeIn delay={0.6}>
           <div className="mb-8 sm:mb-10 md:mb-12 flex flex-wrap gap-4 sm:gap-6 md:gap-10">
             {[
-              { value: activePods.toString(), label: 'Active pods', color: 'text-teal-600' },
-              { value: totalDeliveries.toString(), label: 'Deliveries today', color: 'text-stone-800' },
-              { value: totalCapacity.toString(), label: 'Packages in pods', color: 'text-stone-800' },
+              { value: activePods.toString(), label: 'Pods live now', color: 'text-teal-600' },
+              { value: totalDeliveries.toString(), label: 'Drop-offs today', color: 'text-stone-800' },
+              { value: totalCapacity.toString(), label: 'Packages waiting', color: 'text-stone-800' },
             ].map((stat) => (
               <div key={stat.label} className="flex items-baseline gap-2">
                 <span className={`text-2xl font-bold tabular-nums sm:text-3xl md:text-4xl ${stat.color}`}>
@@ -437,9 +436,9 @@ export default function PodNetwork() {
                       />
                     </svg>
                   </div>
-                  <p className="text-lg font-semibold text-stone-700">Select a pod</p>
+                  <p className="text-lg font-semibold text-stone-700">Pick a pod</p>
                   <p className="mt-2 max-w-[200px] text-sm text-stone-400">
-                    Click any pod on the map to see live status, or open in Google Maps.
+                    Click any pod on the map for live status, or open in Google Maps.
                   </p>
                 </div>
               </FadeIn>
@@ -449,7 +448,7 @@ export default function PodNetwork() {
             <FadeIn delay={1}>
               <div className="rounded-2xl border border-stone-200 bg-white p-4">
                 <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-400">
-                  All pods
+                  All 10 pods
                 </p>
                 <div className="pod-scroll max-h-[260px] space-y-1.5 overflow-y-auto">
                   {pods.map((pod) => (
@@ -548,7 +547,7 @@ function PodDetail({ pod, onClose }: { pod: PodInfo; onClose: () => void }) {
         <span className="text-sm font-medium capitalize text-stone-600">{pod.status}</span>
         {pod.status !== 'maintenance' && (
           <span className="ml-auto text-xs text-stone-400">
-            Next pickup in <span className="font-semibold text-stone-600">{pod.nextPickup}</span>
+            Next pickup <span className="font-semibold text-stone-600">{pod.nextPickup}</span>
           </span>
         )}
       </div>
@@ -556,11 +555,11 @@ function PodDetail({ pod, onClose }: { pod: PodInfo; onClose: () => void }) {
       {/* Stats */}
       <div className="grid grid-cols-2 gap-px bg-stone-100">
         <div className="bg-white px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Temperature</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Climate</p>
           <p className="mt-1 text-xl font-bold text-stone-800">{pod.temperature}</p>
         </div>
         <div className="bg-white px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Today</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Drop-offs today</p>
           <p className="mt-1 text-xl font-bold text-stone-800">
             {pod.deliveriesToday}
             <span className="ml-1 text-xs font-normal text-stone-400">deliveries</span>
@@ -571,7 +570,7 @@ function PodDetail({ pod, onClose }: { pod: PodInfo; onClose: () => void }) {
       {/* Capacity bar */}
       <div className="px-6 py-4">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Capacity</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Slots</p>
           <p className="text-sm font-semibold tabular-nums text-stone-600">
             {pod.capacity}/{pod.maxCapacity}
           </p>

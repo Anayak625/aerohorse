@@ -98,12 +98,12 @@ export default function TransitionSection() {
             }}
           >
             <span className="text-[10px] font-semibold text-teal-600/80 tracking-[0.2em]">
-              CHAPTER 1
+              YOUR PACKAGE'S JOURNEY
             </span>
             <span className="text-stone-300">·</span>
             <div className="h-1.5 w-1.5 rounded-full bg-teal-500 animate-pulse" />
             <span className="text-xs font-medium uppercase tracking-wider text-teal-700">
-              Scroll to begin
+              Scroll to follow along
             </span>
           </div>
           
@@ -123,7 +123,7 @@ export default function TransitionSection() {
                 transition: 'opacity 0.6s ease-out, transform 0.6s ease-out',
               }}
             >
-              One story.
+              One clear path.
             </span>
           </h2>
           
@@ -134,7 +134,7 @@ export default function TransitionSection() {
               transform: enterProgress > 0.5 ? 'translateY(0)' : 'translateY(10px)',
             }}
           >
-            From hub to city to your door—the road, the ride, the moment it arrives.
+            Hub → truck → your building. Watch the road, the ride, and the moment it lands at your door.
           </p>
 
           {/* Story progress bars with labels — fill as truck moves (when stuck) */}
@@ -146,9 +146,9 @@ export default function TransitionSection() {
           >
             <div className="flex items-center gap-4 md:gap-6">
               {[
-                { label: 'Begin', threshold: 0.3 },
-                { label: 'Watch', threshold: 0.5 },
-                { label: 'Go', threshold: 0.7 },
+                { label: 'Start', threshold: 0.3 },
+                { label: 'On the road', threshold: 0.5 },
+                { label: 'Arrival', threshold: 0.7 },
               ].map(({ label, threshold }, i) => (
                 <div key={i} className="flex flex-col items-center gap-2">
                   <div className="h-1.5 w-10 rounded-full bg-stone-200 overflow-hidden">

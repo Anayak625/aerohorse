@@ -1,10 +1,10 @@
 import { TextReveal, FadeIn } from '../components/TextReveal'
 
 const features = [
-  { icon: '🛸', title: 'Autonomous Flight', desc: 'AI-powered navigation with real-time obstacle avoidance' },
-  { icon: '📍', title: 'Geofenced Corridors', desc: 'Pre-approved flight paths for safe, predictable routes' },
-  { icon: '🔒', title: 'Secure Pods', desc: 'Biometric access with climate control for every package' },
-  { icon: '⚡', title: 'Live ETA', desc: 'Track from dispatch to door with minute-by-minute updates' },
+  { icon: '🛸', title: 'Autonomous flight', desc: 'AI navigation and real-time obstacle avoidance so every run is safe and on time' },
+  { icon: '📍', title: 'Approved flight paths', desc: 'Geofenced corridors—no surprises, just predictable routes' },
+  { icon: '🔒', title: 'Secure, climate-controlled pods', desc: 'Your package stays safe and at the right temperature until pickup' },
+  { icon: '⚡', title: 'Live tracking & ETA', desc: 'From dispatch to your door, minute-by-minute updates so you know exactly when to expect it' },
 ]
 
 export default function Technology() {
@@ -15,23 +15,20 @@ export default function Technology() {
           <div>
             <FadeIn>
               <p className="mb-4 sm:mb-6 text-xs font-medium uppercase tracking-[0.4em] text-teal-600">
-                Technology
+                How we do it
               </p>
             </FadeIn>
             <h2 className="text-3xl font-bold tracking-tight text-stone-800 sm:text-4xl md:text-6xl lg:text-7xl">
               <TextReveal delay={0.1} stagger={0.04}>
-                Autonomous drones.
+                Drones that fly. Pods that wait.
               </TextReveal>
               <TextReveal className="text-stone-400" delay={0.3} stagger={0.04}>
-                Smart pods.
-              </TextReveal>
-              <TextReveal className="text-stone-400" delay={0.5} stagger={0.04}>
-                Real-time routing.
+                Riders that deliver.
               </TextReveal>
             </h2>
             <FadeIn delay={0.7} className="mt-4 sm:mt-6 md:mt-8">
               <p className="text-base sm:text-lg md:text-xl text-stone-500 leading-relaxed">
-                Our drones fly predefined corridors to pods. The system assigns the nearest rider and optimizes the final leg. Every step is monitored and secure.
+                Drones follow safe corridors to pods. Our system picks the nearest rider and optimizes the last mile. You get live tracking and secure handoff at every step.
               </p>
             </FadeIn>
           </div>

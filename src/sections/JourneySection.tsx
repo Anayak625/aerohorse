@@ -31,9 +31,9 @@ export default function JourneySection() {
 
   const phase = scrollProgress < 0.33 ? 0 : scrollProgress < 0.66 ? 1 : 2
   const phases = [
-    { title: 'Drone Dispatch', desc: 'Autonomous drones collect your package from our hub and take flight.' },
-    { title: 'Smart Pod', desc: 'The drone delivers to a secure, climate-controlled pod near you.' },
-    { title: 'Final Mile', desc: 'A local rider picks up from the pod and brings it to your door.' },
+    { title: 'Liftoff from the hub', desc: 'Autonomous drones collect your package and take flight—no traffic, no delays.' },
+    { title: 'Touchdown at the pod', desc: 'The drone drops at a secure, climate-controlled pod near you.' },
+    { title: 'Last mile to your door', desc: 'A local rider picks up from the pod and delivers straight to you.' },
   ]
 
   // Calculate entry opacity - fade in during initial scroll
@@ -106,7 +106,7 @@ export default function JourneySection() {
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
           </svg>
-          <span className="text-xs uppercase tracking-wider">Drag to orbit</span>
+          <span className="text-xs uppercase tracking-wider">Drag to look around</span>
         </div>
       </div>
     </section>

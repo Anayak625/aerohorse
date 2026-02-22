@@ -1,9 +1,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // @ts-nocheck
-import { useRef, useEffect, useMemo } from 'react'
+import { useRef, useEffect, useMemo, useState } from 'react'
 import { useThree, useFrame } from '@react-three/fiber'
 import { OrbitControls, useGLTF, Sparkles, Html, RoundedBox, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
+
+const MOBILE_BREAKPOINT = 768
+function useIsSmallDevice() {
+  const [isSmall, setSmall] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches
+  )
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`)
+    const handler = () => setSmall(mql.matches)
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [])
+  return isSmall
+}
 
 const TRUCK_GLTF_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/truck/scene.gltf'
 const LOGO_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/aerohorse-logo.png'
@@ -82,7 +96,8 @@ function ScrollZoom({ scrollProgress, controlsRef }: { scrollProgress: number; c
 export default function JourneyScene({ scrollProgress = 0 }: { scrollProgress: number }) {
   const controlsRef = useRef<any>(null)
   const { camera } = useThree()
-  
+  const isSmallDevice = useIsSmallDevice()
+
   useEffect(() => {
     camera.position.set(0, 4, 8)
     if (controlsRef.current) {
@@ -106,6 +121,7 @@ export default function JourneyScene({ scrollProgress = 0 }: { scrollProgress: n
         ref={controlsRef}
         enableZoom={false}
         enablePan={false}
+        enableRotate={!isSmallDevice}
         minPolarAngle={Math.PI / 6}
         maxPolarAngle={Math.PI / 2.2}
         minDistance={CAMERA_DISTANCE_MIN}
