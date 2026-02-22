@@ -1,6 +1,19 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLenisContext } from '../context/LenisContext'
 
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(query).matches : false
+  )
+  useEffect(() => {
+    const m = window.matchMedia(query)
+    const handler = () => setMatches(m.matches)
+    m.addEventListener('change', handler)
+    return () => m.removeEventListener('change', handler)
+  }, [query])
+  return matches
+}
+
 // ─── Scroll behavior config ─────────────────────────────────────────────────
 const SCROLL_CONFIG = {
   /** px/s: hero (top → journey start) — medium so hero is visible */
@@ -52,6 +65,7 @@ export default function Header() {
   const lastScrollY = useRef(0)
   const navRef = useRef<HTMLElement>(null)
   const lenisRef = useLenisContext()
+  const isMobile = useMediaQuery('(max-width: 768px)')
 
   useEffect(() => {
     const onScroll = () => {
@@ -107,16 +121,20 @@ export default function Header() {
     }
   }
 
+  const expandNav = () => setExpanded(true)
+  const collapseNav = () => setExpanded(false)
+
   return (
     <header
       ref={navRef}
-      className={`fixed left-1/2 -translate-x-1/2 z-50 transition-all duration-700 ease-out ${
-        hidden ? '-translate-y-[120%]' : scrolled ? 'top-4' : 'top-6'
+      className={`fixed left-1/2 -translate-x-1/2 z-50 transition-all duration-700 ease-out w-[calc(100%-2rem)] max-w-2xl md:w-auto ${
+        hidden ? '-translate-y-[120%]' : scrolled ? 'top-3 md:top-4' : 'top-4 md:top-6'
       }`}
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
       <nav
-        onMouseEnter={() => setExpanded(true)}
-        onMouseLeave={() => setExpanded(false)}
+        onMouseEnter={!isMobile ? expandNav : undefined}
+        onMouseLeave={!isMobile ? collapseNav : undefined}
         className={`
           relative flex items-center justify-center
           rounded-full border border-stone-200/60
@@ -124,10 +142,10 @@ export default function Header() {
           shadow-[0_8px_32px_-8px_rgba(0,0,0,0.1),0_0_0_1px_rgba(255,255,255,0.8)_inset]
           transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]
           ${expanded 
-            ? 'px-3 py-2 gap-1' 
+            ? 'px-3 py-2 gap-1 md:gap-1' 
             : scrolled 
               ? 'px-4 py-2.5 gap-2' 
-              : 'px-5 py-3 gap-3'
+              : 'px-4 md:px-5 py-3 gap-2 md:gap-3'
           }
         `}
       >
@@ -161,9 +179,22 @@ export default function Header() {
           </span>
         </a>
 
-        {/* Divider */}
+        {/* Mobile menu button */}
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-label={expanded ? 'Close menu' : 'Open menu'}
+          onClick={() => setExpanded((e) => !e)}
+          className="md:hidden flex flex-col justify-center items-center gap-1.5 w-10 h-10 rounded-full hover:bg-stone-100/80 active:bg-stone-200/80 transition-colors"
+        >
+          <span className={`w-5 h-0.5 bg-stone-600 rounded-full transition-transform duration-300 ${expanded ? 'rotate-45 translate-y-1.5' : ''}`} />
+          <span className={`w-5 h-0.5 bg-stone-600 rounded-full transition-opacity duration-300 ${expanded ? 'opacity-0' : ''}`} />
+          <span className={`w-5 h-0.5 bg-stone-600 rounded-full transition-transform duration-300 ${expanded ? '-rotate-45 -translate-y-1.5' : ''}`} />
+        </button>
+
+        {/* Divider - hide on mobile when collapsed */}
         <div className={`
-          h-5 w-px bg-stone-300/50 transition-all duration-500
+          h-5 w-px bg-stone-300/50 transition-all duration-500 hidden md:block
           ${expanded ? 'opacity-100 mx-1' : 'opacity-0 w-0 mx-0'}
         `} />
 
@@ -172,7 +203,10 @@ export default function Header() {
           flex items-center overflow-hidden
           transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]
           ${expanded ? 'w-auto max-w-[400px] gap-1 opacity-100' : 'w-0 max-w-0 gap-0 opacity-0'}
-        `}>
+          max-md:absolute max-md:left-1/2 max-md:-translate-x-1/2 max-md:top-full max-md:mt-2 max-md:flex-col max-md:py-2 max-md:rounded-2xl max-md:border max-md:border-stone-200/60 max-md:bg-white/95 max-md:backdrop-blur-xl max-md:shadow-xl max-md:w-[calc(100vw-2rem)] max-md:max-w-[320px]
+        `}
+        style={{ display: expanded ? 'flex' : undefined }}
+        >
           {navItems.map((item, i) => (
             <a
               key={item.href}
@@ -198,7 +232,7 @@ export default function Header() {
 
         {/* Divider */}
         <div className={`
-          h-5 w-px bg-stone-300/50 transition-all duration-500
+          h-5 w-px bg-stone-300/50 transition-all duration-500 hidden md:block
           ${expanded ? 'opacity-100 mx-1' : 'opacity-0 w-0 mx-0'}
         `} />
 

@@ -38,18 +38,18 @@ const benefits = [
 
 export default function Benefits() {
   return (
-    <section className="relative overflow-hidden border-y border-stone-200 bg-stone-50 py-32 md:py-48 lg:py-64">
+    <section className="relative overflow-hidden border-y border-stone-200 bg-stone-50 py-20 sm:py-28 md:py-48 lg:py-64">
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-teal-500/5 to-transparent" />
       
-      <div className="relative mx-auto px-8 md:px-12 lg:px-16">
-        <div className="mb-20 md:mb-28 lg:mb-36 max-w-3xl">
+      <div className="relative mx-auto px-4 sm:px-6 md:px-12 lg:px-16">
+        <div className="mb-12 sm:mb-16 md:mb-28 lg:mb-36 max-w-3xl">
           <FadeIn>
-            <p className="mb-6 text-xs font-medium uppercase tracking-[0.4em] text-teal-600">
+            <p className="mb-4 sm:mb-6 text-xs font-medium uppercase tracking-[0.4em] text-teal-600">
               Why Aerohorse
             </p>
           </FadeIn>
-          <h2 className="text-5xl font-bold tracking-tight text-stone-800 md:text-7xl lg:text-8xl">
+          <h2 className="text-4xl font-bold tracking-tight text-stone-800 sm:text-5xl md:text-7xl lg:text-8xl">
             <TextReveal delay={0.1} stagger={0.04}>
               Built for speed.
             </TextReveal>
@@ -59,7 +59,7 @@ export default function Benefits() {
           </h2>
         </div>
         
-        <div className="grid gap-8 md:grid-cols-3 md:gap-6 lg:gap-12">
+        <div className="grid gap-6 sm:gap-8 md:grid-cols-3 md:gap-6 lg:gap-12">
           {benefits.map((b, i) => (
             <BenefitCard key={b.title} benefit={b} index={i} />
           ))}
@@ -137,16 +137,16 @@ function CarbonSavedStrip() {
   return (
     <div
       ref={ref}
-      className={`mt-20 md:mt-28 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 rounded-2xl border border-teal-500/20 bg-gradient-to-r from-teal-500/10 to-teal-500/5 px-8 py-8 md:px-10 md:py-8 transition-all duration-700 ${
+      className={`mt-12 sm:mt-16 md:mt-28 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6 rounded-2xl border border-teal-500/20 bg-gradient-to-r from-teal-500/10 to-teal-500/5 px-4 py-6 sm:px-6 sm:py-6 md:px-10 md:py-8 transition-all duration-700 ${
         inView ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
       }`}
     >
       <div className="flex items-baseline gap-2 flex-wrap">
-        <span className="text-4xl font-bold tabular-nums text-teal-700 md:text-5xl">
+        <span className="text-3xl sm:text-4xl font-bold tabular-nums text-teal-700 md:text-5xl">
           {displayValue.toLocaleString()}
         </span>
-        <span className="text-xl font-medium text-teal-600">kg CO₂</span>
-        <span className="text-stone-500 text-lg">saved by Aerohorse deliveries this month.</span>
+        <span className="text-lg sm:text-xl font-medium text-teal-600">kg CO₂</span>
+        <span className="text-stone-500 text-base sm:text-lg">saved by Aerohorse deliveries this month.</span>
       </div>
       <p className="text-xs text-stone-400 sm:text-right">
         Estimated from drone + rider miles vs. traditional delivery.
@@ -204,21 +204,21 @@ function BenefitCard({ benefit, index }: { benefit: typeof benefits[0]; index: n
   return (
     <div
       ref={ref}
-      className={`group relative overflow-hidden rounded-3xl border border-stone-200 bg-white p-8 md:p-10 shadow-sm transition-all duration-700 hover:border-stone-300 hover:shadow-md ${
+      className={`group relative overflow-hidden rounded-3xl border border-stone-200 bg-white p-5 sm:p-6 md:p-10 shadow-sm transition-all duration-700 hover:border-stone-300 hover:shadow-md ${
         inView ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'
       }`}
       style={{ transitionDelay: `${index * 100}ms` }}
       data-cursor-hover
     >
       <div className={`inline-flex items-baseline gap-1 rounded-full border px-4 py-2 ${colorClasses[benefit.color as keyof typeof colorClasses]}`}>
-        <span className="text-4xl font-bold tabular-nums md:text-5xl">
+        <span className="text-3xl font-bold tabular-nums sm:text-4xl md:text-5xl">
           {benefit.stat.includes('<') && '< '}
           {count}
         </span>
         <span className="text-lg font-medium">{benefit.unit}</span>
       </div>
       
-      <h3 className="mt-6 text-xl font-bold text-stone-800 md:text-2xl">{benefit.title}</h3>
+      <h3 className="mt-4 sm:mt-6 text-lg font-bold text-stone-800 sm:text-xl md:text-2xl">{benefit.title}</h3>
       <p className="mt-3 text-stone-500 leading-relaxed">{benefit.description}</p>
     </div>
   )

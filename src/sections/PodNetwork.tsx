@@ -280,7 +280,7 @@ function PodNetworkMap({
       <div ref={containerRef} className="h-full w-full pod-map-container" />
 
       {/* Legend */}
-      <div className="absolute bottom-4 left-4 z-[1000] flex gap-4 rounded-xl border border-stone-200/80 bg-white/95 px-4 py-2.5 shadow-sm backdrop-blur-sm">
+      <div className="absolute bottom-2 left-2 sm:bottom-4 sm:left-4 z-[1000] flex gap-2 sm:gap-4 rounded-lg sm:rounded-xl border border-stone-200/80 bg-white/95 px-2.5 py-1.5 sm:px-4 sm:py-2.5 shadow-sm backdrop-blur-sm">
         {[
           { label: 'Active', color: 'bg-[#0d9488]' },
           { label: 'Busy', color: 'bg-amber-400' },
@@ -288,7 +288,7 @@ function PodNetworkMap({
         ].map((item) => (
           <div key={item.label} className="flex items-center gap-1.5">
             <div className={`h-2 w-2 rounded-full ${item.color}`} />
-            <span className="text-[10px] font-medium text-stone-500">{item.label}</span>
+            <span className="text-[9px] sm:text-[10px] font-medium text-stone-500">{item.label}</span>
           </div>
         ))}
       </div>
@@ -298,9 +298,10 @@ function PodNetworkMap({
         href="https://www.google.com/maps/search/pods+goa/@15.42,73.92,10z"
         target="_blank"
         rel="noopener noreferrer"
-        className="absolute right-4 top-4 z-[1000] flex items-center gap-2 rounded-xl border border-stone-200/80 bg-white/95 px-4 py-2.5 text-xs font-medium text-stone-600 shadow-sm backdrop-blur-sm transition-colors hover:bg-stone-50 hover:text-teal-600"
+        className="absolute right-2 top-2 sm:right-4 sm:top-4 z-[1000] flex items-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl border border-stone-200/80 bg-white/95 px-2.5 py-2 sm:px-4 sm:py-2.5 text-[10px] sm:text-xs font-medium text-stone-600 shadow-sm backdrop-blur-sm transition-colors hover:bg-stone-50 hover:text-teal-600"
       >
-        <span>Open in Google Maps</span>
+        <span className="hidden sm:inline">Open in Google Maps</span>
+        <span className="sm:hidden">Maps</span>
         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
         </svg>
@@ -340,19 +341,19 @@ export default function PodNetwork() {
     <section
       ref={sectionRef}
       id="pod-network"
-      className="relative overflow-hidden bg-white py-32 md:py-48 lg:py-64"
+      className="relative overflow-hidden bg-white py-20 sm:py-28 md:py-48 lg:py-64"
     >
       <div className="absolute inset-0 bg-gradient-to-b from-stone-50/50 via-transparent to-stone-50/50" />
 
-      <div className="relative mx-auto px-8 md:px-12 lg:px-16">
+      <div className="relative mx-auto px-4 sm:px-6 md:px-12 lg:px-16">
         {/* Header */}
-        <div className="mb-16 md:mb-24 lg:mb-32">
+        <div className="mb-10 sm:mb-14 md:mb-24 lg:mb-32">
           <FadeIn>
-            <p className="mb-6 text-xs font-medium uppercase tracking-[0.4em] text-teal-600">
+            <p className="mb-4 sm:mb-6 text-xs font-medium uppercase tracking-[0.4em] text-teal-600">
               Pod Network
             </p>
           </FadeIn>
-          <h2 className="text-5xl font-bold tracking-tight text-stone-800 md:text-7xl lg:text-8xl">
+          <h2 className="text-4xl font-bold tracking-tight text-stone-800 sm:text-5xl md:text-7xl lg:text-8xl">
             <TextReveal delay={0.1} stagger={0.04}>
               Live in Goa.
             </TextReveal>
@@ -360,8 +361,8 @@ export default function PodNetwork() {
               Always on.
             </TextReveal>
           </h2>
-          <FadeIn delay={0.5} className="mt-8 max-w-2xl">
-            <p className="text-xl text-stone-500 leading-relaxed">
+          <FadeIn delay={0.5} className="mt-4 sm:mt-6 md:mt-8 max-w-2xl">
+            <p className="text-base sm:text-lg md:text-xl text-stone-500 leading-relaxed">
               10 smart pods across Goa&apos;s key corridors. Temperature-controlled,
               real-time monitored. Click a pod on the map or open in Google Maps.
             </p>
@@ -370,14 +371,14 @@ export default function PodNetwork() {
 
         {/* Network stats bar */}
         <FadeIn delay={0.6}>
-          <div className="mb-12 flex flex-wrap gap-6 md:gap-10">
+          <div className="mb-8 sm:mb-10 md:mb-12 flex flex-wrap gap-4 sm:gap-6 md:gap-10">
             {[
               { value: activePods.toString(), label: 'Active pods', color: 'text-teal-600' },
               { value: totalDeliveries.toString(), label: 'Deliveries today', color: 'text-stone-800' },
               { value: totalCapacity.toString(), label: 'Packages in pods', color: 'text-stone-800' },
             ].map((stat) => (
               <div key={stat.label} className="flex items-baseline gap-2">
-                <span className={`text-3xl font-bold tabular-nums md:text-4xl ${stat.color}`}>
+                <span className={`text-2xl font-bold tabular-nums sm:text-3xl md:text-4xl ${stat.color}`}>
                   {stat.value}
                 </span>
                 <span className="text-sm text-stone-400">{stat.label}</span>
@@ -389,9 +390,9 @@ export default function PodNetwork() {
         {/* Map + Detail layout — map and right panel share same row height for a clean grid */}
         <div className="grid gap-8 lg:grid-cols-[1fr_360px] lg:gap-12 lg:items-stretch">
           {/* Real map */}
-          <FadeIn delay={0.7} className="h-full min-h-[320px] lg:min-h-[560px]">
+          <FadeIn delay={0.7} className="h-full min-h-[240px] sm:min-h-[280px] md:min-h-[320px] lg:min-h-[560px]">
             <div
-              className="relative h-full aspect-[4/3] w-full overflow-hidden rounded-3xl border border-stone-200 bg-stone-100 lg:aspect-auto"
+              className="relative h-full aspect-[4/3] w-full overflow-hidden rounded-2xl sm:rounded-3xl border border-stone-200 bg-stone-100 lg:aspect-auto"
               data-cursor-hover
             >
               {mapReady ? (

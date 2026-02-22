@@ -1,5 +1,18 @@
 import { useRef, useEffect, useState, useMemo } from 'react'
 
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(query).matches : false
+  )
+  useEffect(() => {
+    const m = window.matchMedia(query)
+    const handler = () => setMatches(m.matches)
+    m.addEventListener('change', handler)
+    return () => m.removeEventListener('change', handler)
+  }, [query])
+  return matches
+}
+
 interface DeliveryReceiptProps {
   scrollProgress: number
 }
@@ -12,6 +25,7 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
   const [animatedTime, setAnimatedTime] = useState(0)
   const [animatedDist, setAnimatedDist] = useState(0)
   const [animatedCO2, setAnimatedCO2] = useState(0)
+  const isMobile = useMediaQuery('(max-width: 768px)')
 
   const visible = scrollProgress >= RECEIPT_APPEAR
   const progress = Math.min(1, Math.max(0, (scrollProgress - RECEIPT_APPEAR) / (RECEIPT_FULL - RECEIPT_APPEAR)))
@@ -57,14 +71,19 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
   return (
     <div
       ref={ref}
-      className="absolute right-6 top-1/2 z-20 -translate-y-1/2 pointer-events-auto md:right-12"
+      className="absolute left-4 right-4 md:left-auto md:right-12 md:bottom-auto md:top-1/2 md:-translate-y-1/2 z-20 pointer-events-auto"
+      style={{
+        ...(isMobile ? { bottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' } : {}),
+      }}
       style={{
         opacity: eased,
-        transform: `translateY(-50%) translateX(${(1 - eased) * 60}px) scale(${0.9 + eased * 0.1})`,
+        transform: isMobile
+          ? `scale(${0.9 + eased * 0.1})`
+          : `translateY(-50%) translateX(${(1 - eased) * 60}px) scale(${0.9 + eased * 0.1})`,
         transition: 'none',
       }}
     >
-      <div className="receipt-card w-[300px] md:w-[340px] overflow-hidden rounded-3xl border border-stone-200/60 bg-white/80 shadow-2xl shadow-stone-900/10 backdrop-blur-xl">
+      <div className="receipt-card w-full max-w-[300px] md:max-w-none md:w-[340px] overflow-hidden rounded-3xl border border-stone-200/60 bg-white/80 shadow-2xl shadow-stone-900/10 backdrop-blur-xl mx-auto md:mx-0">
         {/* Header stripe */}
         <div className="relative overflow-hidden bg-gradient-to-r from-teal-600 to-teal-500 px-6 py-5">
           <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10" />

@@ -1,8 +1,8 @@
 export default function Footer() {
   return (
     <footer className="border-t border-stone-200 bg-stone-50">
-      <div className="mx-auto px-8 py-16 md:px-12 lg:py-20">
-        <div className="grid gap-12 md:grid-cols-4 md:gap-8">
+      <div className="mx-auto px-4 sm:px-6 py-12 md:px-8 md:py-16 lg:px-12 lg:py-20">
+        <div className="grid gap-8 sm:gap-10 md:grid-cols-4 md:gap-8">
           <div className="md:col-span-2">
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center">
@@ -42,7 +42,7 @@ export default function Footer() {
           </div>
         </div>
         
-        <div className="mt-16 flex flex-col items-center justify-between gap-4 border-t border-stone-200 pt-8 md:flex-row">
+        <div className="mt-10 sm:mt-12 md:mt-16 flex flex-col items-center justify-between gap-4 border-t border-stone-200 pt-6 md:pt-8 md:flex-row text-center md:text-left">
           <p className="text-sm text-stone-400">© 2026 Aerohorse. All rights reserved.</p>
           <div className="flex gap-6">
             {['Twitter', 'LinkedIn', 'Instagram'].map((social) => (

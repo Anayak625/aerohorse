@@ -34,28 +34,28 @@ const steps = [
 
 export default function StorySection() {
   return (
-    <section id="how-it-works" className="relative py-32 md:py-48 lg:py-64 bg-white">
-      <div className="mx-auto px-8 md:px-12 lg:px-16">
-        <div className="mb-24 md:mb-32 lg:mb-40">
+    <section id="how-it-works" className="relative py-20 sm:py-28 md:py-48 lg:py-64 bg-white">
+      <div className="mx-auto px-4 sm:px-6 md:px-12 lg:px-16">
+        <div className="mb-12 sm:mb-20 md:mb-32 lg:mb-40">
           <FadeIn>
-            <p className="mb-6 text-xs font-medium uppercase tracking-[0.4em] text-teal-600">
+            <p className="mb-4 sm:mb-6 text-xs font-medium uppercase tracking-[0.4em] text-teal-600">
               How it works
             </p>
           </FadeIn>
-          <h2 className="text-5xl font-bold tracking-tight text-stone-800 md:text-7xl lg:text-8xl">
+          <h2 className="text-4xl font-bold tracking-tight text-stone-800 sm:text-5xl md:text-7xl lg:text-8xl">
             <TextReveal delay={0.1} stagger={0.04}>
               Sky → Pod → Door.
             </TextReveal>
           </h2>
-          <FadeIn delay={0.4} className="mt-8 max-w-2xl">
-            <p className="text-xl text-stone-500 leading-relaxed">
+          <FadeIn delay={0.4} className="mt-4 sm:mt-6 md:mt-8 max-w-2xl">
+            <p className="text-base sm:text-lg md:text-xl text-stone-500 leading-relaxed">
               A simple chain that changes everything. Drones to pods, riders to you. 
               Fewer trucks, faster delivery, cleaner cities.
             </p>
           </FadeIn>
         </div>
 
-        <div className="grid gap-8 md:gap-12 lg:grid-cols-2 lg:gap-16">
+        <div className="grid gap-6 sm:gap-8 md:gap-12 lg:grid-cols-2 lg:gap-16">
           {steps.map((step, i) => (
             <StoryCard key={step.id} step={step} index={i} />
           ))}
@@ -94,7 +94,7 @@ function StoryCard({
   return (
     <div
       ref={ref}
-      className={`group relative overflow-hidden rounded-3xl border border-stone-200 bg-stone-50 p-8 md:p-10 lg:p-12 shadow-sm transition-all duration-700 hover:border-stone-300 hover:bg-white hover:shadow-md ${
+      className={`group relative overflow-hidden rounded-2xl sm:rounded-3xl border border-stone-200 bg-stone-50 p-5 sm:p-6 md:p-10 lg:p-12 shadow-sm transition-all duration-700 hover:border-stone-300 hover:bg-white hover:shadow-md ${
         inView ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
       }`}
       style={{ transitionDelay: `${index * 100}ms` }}
@@ -105,7 +105,7 @@ function StoryCard({
       
       <div className="relative z-10">
         <span className="text-sm font-medium text-stone-400">{step.num}</span>
-        <h3 className="mt-4 text-2xl font-bold text-stone-800 md:text-3xl">{step.title}</h3>
+        <h3 className="mt-4 text-xl font-bold text-stone-800 sm:text-2xl md:text-3xl">{step.title}</h3>
         <p className="mt-4 text-stone-500 leading-relaxed">{step.description}</p>
         
         <div className="mt-8 flex items-center gap-2 text-teal-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100">

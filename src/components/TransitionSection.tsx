@@ -87,9 +87,9 @@ export default function TransitionSection() {
       <div 
         className="sticky top-0 h-screen w-full flex items-center justify-center relative z-10"
       >
-        <div 
-          className="text-center max-w-3xl px-8"
-        >
+<div 
+        className="text-center max-w-3xl px-4 sm:px-6 md:px-8"
+      >
           <div 
             className="mb-6 inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50/80 px-4 py-2 backdrop-blur-sm transition-all duration-700"
             style={{
@@ -108,7 +108,7 @@ export default function TransitionSection() {
           </div>
           
           <h2 
-            className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-stone-900 transition-all duration-700"
+            className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-stone-900 transition-all duration-700"
             style={{
               opacity: enterProgress > 0.2 ? 1 : 0,
               transform: enterProgress > 0.2 ? 'translateY(0)' : 'translateY(12px)',

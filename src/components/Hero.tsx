@@ -139,7 +139,7 @@ export default function Hero() {
               </p>
             </LineReveal>
             
-            <h1 className="relative z-10 text-5xl font-bold leading-[0.88] tracking-tight text-stone-800 sm:text-6xl md:text-7xl lg:text-8xl [&>div]:block [&>div]:leading-[0.88] [&>div:first-child]:-mb-[0.08em] drop-shadow-[0_2px_8px_rgba(255,255,255,0.9)]" style={{ textShadow: '0 2px 12px rgba(255,255,255,0.85), 0 1px 3px rgba(0,0,0,0.06)' }}>
+            <h1 className="relative z-10 text-4xl font-bold leading-[0.9] tracking-tight text-stone-800 sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl [&>div]:block [&>div]:leading-[0.88] [&>div:first-child]:-mb-[0.08em] drop-shadow-[0_2px_8px_rgba(255,255,255,0.9)]" style={{ textShadow: '0 2px 12px rgba(255,255,255,0.85), 0 1px 3px rgba(0,0,0,0.06)' }}>
               <TextReveal className="block" delay={0.3} stagger={0.05}>
                 From sky
               </TextReveal>
@@ -155,20 +155,20 @@ export default function Hero() {
               </p>
             </FadeIn>
             
-            <FadeIn delay={1} className="mt-6 flex flex-wrap gap-4 justify-center pointer-events-auto">
+            <FadeIn delay={1} className="mt-6 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 justify-center items-stretch sm:items-center pointer-events-auto w-full max-w-sm sm:max-w-none mx-auto">
               <a
                 href="#journey"
-                className="group relative inline-flex items-center gap-3 overflow-hidden rounded-full bg-teal-600 px-8 py-4 text-sm font-medium text-white shadow-lg shadow-teal-600/20 transition-all duration-300 hover:bg-teal-700 hover:shadow-teal-600/30 hover:scale-105"
+                className="group relative inline-flex items-center justify-center gap-3 overflow-hidden rounded-full bg-teal-600 px-6 py-3.5 sm:px-8 sm:py-4 text-sm font-medium text-white shadow-lg shadow-teal-600/20 transition-all duration-300 hover:bg-teal-700 hover:shadow-teal-600/30 hover:scale-105 min-h-[44px]"
                 data-cursor-hover
               >
                 <span className="relative z-10">Experience the journey</span>
-                <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-4 w-4 transition-transform group-hover:translate-x-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </a>
               <a
                 href="#contact"
-                className="inline-flex items-center rounded-full border border-stone-300 bg-white/80 px-8 py-4 text-sm font-medium text-stone-700 transition-all duration-300 hover:border-stone-400 hover:bg-white hover:scale-105"
+                className="inline-flex items-center justify-center rounded-full border border-stone-300 bg-white/80 px-6 py-3.5 sm:px-8 sm:py-4 text-sm font-medium text-stone-700 transition-all duration-300 hover:border-stone-400 hover:bg-white hover:scale-105 min-h-[44px]"
                 data-cursor-hover
               >
                 Partner with us
@@ -199,7 +199,7 @@ export default function Hero() {
 
         {/* Scroll indicator */}
         <div
-          className="absolute bottom-12 left-1/2 z-10 -translate-x-1/2 flex flex-col items-center gap-3"
+          className="absolute bottom-8 sm:bottom-12 left-1/2 z-10 -translate-x-1/2 flex flex-col items-center gap-3 pb-[env(safe-area-inset-bottom)]"
           style={{ opacity: 1 - sceneProgress * 2.5 }}
         >
           <span className="text-[10px] uppercase tracking-[0.3em] text-stone-400 text-center max-w-[200px]">

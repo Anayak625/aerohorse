@@ -63,7 +63,7 @@ function JourneySection() {
     <section
       ref={sectionRef}
       id="journey"
-      className="relative h-[420vh] w-full bg-stone-50"
+      className="relative h-[320vh] sm:h-[380vh] md:h-[420vh] w-full bg-stone-50"
     >
       <div className="sticky top-0 h-screen w-full overflow-hidden">
         <Canvas
@@ -81,10 +81,10 @@ function JourneySection() {
 
         {/* Story arc: Hub — Transit — Delivery */}
         <div
-          className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none px-6 pb-10 md:px-12 md:pb-14"
+          className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none px-4 pb-8 sm:px-6 sm:pb-10 md:px-12 md:pb-14"
           aria-live="polite"
         >
-          <div className="max-w-2xl border-l-2 border-teal-500/30 pl-5 md:pl-6">
+          <div className="max-w-2xl border-l-2 border-teal-500/30 pl-4 sm:pl-5 md:pl-6">
             {/* Step counter */}
             <p
               className="text-[10px] font-medium uppercase tracking-[0.3em] text-stone-400 mb-4 transition-opacity duration-500"
@@ -123,11 +123,11 @@ function JourneySection() {
             </div>
 
             {/* Narrative line with crossfade */}
-            <div className="relative min-h-[4.5rem] md:min-h-[3.5rem]">
+            <div className="relative min-h-[4rem] sm:min-h-[4.5rem] md:min-h-[3.5rem]">
               {narrativeLines.map((line, i) => (
                 <p
                   key={i}
-                  className="absolute left-0 right-0 top-0 text-base md:text-lg text-stone-600 leading-relaxed transition-all duration-500"
+                  className="absolute left-0 right-0 top-0 text-sm sm:text-base md:text-lg text-stone-600 leading-relaxed transition-all duration-500"
                   style={{
                     opacity: narrativePhase === i ? narrativeOpacity : 0,
                     transform:
