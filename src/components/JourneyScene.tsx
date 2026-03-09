@@ -4,6 +4,7 @@ import { useRef, useEffect, useMemo, useState } from 'react'
 import { useThree, useFrame } from '@react-three/fiber'
 import { OrbitControls, useGLTF, Sparkles, Html, RoundedBox, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
+import { useWindowTexture } from '../utils/useWindowTexture'
 
 const MOBILE_BREAKPOINT = 768
 function useIsSmallDevice() {
@@ -111,11 +112,11 @@ export default function JourneyScene({ scrollProgress = 0 }: { scrollProgress: n
       <color attach="background" args={['#fafaf9']} />
       <fog attach="fog" args={['#fafaf9', 20, 60]} />
 
-      <ambientLight intensity={1} />
-      <directionalLight position={[5, 12, 5]} intensity={1.5} color="#ffffff" />
-      <pointLight position={[0, 5, 2]} color="#0d9488" intensity={3} distance={25} />
-      <pointLight position={[4, 3, 1]} color="#64748b" intensity={2} distance={20} />
-      <pointLight position={[-3, 2, 0]} color="#78716c" intensity={1.5} distance={15} />
+      <ambientLight intensity={1.2} />
+      <directionalLight position={[5, 12, 5]} intensity={1.5} color="#fffbeb" />
+      <pointLight position={[0, 5, 2]} color="#14b8a6" intensity={3} distance={25} />
+      <pointLight position={[4, 3, 1]} color="#94a3b8" intensity={2.5} distance={20} />
+      <pointLight position={[-3, 2, 0]} color="#a8a29e" intensity={2} distance={15} />
 
       <OrbitControls
         ref={controlsRef}
@@ -134,11 +135,6 @@ export default function JourneyScene({ scrollProgress = 0 }: { scrollProgress: n
       {/* Drone + parcel delivery at ~50% scroll */}
       <JourneyDrone scrollProgress={scrollProgress} />
 
-      {/* Ground with grid */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
-        <planeGeometry args={[60, 60]} />
-        <meshStandardMaterial color="#f5f5f4" />
-      </mesh>
       <GridFloor />
     </>
   )
@@ -221,8 +217,68 @@ function JourneyDrone({ scrollProgress }: { scrollProgress: number }) {
           <primitive object={clonedScene} />
         </group>
       )}
+      <DeliveryPod scrollProgress={scrollProgress} x={TRUCK_END_X - PARCEL_BACK_OFFSET} z={posZ + PARCEL_FRONT_OFFSET_Z} />
       <Parcel scrollProgress={scrollProgress} truckX={posX} truckY={posY} truckZ={posZ} droneScale={scale} />
     </>
+  )
+}
+
+function DeliveryPod({
+  scrollProgress,
+  x,
+  z
+}: {
+  scrollProgress: number,
+  x: number,
+  z: number
+}) {
+  const ref = useRef<THREE.Group>(null)
+
+  // Activate when parcel is dropping or has landed
+  const isActivated = scrollProgress >= DROP_START
+
+  const ringRef = useRef<THREE.Mesh>(null)
+  const glowRef = useRef<THREE.Mesh>(null)
+
+  useFrame((state) => {
+    // idle pulse is subtle, activated pulse is stronger
+    const pulse = isActivated ? 0.8 + Math.sin(state.clock.elapsedTime * 6) * 0.2 : 0.4
+    if (ringRef.current?.material) {
+      ; (ringRef.current.material as THREE.MeshBasicMaterial).opacity = pulse
+    }
+    if (glowRef.current?.material) {
+      ; (glowRef.current.material as THREE.MeshBasicMaterial).opacity = isActivated ? 1 : 0.3
+    }
+  })
+
+  return (
+    <group ref={ref} position={[x, 0, z]}>
+      {/* Base */}
+      <mesh position={[0, 0.08, 0]}>
+        <cylinderGeometry args={[0.7, 0.8, 0.15, 32]} />
+        <meshStandardMaterial color="#57534e" metalness={0.85} roughness={0.15} />
+      </mesh>
+
+      {/* Dome */}
+      <mesh position={[0, 0.55, 0]}>
+        <sphereGeometry args={[0.5, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshStandardMaterial color="#0d9488" transparent opacity={isActivated ? 0.4 : 0.15} metalness={0.9} roughness={0.1} />
+      </mesh>
+
+      {/* Ring */}
+      <mesh ref={ringRef} position={[0, 0.18, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.6, 0.68, 32]} />
+        <meshBasicMaterial color="#0d9488" transparent opacity={0.85} side={THREE.DoubleSide} />
+      </mesh>
+
+      {/* Inner glow */}
+      <mesh ref={glowRef} position={[0, 0.35, 0]}>
+        <sphereGeometry args={[0.15, 16, 16]} />
+        <meshBasicMaterial color="#14b8a6" transparent opacity={0.9} />
+      </mesh>
+
+      <pointLight position={[0, 0.4, 0]} color="#0d9488" intensity={isActivated ? 3 : 1} distance={4} />
+    </group>
   )
 }
 
@@ -557,44 +613,130 @@ function LandingCelebration({ landProgress }: { landProgress: number }) {
 }
 
 function CityBlock() {
+  const windowTex = useWindowTexture({
+    width: 256,
+    height: 512,
+    rows: 40,
+    cols: 10,
+    litProbability: 0.15,
+  })
+
+  const BuildingMaterial = ({ color, emissive = true }: { color: string, emissive?: boolean }) => (
+    <meshStandardMaterial
+      color={color}
+      map={windowTex}
+      emissiveMap={windowTex}
+      emissive={emissive ? '#5eead4' : '#000000'}
+      emissiveIntensity={emissive ? 0.3 : 0}
+      metalness={0.6}
+      roughness={0.3}
+    />
+  )
+
   return (
     <group position={[4, 0, 0]}>
-      {/* Minimal buildings - right side */}
-      <mesh position={[0, 1.5, -2]}>
-        <boxGeometry args={[1, 3, 1]} />
-        <meshStandardMaterial color="#e7e5e4" />
-      </mesh>
+      {/* Tallest building - 2 tiers */}
+      <group position={[2, 0, -2.5]}>
+        <mesh position={[0, 1.5, 0]}>
+          <boxGeometry args={[1.2, 3, 1]} />
+          <BuildingMaterial color="#d6d3d1" />
+        </mesh>
+        <mesh position={[0, 3.5, 0]}>
+          <boxGeometry args={[0.9, 1, 0.75]} />
+          <BuildingMaterial color="#d6d3d1" />
+        </mesh>
+      </group>
 
-      <mesh position={[2, 2, -2.5]}>
-        <boxGeometry args={[1.2, 4, 1]} />
-        <meshStandardMaterial color="#d6d3d1" />
-      </mesh>
+      {/* Medium building - 2 tiers */}
+      <group position={[0, 0, -2]}>
+        <mesh position={[0, 1.25, 0]}>
+          <boxGeometry args={[1, 2.5, 1]} />
+          <BuildingMaterial color="#e7e5e4" />
+        </mesh>
+        <mesh position={[0, 2.75, 0]}>
+          <boxGeometry args={[0.7, 0.5, 0.7]} />
+          <BuildingMaterial color="#e7e5e4" />
+        </mesh>
+      </group>
 
       <mesh position={[4, 1.2, -2]}>
         <boxGeometry args={[1, 2.4, 0.8]} />
-        <meshStandardMaterial color="#e7e5e4" />
+        <BuildingMaterial color="#e7e5e4" />
       </mesh>
 
       <mesh position={[1, 1.8, -3.5]}>
         <boxGeometry args={[0.9, 3.6, 1]} />
-        <meshStandardMaterial color="#d6d3d1" />
+        <BuildingMaterial color="#d6d3d1" emissive={false} />
       </mesh>
 
       {/* Shorter foreground buildings */}
       <mesh position={[0.5, 0.6, 0]}>
         <boxGeometry args={[0.8, 1.2, 0.8]} />
-        <meshStandardMaterial color="#e7e5e4" transparent opacity={0.6} />
+        <BuildingMaterial color="#e7e5e4" />
       </mesh>
 
       <mesh position={[2.5, 0.5, 0.5]}>
         <boxGeometry args={[1, 1, 0.9]} />
-        <meshStandardMaterial color="#d6d3d1" transparent opacity={0.5} />
+        <BuildingMaterial color="#d6d3d1" />
       </mesh>
 
       <mesh position={[3.5, 0.4, -0.5]}>
         <boxGeometry args={[0.7, 0.8, 0.7]} />
-        <meshStandardMaterial color="#e7e5e4" transparent opacity={0.4} />
+        <BuildingMaterial color="#e7e5e4" />
       </mesh>
+      {/* Hand-placed Trees with wind sway animation and layered pine look */}
+      <AnimatedTree position={[1.5, 0, -1.2]} scale={1.2} phase={0} />
+      <AnimatedTree position={[3, 0, -1]} scale={1} phase={2} />
+      <AnimatedTree position={[-0.5, 0, -1.5]} scale={1.4} phase={4} />
+
+      {/* A few extra background trees for density */}
+      <AnimatedTree position={[2, 0, -3.5]} scale={1.1} phase={1} />
+      <AnimatedTree position={[-1, 0, -2.5]} scale={0.9} phase={3} />
+    </group>
+  )
+}
+
+function AnimatedTree({ position, scale = 1, phase = 0 }: { position: [number, number, number], scale?: number, phase?: number }) {
+  const leavesRef = useRef<THREE.Group>(null)
+
+  useFrame((state) => {
+    if (!leavesRef.current) return
+    const t = state.clock.elapsedTime
+    // Subtle wind rotation on the foliage group
+    const swayX = Math.sin(t * 1.5 + phase) * 0.08
+    const swayZ = Math.cos(t * 1.2 + phase) * 0.08
+    leavesRef.current.rotation.set(swayX, 0, swayZ)
+  })
+
+  // Height of the trunk so leaves pivot at the top of it
+  const trunkHeight = 0.5 * scale
+
+  return (
+    <group position={position}>
+      {/* Trunk anchored at bottom */}
+      <mesh position={[0, trunkHeight / 2, 0]}>
+        <cylinderGeometry args={[0.06 * scale, 0.08 * scale, trunkHeight, 16]} />
+        <meshStandardMaterial color="#57534e" roughness={0.9} />
+      </mesh>
+
+      {/* Leaves Group pivoted at top of trunk */}
+      <group ref={leavesRef} position={[0, trunkHeight, 0]}>
+        {/* Bottom layer */}
+        <mesh position={[0, 0.4 * scale, 0]}>
+          <coneGeometry args={[0.5 * scale, 1.0 * scale, 16]} />
+          <meshStandardMaterial color="#4d7c0f" roughness={0.8} />
+        </mesh>
+        {/* Middle layer */}
+        <mesh position={[0, 0.8 * scale, 0]}>
+          <coneGeometry args={[0.4 * scale, 0.8 * scale, 16]} />
+          <meshStandardMaterial color="#65a30d" roughness={0.8} />
+        </mesh>
+        {/* Top layer */}
+        <mesh position={[0, 1.1 * scale, 0]}>
+          <coneGeometry args={[0.3 * scale, 0.6 * scale, 16]} />
+          <meshStandardMaterial color="#84cc16" roughness={0.8} />
+        </mesh>
+      </group>
     </group>
   )
 }
@@ -609,10 +751,10 @@ function GridFloor() {
     const idx: number[] = []
     let i = 0
     for (let x = -size; x <= size; x += step) {
-      points.push(x, 0.01, -size, x, 0.01, size)
+      points.push(x, 0.015, -size, x, 0.015, size)
       idx.push(i, i + 1)
       i += 2
-      points.push(-size, 0.01, x, size, 0.01, x)
+      points.push(-size, 0.015, x, size, 0.015, x)
       idx.push(i, i + 1)
       i += 2
     }
@@ -627,8 +769,22 @@ function GridFloor() {
   }, [verts, indices])
 
   return (
-    <lineSegments ref={gridRef} geometry={geom}>
-      <lineBasicMaterial color="#0d9488" transparent opacity={0.12} />
-    </lineSegments>
+    <group>
+      {/* Base ground layer */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
+        <planeGeometry args={[60, 60]} />
+        <meshStandardMaterial color="#fafaf9" metalness={0.1} roughness={0.95} />
+      </mesh>
+
+      {/* City Block paved foundation beneath buildings */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[2.5, 0.005, -1.5]}>
+        <planeGeometry args={[6, 5]} />
+        <meshStandardMaterial color="#d6d3d1" roughness={0.9} />
+      </mesh>
+
+      <lineSegments ref={gridRef} geometry={geom}>
+        <lineBasicMaterial color="#0d9488" transparent opacity={0.12} />
+      </lineSegments>
+    </group>
   )
 }
