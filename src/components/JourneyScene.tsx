@@ -146,12 +146,19 @@ export default function JourneyScene({ scrollProgress = 0 }: { scrollProgress: n
 
 function JourneyDrone({ scrollProgress }: { scrollProgress: number }) {
   const { scene } = useGLTF(DRONE_GLTF_URL)
+  const wingsRef = useRef<THREE.Object3D[]>([])
+
   const { clonedScene, scale, baseOffset } = useMemo(() => {
     const clone = scene.clone()
+    wingsRef.current = []
+
     clone.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         (child as THREE.Mesh).castShadow = true
           ; (child as THREE.Mesh).receiveShadow = true
+      }
+      if (/^Wing\d$/.test(child.name)) {
+        wingsRef.current.push(child)
       }
     })
     const box = new THREE.Box3().setFromObject(clone)
@@ -164,7 +171,7 @@ function JourneyDrone({ scrollProgress }: { scrollProgress: number }) {
     return {
       clonedScene: clone,
       scale: s,
-      baseOffset: { x: -center.x * s, y: -box.min.y * s, z: center.z * s },
+      baseOffset: { x: -center.x * s, y: -center.y * s, z: center.z * s },
     }
   }, [scene])
 
@@ -176,13 +183,37 @@ function JourneyDrone({ scrollProgress }: { scrollProgress: number }) {
   const easedT = t * t * (3 - 2 * t)
   const truckX = TRUCK_START_X + easedT * (TRUCK_END_X - TRUCK_START_X)
   const posX = truckX + baseOffset.x
-  const posY = baseOffset.y
+  const FLIGHT_Y = 2.5
+  const posY = FLIGHT_Y
   const posZ = baseOffset.z
+
+  const groupRef = useRef<THREE.Group>(null)
+
+  useFrame((state, delta) => {
+    if (!groupRef.current) return
+    const currentTime = state.clock.elapsedTime
+
+    // Spin propellers
+    wingsRef.current.forEach((wing, i) => {
+      const direction = i % 2 === 0 ? 1 : -1
+      wing.rotation.z += 25 * direction * delta
+    })
+
+    // Add slight hover/bob and pitch/roll based on movement
+    const bobY = Math.sin(currentTime * 3) * 0.05
+    const isMoving = t > 0 && t < 1
+    const pitchDemand = isMoving ? 0.15 : 0.05 + Math.cos(currentTime * 1.7) * 0.02
+    const rollDemand = Math.sin(currentTime * 0.5) * 0.02
+
+    groupRef.current.position.set(posX, posY + bobY, posZ)
+    groupRef.current.rotation.set(pitchDemand, 0, rollDemand)
+  })
 
   return (
     <>
       {scrollProgress >= JOURNEY_TRUCK_START && (
         <group
+          ref={groupRef}
           position={[posX, posY, posZ]}
           scale={[scale, scale, scale]}
           rotation={[0, 0, 0]}
@@ -190,7 +221,7 @@ function JourneyDrone({ scrollProgress }: { scrollProgress: number }) {
           <primitive object={clonedScene} />
         </group>
       )}
-      <Parcel scrollProgress={scrollProgress} truckX={truckX} truckY={baseOffset.y} truckZ={posZ} />
+      <Parcel scrollProgress={scrollProgress} truckX={posX} truckY={posY} truckZ={posZ} droneScale={scale} />
     </>
   )
 }
@@ -200,19 +231,37 @@ function Parcel({
   truckX,
   truckY,
   truckZ,
+  droneScale = 1,
 }: {
   scrollProgress: number
   truckX: number
   truckY: number
   truckZ: number
+  droneScale?: number
 }) {
   const logoTexture = useTexture(LOGO_URL)
+  const bobRef = useRef<THREE.Group>(null)
+
+  useFrame((state) => {
+    if (!bobRef.current) return
+    if (scrollProgress < DROP_START) {
+      // Bob along with the drone while attached
+      bobRef.current.position.y = Math.sin(state.clock.elapsedTime * 3) * 0.05
+    } else {
+      bobRef.current.position.y = 0
+    }
+  })
+
   const t = scrollProgress <= JOURNEY_TRUCK_START
     ? 0
     : scrollProgress >= JOURNEY_TRUCK_END
       ? 1
       : (scrollProgress - JOURNEY_TRUCK_START) / (JOURNEY_TRUCK_END - JOURNEY_TRUCK_START)
-  const onTruckY = truckY + 0.4
+
+  // Offset to match DroneAnimated payload position (from Scene3D)
+  const onTruckY = truckY + droneScale * -0.17
+  // Keep the parcel directly under the drone center, don't offset backwards
+  const attachedX = truckX
   const endX = TRUCK_END_X - PARCEL_BACK_OFFSET
 
   let x: number, y: number, z: number
@@ -224,8 +273,8 @@ function Parcel({
   const landed = scrollProgress >= DROP_FALL_END
 
   if (scrollProgress < DROP_START) {
-    // Stay on truck
-    x = truckX - PARCEL_BACK_OFFSET
+    // Stay on drone
+    x = attachedX
     y = onTruckY
     z = truckZ
   } else if (scrollProgress < DROP_FALL_END) {
@@ -280,51 +329,53 @@ function Parcel({
   if (!visible) return null
   return (
     <group position={[x, y, z]}>
-      <group rotation={[rotationX, 0, rotationZ]} scale={scale}>
-        {/* Main parcel with rounded edges */}
-        <RoundedBox
-          args={[boxWidth, boxHeight, boxDepth]}
-          radius={0.015}
-          smoothness={4}
-          castShadow
-          receiveShadow
-        >
-          <meshStandardMaterial
-            color="#f97316"
-            emissive="#f97316"
-            emissiveIntensity={glowIntensity}
-          />
-        </RoundedBox>
+      <group ref={bobRef}>
+        <group rotation={[rotationX, 0, rotationZ]} scale={scale}>
+          {/* Main parcel with rounded edges */}
+          <RoundedBox
+            args={[boxWidth, boxHeight, boxDepth]}
+            radius={0.015}
+            smoothness={4}
+            castShadow
+            receiveShadow
+          >
+            <meshStandardMaterial
+              color="#f97316"
+              emissive="#f97316"
+              emissiveIntensity={glowIntensity}
+            />
+          </RoundedBox>
 
-        {/* Logo on front side (+Z) */}
-        <mesh position={[0, 0, boxDepth / 2 + 0.001]}>
-          <planeGeometry args={[logoSize, logoSize]} />
-          <meshBasicMaterial map={logoTexture} transparent />
-        </mesh>
+          {/* Logo on front side (+Z) */}
+          <mesh position={[0, 0, boxDepth / 2 + 0.001]}>
+            <planeGeometry args={[logoSize, logoSize]} />
+            <meshBasicMaterial map={logoTexture} transparent />
+          </mesh>
 
-        {/* Logo on back side (-Z) */}
-        <mesh position={[0, 0, -boxDepth / 2 - 0.001]} rotation={[0, Math.PI, 0]}>
-          <planeGeometry args={[logoSize, logoSize]} />
-          <meshBasicMaterial map={logoTexture} transparent />
-        </mesh>
+          {/* Logo on back side (-Z) */}
+          <mesh position={[0, 0, -boxDepth / 2 - 0.001]} rotation={[0, Math.PI, 0]}>
+            <planeGeometry args={[logoSize, logoSize]} />
+            <meshBasicMaterial map={logoTexture} transparent />
+          </mesh>
 
-        {/* Logo on right side (+X) */}
-        <mesh position={[boxWidth / 2 + 0.001, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
-          <planeGeometry args={[logoSize, logoSize]} />
-          <meshBasicMaterial map={logoTexture} transparent />
-        </mesh>
+          {/* Logo on right side (+X) */}
+          <mesh position={[boxWidth / 2 + 0.001, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+            <planeGeometry args={[logoSize, logoSize]} />
+            <meshBasicMaterial map={logoTexture} transparent />
+          </mesh>
 
-        {/* Logo on left side (-X) */}
-        <mesh position={[-boxWidth / 2 - 0.001, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
-          <planeGeometry args={[logoSize, logoSize]} />
-          <meshBasicMaterial map={logoTexture} transparent />
-        </mesh>
+          {/* Logo on left side (-X) */}
+          <mesh position={[-boxWidth / 2 - 0.001, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+            <planeGeometry args={[logoSize, logoSize]} />
+            <meshBasicMaterial map={logoTexture} transparent />
+          </mesh>
 
-        {/* Tape strip on top */}
-        <mesh position={[0, boxHeight / 2 + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[0.02, boxDepth * 0.8]} />
-          <meshBasicMaterial color="#d97706" />
-        </mesh>
+          {/* Tape strip on top */}
+          <mesh position={[0, boxHeight / 2 + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[0.02, boxDepth * 0.8]} />
+            <meshBasicMaterial color="#d97706" />
+          </mesh>
+        </group>
       </group>
 
       {/* Trail effect during drop */}

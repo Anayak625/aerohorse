@@ -16,8 +16,8 @@ export default function JourneySection() {
       const viewportHeight = window.innerHeight
       const top = rect.top
       const height = rect.height
-      
-      
+
+
       if (top < viewportHeight && top + height > 0) {
         const progress = 1 - (top + height - viewportHeight) / (height + viewportHeight)
         setScrollProgress(Math.max(0, Math.min(1, progress)))
@@ -46,13 +46,13 @@ export default function JourneySection() {
       className="relative h-[400vh] w-full"
     >
       {/* Top gradient blend from transition section */}
-      <div 
+      <div
         className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-stone-50 to-transparent pointer-events-none z-10"
         style={{ opacity: 1 - entryOpacity }}
       />
-      
+
       <div className="sticky top-0 h-screen w-full overflow-hidden">
-        <div 
+        <div
           className="absolute inset-0"
           style={{ opacity: entryOpacity, transition: 'opacity 0.3s ease-out' }}
         >
@@ -67,25 +67,23 @@ export default function JourneySection() {
             </Suspense>
           </Canvas>
         </div>
-        
+
         {/* Progress bar */}
         <div className="absolute left-8 top-1/2 -translate-y-1/2 z-20 hidden md:block">
           <div className="flex flex-col gap-4">
             {[0, 1, 2].map((i) => (
               <div key={i} className="flex items-center gap-3">
-                <div className={`h-1 w-8 rounded-full transition-all duration-500 ${
-                  phase >= i ? 'bg-teal-500' : 'bg-stone-300'
-                }`} />
-                <span className={`text-xs uppercase tracking-widest transition-all duration-500 ${
-                  phase === i ? 'text-teal-600' : 'text-stone-400'
-                }`}>
+                <div className={`h-1 w-8 rounded-full transition-all duration-500 ${phase >= i ? 'bg-teal-500' : 'bg-stone-300'
+                  }`} />
+                <span className={`text-xs uppercase tracking-widest transition-all duration-500 ${phase === i ? 'text-teal-600' : 'text-stone-400'
+                  }`}>
                   {i === 0 ? 'Drone' : i === 1 ? 'Pod' : 'Rider'}
                 </span>
               </div>
             ))}
           </div>
         </div>
-        
+
         {/* Phase info */}
         <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-white/95 via-white/70 to-transparent p-8 md:p-12 lg:p-16">
           <div className="max-w-4xl">
@@ -100,7 +98,7 @@ export default function JourneySection() {
             </p>
           </div>
         </div>
-        
+
         {/* Interaction hint */}
         <div className="absolute top-8 right-8 z-20 flex items-center gap-2 text-stone-400">
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

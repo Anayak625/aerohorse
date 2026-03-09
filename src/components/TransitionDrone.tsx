@@ -59,7 +59,7 @@ function DroneModel({ progress }: { progress: number }) {
     halfWidthX +
     progress * (rightEdgeEnd - leftEdgeStart - halfWidthX * 2) +
     baseOffset.x
-  const posY = baseOffset.y + (isNarrow ? 1.35 : 2.2)
+  const posY = baseOffset.y + (isNarrow ? -0.4 : -1.9) // Lowered from 1.35 and 2.2
   const posZ = baseOffset.z
 
   useFrame((state, delta) => {

@@ -65,7 +65,11 @@ export default function Scene3D({
   const normalLookAt = useRef(new THREE.Vector3())
   const droneCamPos = useRef(new THREE.Vector3())
   const droneLookAt = useRef(new THREE.Vector3())
+  const parcelPos = useRef(new THREE.Vector3())
+  const parcelCamPos = useRef(new THREE.Vector3())
+  const parcelLookAt = useRef(new THREE.Vector3())
   const blendedLookAt = useRef(new THREE.Vector3())
+  const lookTarget = useRef(new THREE.Vector3())
   const followOffset = useMemo(() => new THREE.Vector3(0, 3, 6), [])
 
   useFrame((state) => {
@@ -78,8 +82,9 @@ export default function Scene3D({
       smoothStep(DRONE_VIEW_SCROLL_START - DRONE_VIEW_BLEND_IN, DRONE_VIEW_SCROLL_START, scrollProgress) *
       (1 - smoothStep(DRONE_VIEW_SCROLL_END - DRONE_VIEW_BLEND_OUT, DRONE_VIEW_SCROLL_END, scrollProgress))
     const targetBlend = focusActiveClick ? 1 : scrollDroneBlend
-    cameraDroneBlend.current += (targetBlend - cameraDroneBlend.current) * 0.06
-    const blend = cameraDroneBlend.current
+    cameraDroneBlend.current += (targetBlend - cameraDroneBlend.current) * 0.05
+    const blendRaw = cameraDroneBlend.current
+    const blend = blendRaw * blendRaw * (3 - 2 * blendRaw)
 
     const mouseStrength = blend > 0.5 ? 0.08 : 0.4 * (1 - scrollProgress * 0.7)
     const baseZ = 12 + scrollProgress * 8
@@ -95,7 +100,7 @@ export default function Scene3D({
     const lookZ = scrollProgress * 5
     normalLookAt.current.set(mouse.normalizedX * 0.8, lookY, lookZ)
 
-    // Drone-follow view target
+    // Drone-follow view target (base), later blended toward parcel follow-cam during drop
     droneCamPos.current.copy(focusTarget.current).add(followOffset)
     droneLookAt.current.set(
       focusTarget.current.x,
@@ -103,10 +108,59 @@ export default function Scene3D({
       focusTarget.current.z
     )
 
-    // Blend between normal and drone camera for smooth transition
+    // When the parcel is mid‑air, blend the drone camera toward a tighter follow‑cam on the parcel itself.
+    const isDropping =
+      scrollProgress >= DROP_START_SCROLL && scrollProgress <= DROP_END_SCROLL
+    let followParcelBlend = 0
+    if (isDropping) {
+      const midWindow = 0.08
+      const inBlendIn = smoothStep(
+        DROP_START_SCROLL,
+        DROP_START_SCROLL + midWindow,
+        scrollProgress
+      )
+      const inBlendOut =
+        1 -
+        smoothStep(
+          DROP_END_SCROLL - midWindow,
+          DROP_END_SCROLL,
+          scrollProgress
+        )
+      followParcelBlend = inBlendIn * inBlendOut
+    }
+
+    if (followParcelBlend > 0) {
+      const dropSpan = DROP_END_SCROLL - DROP_START_SCROLL
+      const rawDropT = Math.min(
+        1,
+        Math.max(0, (scrollProgress - DROP_START_SCROLL) / dropSpan)
+      )
+      const dropTEased = rawDropT * rawDropT
+
+      parcelPos.current.set(
+        DROP_START.x + (DROP_END.x - DROP_START.x) * dropTEased,
+        DROP_START.y + (DROP_END.y - DROP_START.y) * dropTEased,
+        DROP_START.z + (DROP_END.z - DROP_START.z) * dropTEased
+      )
+
+      parcelCamPos.current
+        .copy(parcelPos.current)
+        .add(new THREE.Vector3(0.4, 1.4, 3.2))
+      parcelLookAt.current
+        .copy(parcelPos.current)
+        .add(new THREE.Vector3(0, -0.08, 0))
+
+      droneCamPos.current.lerp(parcelCamPos.current, followParcelBlend)
+      droneLookAt.current.lerp(parcelLookAt.current, followParcelBlend)
+    }
+
+    // Blend between normal and drone/parcel camera for smooth transition (no extra shake)
     targetCamPos.current.copy(normalTargetPos.current).lerp(droneCamPos.current, blend)
-    cam.position.lerp(targetCamPos.current, 0.08)
-    blendedLookAt.current.lerpVectors(normalLookAt.current, droneLookAt.current, blend)
+    cam.position.lerp(targetCamPos.current, 0.05)
+
+    // Extra smoothing on the look-at target so pans feel more buttery
+    lookTarget.current.lerpVectors(normalLookAt.current, droneLookAt.current, blend)
+    blendedLookAt.current.lerp(lookTarget.current, 0.08)
     cam.lookAt(blendedLookAt.current)
 
     if (groupRef.current) {
@@ -272,10 +326,23 @@ function DroneAnimated({
     const departOffsetY = 2 * departT  // slight lift
     const departOffsetZ = -2 * departT // slight push back
 
-    pos.x += baseOffset.x + departOffsetX
-    pos.y += baseOffset.y + entranceOffsetY + departOffsetY
-    pos.z += baseOffset.z + entranceOffsetZ + departOffsetZ
-    pos.y += Math.sin(currentTime * 3) * 0.03 * entrance // Subtle hover bob (fade in with entrance)
+    // Subtle turbulence: lateral drift and vertical wobble that fade as the drone exits.
+    const turbulenceStrength = (1 - departT) * entrance
+    const swayX =
+      (Math.sin(currentTime * 1.9) * 0.12 +
+        Math.sin(currentTime * 0.47 + 1.3) * 0.08) *
+      turbulenceStrength
+    const swayZ =
+      (Math.sin(currentTime * 1.3 + 0.7) * 0.1 +
+        Math.cos(currentTime * 0.63 + 2.1) * 0.06) *
+      turbulenceStrength
+    const bobY =
+      Math.sin(currentTime * 3) * 0.03 * entrance +
+      Math.sin(currentTime * 1.1 + 0.4) * 0.02 * turbulenceStrength
+
+    pos.x += baseOffset.x + departOffsetX + swayX
+    pos.y += baseOffset.y + entranceOffsetY + departOffsetY + bobY
+    pos.z += baseOffset.z + entranceOffsetZ + departOffsetZ + swayZ
 
     ref.current.position.copy(pos)
 
@@ -290,8 +357,12 @@ function DroneAnimated({
     ref.current.scale.setScalar(s)
 
     ref.current.lookAt(0, 4, 5)
-    const rollDemand = Math.sin(currentTime * 0.3) * 0.05 + departT * 0.18
-    const pitchDemand = 0.12 + departT * 0.06
+    const rollDemand =
+      Math.sin(currentTime * 0.3) * 0.05 +
+      Math.sin(currentTime * 2.1) * 0.03 * (1 - departT) +
+      departT * 0.18
+    const pitchDemand =
+      0.12 + Math.cos(currentTime * 1.7) * 0.04 * (1 - departT) + departT * 0.06
     ref.current.rotation.z = rollDemand * 0.8
     ref.current.rotation.x = pitchDemand * 0.5
 
@@ -542,10 +613,20 @@ function CrowdCircleInPod() {
     }
   }, [scene])
 
-  const crowdY = 0.32
+  const crowdY = 0.55
+
+  const groupRef = useRef<THREE.Group>(null)
+
+  useFrame((state) => {
+    if (!groupRef.current) return
+    const t = state.clock.elapsedTime
+    const pulse = 1 + Math.sin(t * 1.6) * 0.04
+    groupRef.current.scale.set(pulse, 1, pulse)
+    groupRef.current.rotation.y = Math.sin(t * 0.7) * 0.25
+  })
 
   return (
-    <group position={[0 + offset.x, crowdY + offset.y, 0 + offset.z]}>
+    <group ref={groupRef} position={[0 + offset.x, crowdY + offset.y, 0 + offset.z]}>
       <primitive object={clonedScene} scale={scale} />
     </group>
   )
@@ -656,6 +737,8 @@ function DataCity({ scrollProgress = 0 }: { scrollProgress?: number }) {
         )
       })}
       <WeatherParticles scrollProgress={scrollProgress} />
+      <TrafficRings />
+      <DistantAirTraffic />
     </group>
   )
 }
@@ -774,6 +857,84 @@ function WeatherParticles({ scrollProgress }: { scrollProgress: number }) {
         sizeAttenuation
       />
     </points>
+  )
+}
+
+function TrafficRings() {
+  const rings = useRef<THREE.InstancedMesh>(null)
+  const dummy = useMemo(() => new THREE.Object3D(), [])
+  const radii = useMemo(() => [9, 14, 19], [])
+  const instancesPerRing = 26
+  const total = radii.length * instancesPerRing
+
+  useFrame((state) => {
+    if (!rings.current) return
+    const t = state.clock.elapsedTime
+    let i = 0
+    for (let r = 0; r < radii.length; r++) {
+      const radius = radii[r]
+      const dir = r % 2 === 0 ? 1 : -1
+      for (let j = 0; j < instancesPerRing; j++) {
+        const phase = (j / instancesPerRing) * Math.PI * 2
+        const angle = phase + t * 0.28 * dir
+        const x = Math.cos(angle) * radius
+        const z = Math.sin(angle) * radius
+        dummy.position.set(x, 0.16, z)
+        dummy.scale.setScalar(0.22)
+        dummy.rotation.y = angle
+        dummy.updateMatrix()
+        rings.current.setMatrixAt(i++, dummy.matrix)
+      }
+    }
+    rings.current.instanceMatrix.needsUpdate = true
+  })
+
+  return (
+    <instancedMesh ref={rings} args={[undefined, undefined, total]}>
+      <sphereGeometry args={[0.06, 8, 8]} />
+      <meshBasicMaterial color="#f97316" transparent opacity={0.7} />
+    </instancedMesh>
+  )
+}
+
+function DistantAirTraffic() {
+  const swarm = useRef<THREE.InstancedMesh>(null)
+  const dummy = useMemo(() => new THREE.Object3D(), [])
+  const radii = useMemo(() => [16, 22, 28], [])
+  const instancesPerRing = 18
+  const total = radii.length * instancesPerRing
+
+  useFrame((state) => {
+    if (!swarm.current) return
+    const t = state.clock.elapsedTime
+    let i = 0
+    for (let r = 0; r < radii.length; r++) {
+      const radius = radii[r]
+      const height = 4 + r * 1.8
+      for (let j = 0; j < instancesPerRing; j++) {
+        const phase = (j / instancesPerRing) * Math.PI * 2
+        const angle = phase + t * 0.12
+        const x = Math.cos(angle) * radius
+        const z = Math.sin(angle) * radius
+        const wobbleY = Math.sin(t * 0.9 + phase) * 0.35
+        dummy.position.set(x, height + wobbleY, z)
+        const baseScale = 0.16 + (j / instancesPerRing) * 0.06
+        dummy.scale.setScalar(baseScale)
+        dummy.updateMatrix()
+        swarm.current.setMatrixAt(i++, dummy.matrix)
+      }
+    }
+    swarm.current.instanceMatrix.needsUpdate = true
+
+    const material = swarm.current.material as THREE.MeshBasicMaterial
+    material.opacity = 0.25 + Math.sin(state.clock.elapsedTime * 1.4) * 0.15
+  })
+
+  return (
+    <instancedMesh ref={swarm} args={[undefined, undefined, total]}>
+      <sphereGeometry args={[0.04, 8, 8]} />
+      <meshBasicMaterial color="#e5e7eb" transparent opacity={0.3} />
+    </instancedMesh>
   )
 }
 
