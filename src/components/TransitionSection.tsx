@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { Suspense } from 'react'
-import TransitionTruck from './TransitionTruck'
+import TransitionDrone from './TransitionDrone'
 import { useThrottledScrollProgress } from '../hooks/useScrollProgress'
 
 export default function TransitionSection() {
@@ -8,22 +8,22 @@ export default function TransitionSection() {
   const scrollState = useThrottledScrollProgress(
     () => {
       const el = wrapperRef.current
-      if (!el) return { enterProgress: 0, truckProgress: 0 }
+      if (!el) return { enterProgress: 0, droneProgress: 0 }
       const rect = el.getBoundingClientRect()
       const vh = window.innerHeight
       const top = rect.top
       const enterProgress = top >= vh ? 0 : top <= 0 ? 1 : (vh - top) / vh
-      const truckProgress = top > 0 ? 0 : Math.min(1, -top / vh)
-      return { enterProgress, truckProgress }
+      const droneProgress = top > 0 ? 0 : Math.min(1, -top / vh)
+      return { enterProgress, droneProgress }
     },
     0.004,
     []
   )
 
-  const { enterProgress, truckProgress } = scrollState
-  const fadeInOut = truckProgress < 0.5 ? truckProgress * 2 : 1 - (truckProgress - 0.5) * 2
+  const { enterProgress, droneProgress } = scrollState
+  const fadeInOut = droneProgress < 0.5 ? droneProgress * 2 : 1 - (droneProgress - 0.5) * 2
   const bgOpacity = Math.min(1, enterProgress * 2)
-  const truckLayerOpacity = truckProgress < 0.08 ? truckProgress / 0.08 : truckProgress > 0.92 ? (1 - truckProgress) / 0.08 : 1
+  const droneLayerOpacity = droneProgress < 0.08 ? droneProgress / 0.08 : droneProgress > 0.92 ? (1 - droneProgress) / 0.08 : 1
 
   return (
     <div
@@ -50,7 +50,7 @@ export default function TransitionSection() {
               top: `${20 + i * 15}%`,
               left: '-10%',
               right: '-10%',
-              transform: `translateX(${(truckProgress - 0.5) * (i % 2 === 0 ? 100 : -100)}%)`,
+              transform: `translateX(${(droneProgress - 0.5) * (i % 2 === 0 ? 100 : -100)}%)`,
               opacity: fadeInOut * 0.6,
               transition: 'transform 0.1s ease-out'
             }}
@@ -75,7 +75,7 @@ export default function TransitionSection() {
                 width: size,
                 height: size,
                 opacity: fadeInOut * (0.2 + (i % 5) * 0.1),
-                transform: `translateY(${(truckProgress - 0.5) * -200 + Math.sin(delay) * 50}px) scale(${0.5 + truckProgress * 0.5})`,
+                transform: `translateY(${(droneProgress - 0.5) * -200 + Math.sin(delay) * 50}px) scale(${0.5 + droneProgress * 0.5})`,
                 transition: 'transform 0.15s ease-out, opacity 0.2s ease-out'
               }}
             />
@@ -134,10 +134,10 @@ export default function TransitionSection() {
               transform: enterProgress > 0.5 ? 'translateY(0)' : 'translateY(10px)',
             }}
           >
-            Hub → truck → your building. Watch the road, the ride, and the moment it lands at your door.
+            Hub → drone → pod → your door. Watch the flight, the drop, and the moment it lands.
           </p>
 
-          {/* Story progress bars with labels — fill as truck moves (when stuck) */}
+          {/* Story progress bars with labels — fill as drone moves */}
           <div 
             className="mt-14 flex flex-col items-center gap-4 relative z-10 transition-all duration-500"
             style={{
@@ -146,22 +146,22 @@ export default function TransitionSection() {
           >
             <div className="flex items-center gap-4 md:gap-6">
               {[
-                { label: 'Start', threshold: 0.3 },
-                { label: 'On the road', threshold: 0.5 },
-                { label: 'Arrival', threshold: 0.7 },
+                { label: 'Launch', threshold: 0.3 },
+                { label: 'In flight', threshold: 0.5 },
+                { label: 'Touchdown', threshold: 0.7 },
               ].map(({ label, threshold }, i) => (
                 <div key={i} className="flex flex-col items-center gap-2">
                   <div className="h-1.5 w-10 rounded-full bg-stone-200 overflow-hidden">
                     <div 
                     className="h-full bg-teal-500 rounded-full transition-all duration-500 ease-out"
                     style={{ 
-                      width: truckProgress > threshold ? '100%' : '0%',
+                      width: droneProgress > threshold ? '100%' : '0%',
                     }}
                   />
                   </div>
                   <span 
                     className={`text-[10px] uppercase tracking-[0.2em] transition-colors duration-300 ${
-                      truckProgress > threshold ? 'text-teal-600' : 'text-stone-300'
+                      droneProgress > threshold ? 'text-teal-600' : 'text-stone-300'
                     }`}
                   >
                     {label}
@@ -176,24 +176,24 @@ export default function TransitionSection() {
         </div>
       </div>
 
-      {/* Truck (GLTF) passing from left to right — above gradient so it's visible */}
+      {/* Drone (GLTF) passing from left to right — above gradient so it's visible */}
       <div
         className="absolute inset-0 z-[5] pointer-events-none"
         style={{
-          opacity: truckLayerOpacity,
+          opacity: droneLayerOpacity,
           pointerEvents: 'none',
         }}
         aria-hidden
       >
         <Suspense fallback={null}>
-          <TransitionTruck progress={truckProgress} />
+          <TransitionDrone progress={droneProgress} />
         </Suspense>
       </div>
 
       {/* Bottom gradient blend into journey section */}
       <div 
         className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-stone-50 to-transparent pointer-events-none"
-        style={{ opacity: Math.max(0, (truckProgress - 0.6) * 2.5) }}
+        style={{ opacity: Math.max(0, (droneProgress - 0.6) * 2.5) }}
       />
     </section>
     </div>

@@ -59,8 +59,8 @@ export default function JourneySection() {
           <Canvas
             camera={{ position: [0, 3, 8], fov: 50 }}
             dpr={[1, 2]}
-            gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
             shadows
+            gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
           >
             <Suspense fallback={null}>
               <JourneyScene scrollProgress={scrollProgress} />

@@ -16,17 +16,17 @@ import Footer from './components/Footer'
 import { useThrottledScrollProgress } from './hooks/useScrollProgress'
 
 // Parcel lands early in section so "landed" + receipt get most of the scroll; How it works appears only after.
-const JOURNEY_TRUCK_END = 0.65
+const JOURNEY_DRONE_END = 0.65
 const PARCEL_DROP_END = 0.88
-const STICK_SCROLL_START = 0.32 // raw scroll where truck reaches end
+const STICK_SCROLL_START = 0.32 // raw scroll where drone reaches end
 const STICK_SCROLL_END = 0.42   // parcel lands here; raw 0.42→1 = long hold on receipt view
 
 function stickScrollToProgress(raw: number): number {
   if (raw <= STICK_SCROLL_START) {
-    return (raw / STICK_SCROLL_START) * JOURNEY_TRUCK_END
+    return (raw / STICK_SCROLL_START) * JOURNEY_DRONE_END
   }
   if (raw <= STICK_SCROLL_END) {
-    return JOURNEY_TRUCK_END + ((raw - STICK_SCROLL_START) / (STICK_SCROLL_END - STICK_SCROLL_START)) * (PARCEL_DROP_END - JOURNEY_TRUCK_END)
+    return JOURNEY_DRONE_END + ((raw - STICK_SCROLL_START) / (STICK_SCROLL_END - STICK_SCROLL_START)) * (PARCEL_DROP_END - JOURNEY_DRONE_END)
   }
   return PARCEL_DROP_END + ((raw - STICK_SCROLL_END) / (1 - STICK_SCROLL_END)) * (1 - PARCEL_DROP_END)
 }
@@ -51,11 +51,11 @@ function JourneySection() {
   const narrativePhase =
     scrollProgress < 0.35 ? 0 : scrollProgress < 0.6 ? 1 : 2
   const narrativeLines = [
-    'The truck leaves the hub. Engine on, route locked in.',
-    'Across the city. Your package is in the back, rolling with the flow.',
-    'Parcel off the truck. Into the building. Delivered.',
+    'The drone leaves the hub. Autopilot on, route locked in.',
+    'Across the sky. Your package is under the drone, flying to the pod.',
+    'Parcel off the drone. Into the pod. Delivered.',
   ]
-  const phaseLabels = ['Hub', 'En route', 'Delivered']
+  const phaseLabels = ['Hub', 'In flight', 'Delivered']
   // Crossfade: show current and next line for smooth transition
   const narrativeOpacity = Math.min(1, scrollProgress * 4)
 

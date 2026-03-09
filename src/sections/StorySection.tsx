@@ -49,7 +49,7 @@ export default function StorySection() {
           </h2>
           <FadeIn delay={0.4} className="mt-4 sm:mt-6 md:mt-8 max-w-2xl">
             <p className="text-base sm:text-lg md:text-xl text-stone-500 leading-relaxed">
-              One clear path: drones to pods, riders to you. Fewer trucks, faster drop-offs, and a smaller footprint for your city.
+              One clear path: drones to pods, riders to you. Faster drop-offs and a smaller footprint for your city.
             </p>
           </FadeIn>
         </div>

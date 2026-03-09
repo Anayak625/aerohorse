@@ -24,7 +24,7 @@ const benefits = [
     stat: '60',
     unit: '%',
     title: 'Up to 60% less carbon',
-    description: 'Drones and riders replace heavy trucks. Cleaner air, quieter streets, a smaller footprint.',
+    description: 'Drones and riders replace road traffic. Cleaner air, quieter streets, a smaller footprint.',
     color: 'slate',
   },
   {
@@ -149,7 +149,7 @@ function CarbonSavedStrip() {
         <span className="text-stone-500 text-base sm:text-lg">saved by Aerohorse deliveries this month.</span>
       </div>
       <p className="text-xs text-stone-400 sm:text-right">
-        Based on drone + rider miles vs. traditional truck delivery.
+        Based on drone + rider miles vs. traditional road delivery.
       </p>
     </div>
   )

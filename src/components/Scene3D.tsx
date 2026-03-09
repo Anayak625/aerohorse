@@ -45,6 +45,9 @@ const DRONE_GLTF_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/
 const DRONE_TARGET_SIZE = 3
 useGLTF.preload(DRONE_GLTF_URL)
 
+const CROWD_GLTF_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/crowd-circle.gltf'
+useGLTF.preload(CROWD_GLTF_URL)
+
 export default function Scene3D({
   mouse = { normalizedX: 0, normalizedY: 0 },
   scrollProgress = 0,
@@ -138,9 +141,6 @@ export default function Scene3D({
           />
         </Suspense>
         <Pods onHoverChange={onHoverChange} />
-        <Suspense fallback={<TruckPlaceholder />}>
-          <DeliveryCar scrollProgress={scrollProgress} />
-        </Suspense>
         <DroppingParcel scrollProgress={scrollProgress} />
       </group>
 
@@ -238,6 +238,19 @@ function DroneAnimated({
     }
     const entrance = entranceProgress.current
 
+    // After the parcel has reached the pod in the hero scene (around 60–65% scroll),
+    // have this same drone peel away toward the viewer and downwards,
+    // exiting through the bottom of the frame instead of drifting up‑right.
+    const DEPART_START = 0.6
+    const DEPART_END = 0.9
+    const departTRaw =
+      scrollProgress <= DEPART_START
+        ? 0
+        : scrollProgress >= DEPART_END
+          ? 1
+          : (scrollProgress - DEPART_START) / (DEPART_END - DEPART_START)
+    const departT = departTRaw * departTRaw * (3 - 2 * departTRaw)
+
     // Spin propellers - rotate around local Z axis (due to model orientation)
     // Delta is the time since last frame, use it for frame-rate independent animation
     wingsRef.current.forEach((wing, i) => {
@@ -246,15 +259,22 @@ function DroneAnimated({
       wing.rotation.z += 25 * direction * delta // fast spinning
     })
 
-    // Drone in front of camera so it's visible; baseOffset centers the model at this position
-    // Entrance: fly in from below and in front (toward the viewer)
+    // Drone in front of camera so it's visible; baseOffset centers the model at this position.
+    // Entrance: fly in from below and in front (toward the viewer).
     const entranceOffsetY = (1 - entrance) * -6 // starts 6 units below
     const entranceOffsetZ = (1 - entrance) * 8 // starts 8 units in front (toward camera)
-    
+
     const pos = new THREE.Vector3(0, 5.3, 1)
-    pos.x += baseOffset.x
-    pos.y += baseOffset.y + entranceOffsetY
-    pos.z += baseOffset.z + entranceOffsetZ
+
+    // Departure: move the drone explicitly towards the RIGHT (+X) edge and slightly away/upwards 
+    // to match the entry vector of the TransitionDrone which starts left.
+    const departOffsetX = 20 * departT // fly fast to the right
+    const departOffsetY = 2 * departT  // slight lift
+    const departOffsetZ = -2 * departT // slight push back
+
+    pos.x += baseOffset.x + departOffsetX
+    pos.y += baseOffset.y + entranceOffsetY + departOffsetY
+    pos.z += baseOffset.z + entranceOffsetZ + departOffsetZ
     pos.y += Math.sin(currentTime * 3) * 0.03 * entrance // Subtle hover bob (fade in with entrance)
 
     ref.current.position.copy(pos)
@@ -263,19 +283,23 @@ function DroneAnimated({
 
     // Scale includes entrance animation (starts at 0.3, grows to full size)
     const entranceScale = 0.3 + entrance * 0.7
-    const targetScale = modelScale * entranceScale * (hovered ? 1.12 : 1)
+    // Slightly adjust scale as it departs; keep it roughly stable so motion reads as toward‑camera
+    const departScale = 1 - 0.03 * departT
+    const targetScale = modelScale * entranceScale * departScale * (hovered ? 1.12 : 1)
     const s = ref.current.scale.x + (targetScale - ref.current.scale.x) * 0.12
     ref.current.scale.setScalar(s)
 
     ref.current.lookAt(0, 4, 5)
-    const rollDemand = Math.sin(currentTime * 0.3) * 0.05
-    const pitchDemand = 0.12
+    const rollDemand = Math.sin(currentTime * 0.3) * 0.05 + departT * 0.18
+    const pitchDemand = 0.12 + departT * 0.06
     ref.current.rotation.z = rollDemand * 0.8
     ref.current.rotation.x = pitchDemand * 0.5
 
-    // Fade in drone materials
+    // Keep the drone fully opaque while it moves down through the frame,
+    // and only let it disappear once it is fully off‑screen at the very end.
+    const opacity = entrance
     droneMaterials.current.forEach((mat) => {
-      mat.opacity = entrance
+      mat.opacity = opacity
     })
   })
 
@@ -306,56 +330,37 @@ function DroneAnimated({
   )
 }
 
-// Pod base radius ~0.8, diameter ~1.6. Truck placed one diameter to the left of pod.
+// Pod base radius ~0.8, also used to size the in‑pod crowd circle
 const POD_RADIUS = 0.8
-const POD_DIAMETER = POD_RADIUS * 2
 
 // Same parcel as drone's payload: drops from drone position (15% scroll) to pod top (60% scroll)
-// Then travels from pod toward truck (60-65% scroll) for one pod diameter distance
 const DRONE_SCALE = 3 // match DroneAnimated baseScale so parcel is same size
 const DROP_START_SCROLL = 0.15
 const DROP_END_SCROLL = 0.6
-const TRAVEL_START_SCROLL = 0.6
-const TRAVEL_END_SCROLL = 0.65
 // Pod ring top y=0.18; parcel height 0.1*DRONE_SCALE → center at 0.18 + 0.1*DRONE_SCALE/2
 const POD_TOP_Y = 0.18 + (0.1 * DRONE_SCALE) / 2
 // Drone at (0, 5.3, 1), scale 3, package local (0, -0.17, -0.02) → world start
 const DROP_START = { x: 0, y: 5.3 + DRONE_SCALE * (-0.17), z: 1 + DRONE_SCALE * (-0.02) }
 const DROP_END = { x: 0, y: POD_TOP_Y, z: 0 }
-// Travel destination: one pod diameter in truck direction (negative X)
-const TRAVEL_END = { x: -POD_DIAMETER, y: POD_TOP_Y, z: 0 }
 
 const LOGO_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/aerohorse-logo.png'
 
 function DroppingParcel({ scrollProgress }: { scrollProgress: number }) {
-  const visible = scrollProgress >= DROP_START_SCROLL && scrollProgress < TRAVEL_END_SCROLL
+  const visible = scrollProgress >= DROP_START_SCROLL && scrollProgress <= DROP_END_SCROLL
   const logoTexture = useTexture(LOGO_URL)
 
-  // Phase 1: Drop from drone to pod (15% - 60%)
+  // Single phase: Drop from drone to pod (15% - 60%)
   const dropT = visible
     ? Math.min(1, (scrollProgress - DROP_START_SCROLL) / (DROP_END_SCROLL - DROP_START_SCROLL))
     : 0
   const dropTEased = dropT * dropT
 
-  // Phase 2: Travel from pod toward truck (60% - 65%)
-  const travelT = scrollProgress >= TRAVEL_START_SCROLL
-    ? Math.min(1, (scrollProgress - TRAVEL_START_SCROLL) / (TRAVEL_END_SCROLL - TRAVEL_START_SCROLL))
-    : 0
-  const travelTEased = travelT * travelT * (3 - 2 * travelT) // smoothstep for smooth motion
-
   let x: number, y: number, z: number
 
-  if (scrollProgress < TRAVEL_START_SCROLL) {
-    // Phase 1: Dropping to pod
-    x = DROP_START.x + (DROP_END.x - DROP_START.x) * dropTEased
-    y = DROP_START.y + (DROP_END.y - DROP_START.y) * dropTEased
-    z = DROP_START.z + (DROP_END.z - DROP_START.z) * dropTEased
-  } else {
-    // Phase 2: Traveling from pod toward truck
-    x = DROP_END.x + (TRAVEL_END.x - DROP_END.x) * travelTEased
-    y = DROP_END.y + (TRAVEL_END.y - DROP_END.y) * travelTEased
-    z = DROP_END.z + (TRAVEL_END.z - DROP_END.z) * travelTEased
-  }
+  // Directly interpolate from drone start to pod top
+  x = DROP_START.x + (DROP_END.x - DROP_START.x) * dropTEased
+  y = DROP_START.y + (DROP_END.y - DROP_START.y) * dropTEased
+  z = DROP_START.z + (DROP_END.z - DROP_START.z) * dropTEased
 
   if (!visible) return null
 
@@ -418,139 +423,8 @@ function DroppingParcel({ scrollProgress }: { scrollProgress: number }) {
   )
 }
 
-const TRUCK_POSITION_X = -POD_DIAMETER - 0.3  // one pod diameter to the left of pod center
-const TRUCK_TARGET_SIZE = 1.4
-
-// Truck animation: starts at 72% scroll, completes by 100%
-const TRUCK_START_SCROLL = 0.70
-const TRUCK_END_SCROLL = 1.0
-
-const TRUCK_GLTF_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/truck/scene.gltf'
-useGLTF.preload(TRUCK_GLTF_URL)
-
-// Calculate truck position and rotation along simple L-shaped path
-// Original truck orientation: Math.PI (back faces +X, toward pod)
-function getTruckPathPosition(t: number): { x: number; z: number; rotation: number } {
-  const startX = TRUCK_POSITION_X
-  const startZ = 0
-
-  // t=0: truck is stationary, original orientation (Math.PI)
-  if (t <= 0) {
-    return { x: startX, z: startZ, rotation: Math.PI }
-  }
-
-  // 70-72% scroll: -X direction (0% - 16.7% of path t)
-  // 72-82% scroll: turn + +Z direction (16.7% - 100% of path t)
-  // So phase1 ends at t = (72-70)/(82-70) = 2/12 = 0.167
-  const phase1End = 0.167
-  const straightDistance = POD_DIAMETER
-
-  if (t <= phase1End) {
-    // Phase 1: Straight line in -X direction (70-72% scroll)
-    const phase1T = t / phase1End
-    const x = startX - straightDistance * phase1T
-    return { x, z: startZ, rotation: Math.PI }
-  }
-
-  const turnStartX = startX - straightDistance
-
-  // Quick smooth turn (16.7% - 25% of path t)
-  const phase2End = 0.25
-  const turnRadius = 2
-
-  if (t <= phase2End) {
-    // Smooth arc turn: 90 degrees to the right (toward +Z, scroll direction)
-    const phase2T = (t - phase1End) / (phase2End - phase1End)
-    const angle = phase2T * (Math.PI / 2) // 0 to PI/2 (quarter circle)
-    const x = turnStartX - turnRadius * Math.sin(angle)
-    const z = startZ + turnRadius * (1 - Math.cos(angle))
-    // Rotate from PI (facing -X) to PI + PI/2 = 3PI/2 or -PI/2 (facing +Z)
-    const rotation = Math.PI + angle
-    return { x, z, rotation }
-  }
-
-  // Phase 3: Straight line in +Z direction (75-85% scroll)
-  const turnEndX = turnStartX - turnRadius
-  const turnEndZ = startZ + turnRadius
-  const straightLength = 15
-
-  const phase3T = (t - phase2End) / (1 - phase2End)
-  const x = turnEndX
-  const z = turnEndZ + straightLength * phase3T
-  // Facing +Z direction: rotation = 3PI/2 or -PI/2
-  const rotation = Math.PI * 1.5
-  return { x, z, rotation }
-}
-
-function TruckPlaceholder() {
-  return (
-    <group position={[TRUCK_POSITION_X, 0.3, 0]} rotation={[0, Math.PI, 0]}>
-      <mesh castShadow receiveShadow>
-        <boxGeometry args={[0.5, 0.25, 0.2]} />
-        <meshStandardMaterial color="#1e3a5f" metalness={0.6} roughness={0.4} />
-      </mesh>
-    </group>
-  )
-}
-
-function DeliveryCar({ scrollProgress = 0 }: { scrollProgress?: number }) {
-  const { scene } = useGLTF(TRUCK_GLTF_URL)
-  const groupRef = useRef<THREE.Group>(null)
-
-  const { clonedScene, scale, baseOffset } = useMemo(() => {
-    const clone = scene.clone()
-    clone.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh) {
-        (child as THREE.Mesh).castShadow = true
-          ; (child as THREE.Mesh).receiveShadow = true
-      }
-    })
-    const box = new THREE.Box3().setFromObject(clone)
-    const size = new THREE.Vector3()
-    const center = new THREE.Vector3()
-    box.getSize(size)
-    box.getCenter(center)
-    const maxDim = Math.max(size.x, size.y, size.z) || 1
-    const s = TRUCK_TARGET_SIZE / maxDim
-
-    return {
-      clonedScene: clone,
-      scale: s,
-      baseOffset: {
-        x: -center.x * s,
-        y: -box.min.y * s,
-        z: center.z * s,
-      },
-    }
-  }, [scene])
-
-  // Calculate animated position based on scroll
-  const truckT = scrollProgress >= TRUCK_START_SCROLL
-    ? Math.min(1, (scrollProgress - TRUCK_START_SCROLL) / (TRUCK_END_SCROLL - TRUCK_START_SCROLL))
-    : 0
-
-  const pathPos = getTruckPathPosition(truckT)
-
-  // Apply easing for smoother motion
-  const easedT = truckT * truckT * (3 - 2 * truckT)
-  const animatedPathPos = getTruckPathPosition(easedT)
-
-  const posX = animatedPathPos.x + baseOffset.x
-  const posY = baseOffset.y
-  const posZ = animatedPathPos.z + baseOffset.z
-  const rotationY = animatedPathPos.rotation
-
-  return (
-    <group
-      ref={groupRef}
-      position={[posX, posY, posZ]}
-      scale={[scale, scale, scale]}
-      rotation={[0, rotationY, 0]}
-    >
-      <primitive object={clonedScene} />
-    </group>
-  )
-}
+// (Truck model and path have been removed from the hero scene;
+// delivery is now expressed purely via the drone + parcel + pod.)
 
 function Pods({ onHoverChange }: { onHoverChange?: (t: HoverTarget) => void }) {
   return (
@@ -627,7 +501,52 @@ function Pod({
         <meshBasicMaterial color="#14b8a6" transparent opacity={0.9} />
       </mesh>
 
+      {/* Crowd circle inside pod */}
+      <CrowdCircleInPod />
+
       <pointLight position={[0, 0.4, 0]} color="#0d9488" intensity={hovered ? 2.2 : 1.5} distance={3} />
+    </group>
+  )
+}
+
+function CrowdCircleInPod() {
+  const { scene } = useGLTF(CROWD_GLTF_URL)
+
+  const { clonedScene, scale, offset } = useMemo(() => {
+    const clone = scene.clone()
+    clone.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        ; (child as THREE.Mesh).castShadow = false
+          ; (child as THREE.Mesh).receiveShadow = false
+      }
+    })
+
+    const box = new THREE.Box3().setFromObject(clone)
+    const size = new THREE.Vector3()
+    const center = new THREE.Vector3()
+    box.getSize(size)
+    box.getCenter(center)
+
+    const maxDim = Math.max(size.x, size.y, size.z) || 1
+    const targetDiameter = POD_RADIUS * 5
+    const s = targetDiameter / maxDim
+
+    return {
+      clonedScene: clone,
+      scale: s,
+      offset: {
+        x: -center.x * s,
+        y: -center.y * s,
+        z: -center.z * s,
+      },
+    }
+  }, [scene])
+
+  const crowdY = 0.32
+
+  return (
+    <group position={[0 + offset.x, crowdY + offset.y, 0 + offset.z]}>
+      <primitive object={clonedScene} scale={scale} />
     </group>
   )
 }

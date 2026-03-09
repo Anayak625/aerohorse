@@ -19,12 +19,12 @@ function useIsSmallDevice() {
   return isSmall
 }
 
-const TRUCK_GLTF_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/truck/scene.gltf'
+const DRONE_GLTF_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/drone/scene.gltf'
 const LOGO_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/aerohorse-logo.png'
 const TRUCK_TARGET_SIZE = 1.2
-const JOURNEY_TRUCK_START = 0.4
+const JOURNEY_TRUCK_START = 0.05 // start coming in right away so it feels continuous from previous section
 const JOURNEY_TRUCK_END = 0.65
-const TRUCK_START_X = -14
+const TRUCK_START_X = -20 // start further left so it flies in
 const TRUCK_END_X = 3
 const PARCEL_BACK_OFFSET = 0.1 // 10px back (in world units)
 // Parcel stays on truck; at end it goes up then down like a projectile
@@ -49,7 +49,7 @@ const PARCEL_LANDING_TARGET = new THREE.Vector3(
   0 + PARCEL_FRONT_OFFSET_Z
 )
 
-useGLTF.preload(TRUCK_GLTF_URL)
+useGLTF.preload(DRONE_GLTF_URL)
 
 function ScrollZoom({ scrollProgress, controlsRef }: { scrollProgress: number; controlsRef: React.RefObject<any> }) {
   const { camera } = useThree()
@@ -110,7 +110,7 @@ export default function JourneyScene({ scrollProgress = 0 }: { scrollProgress: n
       <ScrollZoom scrollProgress={scrollProgress} controlsRef={controlsRef} />
       <color attach="background" args={['#fafaf9']} />
       <fog attach="fog" args={['#fafaf9', 20, 60]} />
-      
+
       <ambientLight intensity={1} />
       <directionalLight position={[5, 12, 5]} intensity={1.5} color="#ffffff" />
       <pointLight position={[0, 5, 2]} color="#0d9488" intensity={3} distance={25} />
@@ -131,8 +131,8 @@ export default function JourneyScene({ scrollProgress = 0 }: { scrollProgress: n
       {/* City Buildings - Half Planned City */}
       <CityBlock />
 
-      {/* Truck + parcel delivery at ~50% scroll */}
-      <JourneyTruck scrollProgress={scrollProgress} />
+      {/* Drone + parcel delivery at ~50% scroll */}
+      <JourneyDrone scrollProgress={scrollProgress} />
 
       {/* Ground with grid */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
@@ -144,14 +144,14 @@ export default function JourneyScene({ scrollProgress = 0 }: { scrollProgress: n
   )
 }
 
-function JourneyTruck({ scrollProgress }: { scrollProgress: number }) {
-  const { scene } = useGLTF(TRUCK_GLTF_URL)
+function JourneyDrone({ scrollProgress }: { scrollProgress: number }) {
+  const { scene } = useGLTF(DRONE_GLTF_URL)
   const { clonedScene, scale, baseOffset } = useMemo(() => {
     const clone = scene.clone()
     clone.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         (child as THREE.Mesh).castShadow = true
-        ;(child as THREE.Mesh).receiveShadow = true
+          ; (child as THREE.Mesh).receiveShadow = true
       }
     })
     const box = new THREE.Box3().setFromObject(clone)
@@ -222,7 +222,7 @@ function Parcel({
 
   const isDroppingPhase = scrollProgress >= DROP_START && scrollProgress < DROP_FALL_END
   const landed = scrollProgress >= DROP_FALL_END
-  
+
   if (scrollProgress < DROP_START) {
     // Stay on truck
     x = truckX - PARCEL_BACK_OFFSET
@@ -238,27 +238,27 @@ function Parcel({
     x = endX
     z = truckZ + fallEased * PARCEL_FRONT_OFFSET_Z
     y = arcA * fallEased * fallEased + arcB * fallEased + onTruckY
-    
+
     // Tumbling rotation during drop
     rotationX = fallT * Math.PI * 2.5
     rotationZ = fallT * Math.PI * 1.2
-    
+
     // Slight scale pulse during flight
     scale = 1 + Math.sin(fallT * Math.PI) * 0.08
   } else {
     // Rest on ground, in front of truck for visibility
     x = endX
     z = truckZ + PARCEL_FRONT_OFFSET_Z
-    
+
     // Bounce effect after landing
     const landT = Math.min(1, (scrollProgress - DROP_FALL_END) / 0.08)
     const bounceDecay = Math.exp(-landT * 6)
     bounceY = Math.sin(landT * Math.PI * 3) * 0.15 * bounceDecay
-    
+
     // Squash and stretch on bounce
     const squashT = Math.sin(landT * Math.PI * 3) * bounceDecay
     scale = 1 + squashT * 0.1
-    
+
     y = PARCEL_GROUND_Y + bounceY
   }
 
@@ -271,9 +271,9 @@ function Parcel({
   const logoSize = 0.06
 
   // Glow intensity increases as parcel falls and pulses when landed
-  const glowIntensity = isDroppingPhase 
+  const glowIntensity = isDroppingPhase
     ? 0.3 + ((scrollProgress - DROP_START) / (DROP_FALL_END - DROP_START)) * 0.5
-    : landed 
+    : landed
       ? 0.6 + Math.sin(landProgress * Math.PI * 4) * 0.2 * (1 - landProgress)
       : 0
 
@@ -289,8 +289,8 @@ function Parcel({
           castShadow
           receiveShadow
         >
-          <meshStandardMaterial 
-            color="#f97316" 
+          <meshStandardMaterial
+            color="#f97316"
             emissive="#f97316"
             emissiveIntensity={glowIntensity}
           />
@@ -352,26 +352,26 @@ function LandingCelebration({ landProgress }: { landProgress: number }) {
   const ripple1T = Math.min(1, landProgress / 0.25)
   const ripple2T = Math.min(1, Math.max(0, (landProgress - 0.08)) / 0.3)
   const ripple3T = Math.min(1, Math.max(0, (landProgress - 0.15)) / 0.35)
-  
+
   const ripple1Scale = ripple1T * 1.8
   const ripple2Scale = ripple2T * 2.5
   const ripple3Scale = ripple3T * 3.2
-  
+
   const ripple1Opacity = (1 - ripple1T) * 0.8
   const ripple2Opacity = (1 - ripple2T) * 0.5
   const ripple3Opacity = (1 - ripple3T) * 0.3
-  
+
   // Badge pop: elastic feel between 10% and 40% of land progress
   const badgeT = landProgress < 0.1 ? 0 : Math.min(1, (landProgress - 0.1) / 0.3)
   const badgeScale = badgeT < 1 ? 1 - Math.pow(1 - badgeT, 3) : 1
   const badgeOvershoot = badgeT < 1 ? 1 + (1 - Math.pow(1 - badgeT, 2)) * 0.35 : 1
   const badgeOpacity = Math.min(1, badgeT * 2.5)
-  
+
   // Sparkles burst immediately then fade
-  const sparkleOpacity = landProgress < 0.5 
-    ? Math.min(1, landProgress / 0.1) 
+  const sparkleOpacity = landProgress < 0.5
+    ? Math.min(1, landProgress / 0.1)
     : Math.max(0, 1 - (landProgress - 0.5) / 0.5)
-  
+
   // Rising particles effect
   const particleRise = Math.min(1, landProgress / 0.6)
 
@@ -450,7 +450,7 @@ function LandingCelebration({ landProgress }: { landProgress: number }) {
         color="#f97316"
         opacity={sparkleOpacity * 0.9}
       />
-      
+
       {/* Secondary sparkles - teal */}
       <Sparkles
         count={22}
@@ -460,7 +460,7 @@ function LandingCelebration({ landProgress }: { landProgress: number }) {
         color="#0d9488"
         opacity={sparkleOpacity * 0.7}
       />
-      
+
       {/* Golden accent sparkles */}
       <Sparkles
         count={14}
@@ -513,33 +513,33 @@ function CityBlock() {
         <boxGeometry args={[1, 3, 1]} />
         <meshStandardMaterial color="#e7e5e4" />
       </mesh>
-      
+
       <mesh position={[2, 2, -2.5]}>
         <boxGeometry args={[1.2, 4, 1]} />
         <meshStandardMaterial color="#d6d3d1" />
       </mesh>
-      
+
       <mesh position={[4, 1.2, -2]}>
         <boxGeometry args={[1, 2.4, 0.8]} />
         <meshStandardMaterial color="#e7e5e4" />
       </mesh>
-      
+
       <mesh position={[1, 1.8, -3.5]}>
         <boxGeometry args={[0.9, 3.6, 1]} />
         <meshStandardMaterial color="#d6d3d1" />
       </mesh>
-      
+
       {/* Shorter foreground buildings */}
       <mesh position={[0.5, 0.6, 0]}>
         <boxGeometry args={[0.8, 1.2, 0.8]} />
         <meshStandardMaterial color="#e7e5e4" transparent opacity={0.6} />
       </mesh>
-      
+
       <mesh position={[2.5, 0.5, 0.5]}>
         <boxGeometry args={[1, 1, 0.9]} />
         <meshStandardMaterial color="#d6d3d1" transparent opacity={0.5} />
       </mesh>
-      
+
       <mesh position={[3.5, 0.4, -0.5]}>
         <boxGeometry args={[0.7, 0.8, 0.7]} />
         <meshStandardMaterial color="#e7e5e4" transparent opacity={0.4} />
@@ -550,7 +550,7 @@ function CityBlock() {
 
 function GridFloor() {
   const gridRef = useRef<THREE.LineSegments>(null)
-  
+
   const [verts, indices] = useMemo(() => {
     const size = 30
     const step = 2
@@ -567,7 +567,7 @@ function GridFloor() {
     }
     return [new Float32Array(points), new Uint16Array(idx)]
   }, [])
-  
+
   const geom = useMemo(() => {
     const g = new THREE.BufferGeometry()
     g.setAttribute('position', new THREE.BufferAttribute(verts, 3))
