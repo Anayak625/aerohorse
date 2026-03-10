@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import Scene3D, { type HoverTarget } from './Scene3D'
 import { TextReveal, LineReveal, FadeIn } from './TextReveal'
 import { useThrottledScrollProgress } from '../hooks/useScrollProgress'
+import { useDevicePerformance } from '../hooks/useDevicePerformance'
 
 // Match Scene3D: same mouse strength and coefficients so text parallax is in sync with drone/camera
 const MOUSE_STRENGTH_NORMAL = 0.4
@@ -17,6 +18,7 @@ const TILT_PERSPECTIVE_PX = 500
 const TILT_TRANSLATE_Z = 40
 
 export default function Hero() {
+  const performance = useDevicePerformance()
   const [mouse, setMouse] = useState({ normalizedX: 0, normalizedY: 0 })
   const sceneProgress = useThrottledScrollProgress(
     () => Math.min(1, window.scrollY / (window.innerHeight * 3)),
@@ -84,21 +86,21 @@ export default function Hero() {
       className="relative w-full"
       style={{ height: '400vh' }}
     >
-    <section
-      ref={sectionRef}
-      className="sticky top-0 left-0 right-0 h-screen w-full overflow-hidden"
-      onMouseMove={onMouseMove}
-      data-cursor-hover={hoveredTarget != null ? '' : undefined}
-    >
+      <section
+        ref={sectionRef}
+        className="sticky top-0 left-0 right-0 h-screen w-full overflow-hidden"
+        onMouseMove={onMouseMove}
+        data-cursor-hover={hoveredTarget != null ? '' : undefined}
+      >
         <div
           className="absolute inset-0 z-0"
           data-cursor-hover={hoveredTarget != null ? '' : undefined}
         >
           <Canvas
             camera={{ position: [0, 5, 12], fov: 50 }}
-            dpr={[1, 1.5]}
-            gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
-            shadows
+            dpr={performance.dpr as [number, number]}
+            gl={{ antialias: performance.antialias, alpha: false, powerPreference: 'high-performance' }}
+            shadows={performance.shadows}
           >
             <Suspense fallback={null}>
               <Scene3D
@@ -111,7 +113,7 @@ export default function Hero() {
             </Suspense>
           </Canvas>
         </div>
-        
+
         {/* Content overlay — perspective wrapper so text tilt reads as real 3D */}
         <div
           className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-center items-center transition-[opacity,visibility] duration-500 ease-out"
@@ -132,53 +134,53 @@ export default function Hero() {
               willChange: 'transform',
             }}
           >
-          <div className="max-w-4xl mx-auto">
-            <LineReveal delay={0.2}>
-              <p className="mb-6 text-xs font-medium uppercase tracking-[0.4em] text-teal-600">
-                Delivery, reimagined
-              </p>
-            </LineReveal>
-            
-            <h1 className="relative z-10 text-4xl font-bold leading-[0.9] tracking-tight text-stone-800 sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl [&>div]:block [&>div]:leading-[0.88] [&>div:first-child]:-mb-[0.08em] drop-shadow-[0_2px_8px_rgba(255,255,255,0.9)]" style={{ textShadow: '0 2px 12px rgba(255,255,255,0.85), 0 1px 3px rgba(0,0,0,0.06)' }}>
-              <TextReveal className="block" delay={0.3} stagger={0.05}>
-                From sky
-              </TextReveal>
-              <TextReveal className="block gradient-text" delay={0.5} stagger={0.05}>
-                to your door.
-              </TextReveal>
-            </h1>
-            
-            <FadeIn delay={0.8} className="max-w-xl mx-auto">
-              <p className="text-base text-stone-600 md:text-lg leading-relaxed drop-shadow-sm" style={{ textShadow: '0 1px 2px rgba(255,255,255,0.8)' }}>
-                Drones drop to smart pods every 500m. Local riders handle the last mile. 
-                <span className="text-stone-800 font-medium"> Less traffic. Less carbon. More speed.</span>
-              </p>
-            </FadeIn>
-            
-            <FadeIn delay={1} className="mt-6 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 justify-center items-stretch sm:items-center pointer-events-auto w-full max-w-sm sm:max-w-none mx-auto">
-              <a
-                href="#journey"
-                className="group relative inline-flex items-center justify-center gap-3 overflow-hidden rounded-full bg-teal-600 px-6 py-3.5 sm:px-8 sm:py-4 text-sm font-medium text-white shadow-lg shadow-teal-600/20 transition-all duration-300 hover:bg-teal-700 hover:shadow-teal-600/30 hover:scale-105 min-h-[44px]"
-                data-cursor-hover
-              >
-                <span className="relative z-10">See how it works</span>
-                <svg className="h-4 w-4 transition-transform group-hover:translate-x-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </a>
-              <a
-                href="#contact"
-                className="inline-flex items-center justify-center rounded-full border border-stone-300 bg-white/80 px-6 py-3.5 sm:px-8 sm:py-4 text-sm font-medium text-stone-700 transition-all duration-300 hover:border-stone-400 hover:bg-white hover:scale-105 min-h-[44px]"
-                data-cursor-hover
-              >
-                Get in touch
-              </a>
-            </FadeIn>
-          </div>
+            <div className="max-w-4xl mx-auto">
+              <LineReveal delay={0.2}>
+                <p className="mb-6 text-xs font-medium uppercase tracking-[0.4em] text-teal-600">
+                  Delivery, reimagined
+                </p>
+              </LineReveal>
+
+              <h1 className="relative z-10 text-4xl font-bold leading-[0.9] tracking-tight text-stone-800 sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl [&>div]:block [&>div]:leading-[0.88] [&>div:first-child]:-mb-[0.08em] drop-shadow-[0_2px_8px_rgba(255,255,255,0.9)]" style={{ textShadow: '0 2px 12px rgba(255,255,255,0.85), 0 1px 3px rgba(0,0,0,0.06)' }}>
+                <TextReveal className="block" delay={0.3} stagger={0.05}>
+                  From sky
+                </TextReveal>
+                <TextReveal className="block gradient-text" delay={0.5} stagger={0.05}>
+                  to your door.
+                </TextReveal>
+              </h1>
+
+              <FadeIn delay={0.8} className="max-w-xl mx-auto">
+                <p className="text-base text-stone-600 md:text-lg leading-relaxed drop-shadow-sm" style={{ textShadow: '0 1px 2px rgba(255,255,255,0.8)' }}>
+                  Drones drop to smart pods every 500m. Local riders handle the last mile.
+                  <span className="text-stone-800 font-medium"> Less traffic. Less carbon. More speed.</span>
+                </p>
+              </FadeIn>
+
+              <FadeIn delay={1} className="mt-6 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 justify-center items-stretch sm:items-center pointer-events-auto w-full max-w-sm sm:max-w-none mx-auto">
+                <a
+                  href="#journey"
+                  className="group relative inline-flex items-center justify-center gap-3 overflow-hidden rounded-full bg-teal-600 px-6 py-3.5 sm:px-8 sm:py-4 text-sm font-medium text-white shadow-lg shadow-teal-600/20 transition-all duration-300 hover:bg-teal-700 hover:shadow-teal-600/30 hover:scale-105 min-h-[44px]"
+                  data-cursor-hover
+                >
+                  <span className="relative z-10">See how it works</span>
+                  <svg className="h-4 w-4 transition-transform group-hover:translate-x-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                </a>
+                <a
+                  href="#contact"
+                  className="inline-flex items-center justify-center rounded-full border border-stone-300 bg-white/80 px-6 py-3.5 sm:px-8 sm:py-4 text-sm font-medium text-stone-700 transition-all duration-300 hover:border-stone-400 hover:bg-white hover:scale-105 min-h-[44px]"
+                  data-cursor-hover
+                >
+                  Get in touch
+                </a>
+              </FadeIn>
+            </div>
           </div>
         </div>
-        
-        
+
+
 
         {/* Scroll progress bar — shows drone position along path */}
         <div
@@ -209,15 +211,15 @@ export default function Hero() {
           </span>
           <div className="h-12 w-px bg-gradient-to-b from-stone-400 to-transparent" />
         </div>
-        
+
         {/* Bottom gradient fade for smooth transition */}
-        <div 
+        <div
           className="absolute bottom-0 left-0 right-0 h-60 bg-gradient-to-t from-stone-50 via-stone-50/80 to-transparent pointer-events-none z-20"
-          style={{ 
+          style={{
             opacity: Math.min(1, sceneProgress * 2),
           }}
         />
-    </section>
+      </section>
     </div>
   )
 }

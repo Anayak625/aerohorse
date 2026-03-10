@@ -6,6 +6,7 @@ import { Float, Sparkles, useGLTF, RoundedBox, useTexture } from '@react-three/d
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import { useWindowTexture } from '../utils/useWindowTexture'
+import { useDevicePerformance } from '../hooks/useDevicePerformance'
 
 const GRID_SIZE = 25
 
@@ -56,6 +57,7 @@ export default function Scene3D({
   onDroneClick,
   focusDroneUntil = 0,
 }: SceneProps) {
+  const performance = useDevicePerformance()
   const groupRef = useRef<THREE.Group>(null)
   const targetCamPos = useRef(new THREE.Vector3(0, 5, 12))
   const focusTarget = useRef(new THREE.Vector3(0, 4.8, 1))
@@ -182,8 +184,8 @@ export default function Scene3D({
       <pointLight position={[8, 4, 2]} color="#78716c" intensity={0.8} distance={18} />
 
       <group ref={groupRef}>
-        <Sparkles count={45} scale={35} size={2} speed={0.3} opacity={0.3} color="#0d9488" />
-        <Sparkles count={25} scale={30} size={2.5} speed={0.2} opacity={0.2} color="#a8a29e" />
+        <Sparkles count={performance.isLowEnd ? 15 : 45} scale={35} size={2} speed={0.3} opacity={0.3} color="#0d9488" />
+        <Sparkles count={performance.isLowEnd ? 10 : 25} scale={30} size={2.5} speed={0.2} opacity={0.2} color="#a8a29e" />
 
         <GroundPlane />
         <DataCity scrollProgress={scrollProgress} />
@@ -199,9 +201,11 @@ export default function Scene3D({
         <DroppingParcel scrollProgress={scrollProgress} />
       </group>
 
-      <EffectComposer multisampling={0}>
-        <Bloom luminanceThreshold={0.55} luminanceSmoothing={0.9} intensity={0.5} mipmapBlur />
-      </EffectComposer>
+      {!performance.isLowEnd && (
+        <EffectComposer multisampling={0}>
+          <Bloom luminanceThreshold={0.55} luminanceSmoothing={0.9} intensity={0.5} mipmapBlur />
+        </EffectComposer>
+      )}
     </>
   )
 }

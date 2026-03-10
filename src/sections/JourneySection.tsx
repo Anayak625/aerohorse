@@ -2,9 +2,11 @@ import { useRef, useState, useEffect } from 'react'
 import { Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
 import JourneyScene from '../components/JourneyScene'
+import { useDevicePerformance } from '../hooks/useDevicePerformance'
 
 export default function JourneySection() {
   const sectionRef = useRef<HTMLElement>(null)
+  const performance = useDevicePerformance()
   const [scrollProgress, setScrollProgress] = useState(0)
 
   useEffect(() => {
@@ -58,9 +60,9 @@ export default function JourneySection() {
         >
           <Canvas
             camera={{ position: [0, 3, 8], fov: 50 }}
-            dpr={[1, 2]}
-            shadows
-            gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
+            dpr={performance.dpr as [number, number]}
+            shadows={performance.shadows}
+            gl={{ antialias: performance.antialias, alpha: false, powerPreference: 'high-performance' }}
           >
             <Suspense fallback={null}>
               <JourneyScene scrollProgress={scrollProgress} />

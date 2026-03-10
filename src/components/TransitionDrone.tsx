@@ -4,6 +4,7 @@ import { useRef, useMemo, useEffect } from 'react'
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
+import { useDevicePerformance } from '../hooks/useDevicePerformance'
 
 const DRONE_GLTF_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/drone/scene.gltf'
 // Slightly larger so it matches the landing drone's presence
@@ -17,7 +18,7 @@ function DroneModel({ progress }: { progress: number }) {
   const { size } = useThree()
   const aspect = size.width / (size.height || 1)
   const isNarrow = aspect < MOBILE_ASPECT_THRESHOLD
-  const droneTargetSize = isNarrow ? Math.max(0.4, 0.7 * aspect) : DRONE_TARGET_SIZE_DESKTOP
+  const droneTargetSize = isNarrow ? Math.max(1.9, 0.9 * aspect) : DRONE_TARGET_SIZE_DESKTOP
   const groupRef = useRef<THREE.Group>(null)
   const wingsRef = useRef<THREE.Object3D[]>([])
 
@@ -59,7 +60,7 @@ function DroneModel({ progress }: { progress: number }) {
     halfWidthX +
     progress * (rightEdgeEnd - leftEdgeStart - halfWidthX * 2) +
     baseOffset.x
-  const posY = baseOffset.y + (isNarrow ? -0.4 : -1.9) // Lowered from 1.35 and 2.2
+  const posY = baseOffset.y + (isNarrow ? -1.9 : -1.9) // Lowered from 1.35 and 2.2
   const posZ = baseOffset.z
 
   useFrame((state, delta) => {
@@ -131,12 +132,13 @@ function Scene({ progress }: { progress: number }) {
 }
 
 export default function TransitionDrone({ progress }: { progress: number }) {
+  const performance = useDevicePerformance()
   return (
     <div className="absolute inset-0 z-0 pointer-events-none">
       <Canvas
         orthographic
-        dpr={[1, 1.5]}
-        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+        dpr={performance.dpr as [number, number]}
+        gl={{ antialias: performance.antialias, alpha: true, powerPreference: 'high-performance' }}
         style={{ display: 'block' }}
       >
         <Scene progress={progress} />

@@ -5,6 +5,7 @@ import { useThree, useFrame } from '@react-three/fiber'
 import { OrbitControls, useGLTF, Sparkles, Html, RoundedBox, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { useWindowTexture } from '../utils/useWindowTexture'
+import { useDevicePerformance } from '../hooks/useDevicePerformance'
 
 const MOBILE_BREAKPOINT = 768
 function useIsSmallDevice() {
@@ -295,6 +296,7 @@ function Parcel({
   truckZ: number
   droneScale?: number
 }) {
+  const performance = useDevicePerformance()
   const logoTexture = useTexture(LOGO_URL)
   const bobRef = useRef<THREE.Group>(null)
 
@@ -437,7 +439,7 @@ function Parcel({
       {/* Trail effect during drop */}
       {isDroppingPhase && (
         <Sparkles
-          count={10}
+          count={performance.isLowEnd ? 4 : 10}
           scale={0.5}
           size={0.8}
           speed={1.5}
@@ -455,6 +457,7 @@ function Parcel({
 }
 
 function LandingCelebration({ landProgress }: { landProgress: number }) {
+  const performance = useDevicePerformance()
   // Multiple ripples with staggered timing for impact effect
   const ripple1T = Math.min(1, landProgress / 0.25)
   const ripple2T = Math.min(1, Math.max(0, (landProgress - 0.08)) / 0.3)
@@ -550,7 +553,7 @@ function LandingCelebration({ landProgress }: { landProgress: number }) {
 
       {/* Burst sparkles - orange */}
       <Sparkles
-        count={35}
+        count={performance.isLowEnd ? 12 : 35}
         scale={1.5 + particleRise * 0.5}
         size={2}
         speed={0.8}
@@ -560,7 +563,7 @@ function LandingCelebration({ landProgress }: { landProgress: number }) {
 
       {/* Secondary sparkles - teal */}
       <Sparkles
-        count={22}
+        count={performance.isLowEnd ? 8 : 22}
         scale={2 + particleRise * 0.8}
         size={1.5}
         speed={0.5}
@@ -570,7 +573,7 @@ function LandingCelebration({ landProgress }: { landProgress: number }) {
 
       {/* Golden accent sparkles */}
       <Sparkles
-        count={14}
+        count={performance.isLowEnd ? 5 : 14}
         scale={1.2}
         size={1.8}
         speed={0.3}
@@ -634,7 +637,7 @@ function CityBlock() {
   )
 
   return (
-    <group position={[4, 0, 0]}>
+    <group position={[4, 0, 0]} rotation={[0, 20 * (Math.PI / 180), 0]}>
       {/* Tallest building - 2 tiers */}
       <group position={[2, 0, -2.5]}>
         <mesh position={[0, 1.5, 0]}>

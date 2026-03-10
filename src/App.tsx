@@ -14,6 +14,7 @@ import PodNetwork from './sections/PodNetwork'
 import CTA from './sections/CTA'
 import Footer from './components/Footer'
 import { useThrottledScrollProgress } from './hooks/useScrollProgress'
+import { useDevicePerformance } from './hooks/useDevicePerformance'
 
 // Parcel lands early in section so "landed" + receipt get most of the scroll; How it works appears only after.
 const JOURNEY_DRONE_END = 0.65
@@ -32,6 +33,7 @@ function stickScrollToProgress(raw: number): number {
 }
 
 function JourneySection() {
+  const performance = useDevicePerformance()
   const sectionRef = useRef<HTMLElement>(null)
   const scrollProgress = useThrottledScrollProgress(
     () => {
@@ -68,8 +70,8 @@ function JourneySection() {
       <div className="sticky top-0 h-screen w-full overflow-hidden">
         <Canvas
           camera={{ position: [0, 6, 12], fov: 50 }}
-          dpr={[1, 1.5]}
-          gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
+          dpr={performance.dpr as [number, number]}
+          gl={{ antialias: performance.antialias, alpha: false, powerPreference: 'high-performance' }}
         >
           <Suspense fallback={null}>
             <JourneyScene scrollProgress={scrollProgress} />
@@ -98,13 +100,12 @@ function JourneySection() {
               {phaseLabels.map((label, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <span
-                    className={`text-xs font-semibold uppercase tracking-widest transition-all duration-500 ${
-                      narrativePhase === i
-                        ? 'text-teal-600'
-                        : narrativePhase > i
-                          ? 'text-teal-500/70'
-                          : 'text-stone-300'
-                    }`}
+                    className={`text-xs font-semibold uppercase tracking-widest transition-all duration-500 ${narrativePhase === i
+                      ? 'text-teal-600'
+                      : narrativePhase > i
+                        ? 'text-teal-500/70'
+                        : 'text-stone-300'
+                      }`}
                   >
                     {label}
                   </span>

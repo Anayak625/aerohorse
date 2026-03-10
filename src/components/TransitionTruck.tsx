@@ -4,6 +4,7 @@ import { useRef, useMemo, useEffect } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
+import { useDevicePerformance } from '../hooks/useDevicePerformance'
 
 const TRUCK_GLTF_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/truck/scene.gltf'
 const TRUCK_TARGET_SIZE_DESKTOP = 1.7
@@ -23,7 +24,7 @@ function TruckModel({ progress }: { progress: number }) {
     clone.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         (child as THREE.Mesh).castShadow = true
-        ;(child as THREE.Mesh).receiveShadow = true
+          ; (child as THREE.Mesh).receiveShadow = true
       }
     })
     const box = new THREE.Box3().setFromObject(clone)
@@ -115,12 +116,13 @@ function Scene({ progress }: { progress: number }) {
 }
 
 export default function TransitionTruck({ progress }: { progress: number }) {
+  const performance = useDevicePerformance()
   return (
     <div className="absolute inset-0 z-0 pointer-events-none">
       <Canvas
         orthographic
-        dpr={[1, 1.5]}
-        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+        dpr={performance.dpr as [number, number]}
+        gl={{ antialias: performance.antialias, alpha: true, powerPreference: 'high-performance' }}
         style={{ display: 'block' }}
       >
         <Scene progress={progress} />

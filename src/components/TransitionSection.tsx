@@ -102,9 +102,6 @@ export default function TransitionSection() {
             </span>
             <span className="text-stone-300">·</span>
             <div className="h-1.5 w-1.5 rounded-full bg-teal-500 animate-pulse" />
-            <span className="text-xs font-medium uppercase tracking-wider text-teal-700">
-              Scroll to follow along
-            </span>
           </div>
           
           <h2 
