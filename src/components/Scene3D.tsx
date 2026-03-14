@@ -5,23 +5,11 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { Float, Sparkles, useGLTF, RoundedBox, useTexture } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import * as THREE from 'three'
-import { useWindowTexture } from '../utils/useWindowTexture'
 import { useDevicePerformance } from '../hooks/useDevicePerformance'
-
-const GRID_SIZE = 25
 
 export type HoverTarget = 'drone' | 'pod' | null
 
-// --- Data City: one unified city where buildings encode weather + delivery data ---
-type WeatherType = 'sunny' | 'rain' | 'snow' | 'cloudy' | 'fog'
-interface BuildingData {
-  gridX: number
-  gridZ: number
-  districtId: number
-  weather: WeatherType
-  deliveryActivity: number // 0–1, drives height + glow
-  temperature: number     // 0–1, warm–cool for tint
-}
+
 
 interface SceneProps {
   mouse?: { normalizedX: number; normalizedY: number }
@@ -49,6 +37,9 @@ useGLTF.preload(DRONE_GLTF_URL)
 
 const CROWD_GLTF_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/crowd-circle.gltf'
 useGLTF.preload(CROWD_GLTF_URL)
+
+const CITY_GLTF_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/city/scene.gltf'
+useGLTF.preload(CITY_GLTF_URL)
 
 export default function Scene3D({
   mouse = { normalizedX: 0, normalizedY: 0 },
@@ -146,12 +137,16 @@ export default function Scene3D({
         DROP_START.z + (DROP_END.z - DROP_START.z) * dropTEased
       )
 
-      parcelCamPos.current
-        .copy(parcelPos.current)
-        .add(new THREE.Vector3(0.4, 1.4, 3.2))
-      parcelLookAt.current
-        .copy(parcelPos.current)
-        .add(new THREE.Vector3(0, -0.08, 0))
+      parcelCamPos.current.set(
+        parcelPos.current.x + 0.4,
+        parcelPos.current.y + 1.4,
+        parcelPos.current.z + 3.2
+      )
+      parcelLookAt.current.set(
+        parcelPos.current.x,
+        parcelPos.current.y - 0.08,
+        parcelPos.current.z
+      )
 
       droneCamPos.current.lerp(parcelCamPos.current, followParcelBlend)
       droneLookAt.current.lerp(parcelLookAt.current, followParcelBlend)
@@ -174,21 +169,23 @@ export default function Scene3D({
 
   return (
     <>
-      <color attach="background" args={['#fafaf9']} />
-      <fog attach="fog" args={['#fafaf9', 15, 50]} />
+      <color attach="background" args={['#7f786f']} />
+      <fog attach="fog" args={['#7f786f', 15, 50]} />
 
-      <ambientLight intensity={0.8} />
+      <ambientLight intensity={0.6} />
+      <hemisphereLight args={['#e8f4f8', '#44403c', 0.5]} />
       <directionalLight position={[8, 15, 8]} intensity={1.2} color="#ffffff" />
       <pointLight position={[0, 8, 4]} color="#0d9488" intensity={2} distance={25} />
-      <pointLight position={[-8, 5, -4]} color="#64748b" intensity={1} distance={20} />
-      <pointLight position={[8, 4, 2]} color="#78716c" intensity={0.8} distance={18} />
 
       <group ref={groupRef}>
-        <Sparkles count={performance.isLowEnd ? 15 : 45} scale={35} size={2} speed={0.3} opacity={0.3} color="#0d9488" />
-        <Sparkles count={performance.isLowEnd ? 10 : 25} scale={30} size={2.5} speed={0.2} opacity={0.2} color="#a8a29e" />
+        {!performance.isLowEnd && (
+          <Sparkles count={25} scale={35} size={2} speed={0.3} opacity={0.3} color="#0d9488" />
+        )}
 
         <GroundPlane />
-        <DataCity scrollProgress={scrollProgress} />
+        <Suspense fallback={null}>
+          <CityModel />
+        </Suspense>
         <Suspense fallback={null}>
           <DroneAnimated
             scrollProgress={scrollProgress}
@@ -199,6 +196,8 @@ export default function Scene3D({
         </Suspense>
         <Pods onHoverChange={onHoverChange} />
         <DroppingParcel scrollProgress={scrollProgress} />
+        <TrafficRings isLowEnd={performance.isLowEnd} />
+        {!performance.isLowEnd && <DistantAirTraffic />}
       </group>
 
       {!performance.isLowEnd && (
@@ -323,15 +322,12 @@ function DroneAnimated({
     const entranceOffsetY = (1 - entrance) * -6 // starts 6 units below
     const entranceOffsetZ = (1 - entrance) * 8 // starts 8 units in front (toward camera)
 
-    const pos = new THREE.Vector3(0, 5.3, 1)
+    // Departure offsets
+    const departOffsetX = 20 * departT
+    const departOffsetY = 2 * departT
+    const departOffsetZ = -2 * departT
 
-    // Departure: move the drone explicitly towards the RIGHT (+X) edge and slightly away/upwards 
-    // to match the entry vector of the TransitionDrone which starts left.
-    const departOffsetX = 20 * departT // fly fast to the right
-    const departOffsetY = 2 * departT  // slight lift
-    const departOffsetZ = -2 * departT // slight push back
-
-    // Subtle turbulence: lateral drift and vertical wobble that fade as the drone exits.
+    // Subtle turbulence
     const turbulenceStrength = (1 - departT) * entrance
     const swayX =
       (Math.sin(currentTime * 1.9) * 0.12 +
@@ -345,13 +341,14 @@ function DroneAnimated({
       Math.sin(currentTime * 3) * 0.03 * entrance +
       Math.sin(currentTime * 1.1 + 0.4) * 0.02 * turbulenceStrength
 
-    pos.x += baseOffset.x + departOffsetX + swayX
-    pos.y += baseOffset.y + entranceOffsetY + departOffsetY + bobY
-    pos.z += baseOffset.z + entranceOffsetZ + departOffsetZ + swayZ
-
-    ref.current.position.copy(pos)
-
+    // Set position directly — avoids per-frame Vector3 allocation
+    ref.current.position.set(
+      baseOffset.x + departOffsetX + swayX,
+      5.3 + baseOffset.y + entranceOffsetY + departOffsetY + bobY,
+      1 + baseOffset.z + entranceOffsetZ + departOffsetZ + swayZ
+    )
     if (focusTargetRef) focusTargetRef.current.copy(ref.current.position)
+
 
     // Scale includes entrance animation (starts at 0.3, grows to full size)
     const entranceScale = 0.3 + entrance * 0.7
@@ -413,8 +410,9 @@ const POD_RADIUS = 0.8
 const DRONE_SCALE = 3 // match DroneAnimated baseScale so parcel is same size
 const DROP_START_SCROLL = 0.15
 const DROP_END_SCROLL = 0.6
-// Pod ring top y=0.18; parcel height 0.1*DRONE_SCALE → center at 0.18 + 0.1*DRONE_SCALE/2
-const POD_TOP_Y = 0.18 + (0.1 * DRONE_SCALE) / 2
+// Pod ring top y=0.18 + 0.4 lift; parcel height 0.1*DRONE_SCALE → center at lifted pod ring top + half parcel height
+const POD_LIFT = 0.4
+const POD_TOP_Y = POD_LIFT + 0.18 + (0.1 * DRONE_SCALE) / 2
 // Drone at (0, 5.3, 1), scale 3, package local (0, -0.17, -0.02) → world start
 const DROP_START = { x: 0, y: 5.3 + DRONE_SCALE * (-0.17), z: 1 + DRONE_SCALE * (-0.02) }
 const DROP_END = { x: 0, y: POD_TOP_Y, z: 0 }
@@ -504,7 +502,7 @@ function DroppingParcel({ scrollProgress }: { scrollProgress: number }) {
 
 function Pods({ onHoverChange }: { onHoverChange?: (t: HoverTarget) => void }) {
   return (
-    <Pod position={[0, 0, 0]} delay={0} onHoverChange={onHoverChange} />
+    <Pod position={[0, POD_LIFT, 0]} delay={0} onHoverChange={onHoverChange} />
   )
 }
 
@@ -637,332 +635,72 @@ function CrowdCircleInPod() {
   )
 }
 
-// One unified city: layout is a single grid of building slots; each building encodes weather + delivery data
-const CITY_RING_INNER = 6
-const CITY_RING_OUTER = 22
-const CITY_STEP = 3
+// ─── City GLTF Model ───────────────────────────────────────────────────────
+// Uses the GLTF scene directly (no clone) — safe because this is the only consumer.
+// Shadows disabled: the model uses KHR_materials_unlit and shadows on a ~11M vertex
+// city mesh are prohibitively expensive.
+
+// Shift the auto-centred city so its open plaza square sits at the pod's world position (0,0).
+// Tweak X / Z if the plaza drifts; positive X = right, positive Z = toward viewer.
+const CITY_PLAZA_OFFSET = { x: 2, z: -4 }
+
+function CityModel() {
+  const { scene } = useGLTF(CITY_GLTF_URL)
+
+  // Compute scale + floor-alignment once; never re-run (scene ref is stable).
+  const { scale, offset } = useMemo(() => {
+    const box = new THREE.Box3().setFromObject(scene)
+    const size = new THREE.Vector3()
+    const center = new THREE.Vector3()
+    box.getSize(size)
+    box.getCenter(center)
+    const maxDim = Math.max(size.x, size.y, size.z) || 1
+    const TARGET_SIZE = 44
+    const s = TARGET_SIZE / maxDim
+    return {
+      scale: s,
+      // Center XZ, floor to Y=0, then apply plaza nudge
+      offset: [
+        -center.x * s + CITY_PLAZA_OFFSET.x,
+        -box.min.y * s,
+        -center.z * s + CITY_PLAZA_OFFSET.z,
+      ] as [number, number, number],
+    }
+  }, [scene])
+
+  return (
+    <group position={offset}>
+      <primitive object={scene} scale={scale} />
+    </group>
+  )
+}
+
+// Seeded random for traffic effects
 const SEED = 42
 function seeded(i: number) {
   const x = Math.sin(SEED + i * 9999) * 10000
   return x - Math.floor(x)
 }
 
-function buildCityLayout(): BuildingData[] {
-  const out: BuildingData[] = []
-  let idx = 0
-  for (let x = -GRID_SIZE; x <= GRID_SIZE; x += CITY_STEP) {
-    for (let z = -GRID_SIZE; z <= GRID_SIZE; z += CITY_STEP) {
-      const dist = Math.sqrt(x * x + z * z)
-      if (dist < CITY_RING_INNER || dist > CITY_RING_OUTER) {
-        idx++
-        continue
-      }
 
-      const s = seeded(idx)
-      // 40% chance of a building, 20% chance of a park/grass empty lot, otherwise paved square
-      let activity = 0
-      if (s > 0.6) {
-        // Building
-        activity = 0.3 + seeded(idx + 1) * 0.65
-      } else if (s > 0.4) {
-        // Park / empty green lot (signified by very low activity but not 0)
-        activity = 0.05
-      } else {
-        // Just paved sidewalk
-        activity = 0
-      }
 
-      const districtId = Math.floor((Math.atan2(z, x) + Math.PI) / (Math.PI / 2)) % 4
 
-      out.push({
-        gridX: x,
-        gridZ: z,
-        districtId,
-        weather: 'sunny',
-        deliveryActivity: activity,
-        temperature: 0.4 + seeded(idx + 2) * 0.4,
-      })
-      idx++
-    }
-  }
-  return out
-}
 
-const WEATHER_CYCLE: WeatherType[] = ['sunny', 'cloudy', 'rain', 'fog', 'snow', 'cloudy', 'sunny']
-function getWeatherForScroll(scrollProgress: number, districtId: number): WeatherType {
-  const phase = (scrollProgress * 1.2 + districtId * 0.15) % 1
-  const index = Math.floor(phase * (WEATHER_CYCLE.length - 1))
-  return WEATHER_CYCLE[Math.min(index, WEATHER_CYCLE.length - 1)]
-}
 
-function DataCity({ scrollProgress = 0 }: { scrollProgress?: number }) {
-  const layout = useMemo(() => buildCityLayout(), [])
 
-  // Generate the window texture for city buildings
-  const windowTex = useWindowTexture({
-    width: 256,
-    height: 512,
-    rows: 40,
-    cols: 10,
-    litProbability: 0.15,
-  })
-
-  // Ground planes to simulate city blocks beneath the buildings
-  const blocksGeom = useMemo(() => {
-    const step = 2.5
-    const boxes: JSX.Element[] = []
-    for (let x = -GRID_SIZE; x <= GRID_SIZE; x += step) {
-      for (let z = -GRID_SIZE; z <= GRID_SIZE; z += step) {
-        if (Math.abs(x) > CITY_RING_OUTER || Math.abs(z) > CITY_RING_OUTER) continue
-
-        // Find if this block is a park (from layout)
-        const block = layout.find(b => Math.abs(b.gridX - x) < 0.1 && Math.abs(b.gridZ - z) < 0.1)
-        const isPark = block && block.deliveryActivity > 0 && block.deliveryActivity < 0.1
-
-        // Dark road underneath, slightly raised lighter sidewalk on top, or green patch if park
-        boxes.push(
-          <group key={`${x}-${z}`} position={[x, 0, z]}>
-            {/* Road border (bottom) */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
-              <planeGeometry args={[2.5, 2.5]} />
-              <meshStandardMaterial color="#44403c" roughness={0.9} />
-            </mesh>
-            {/* Sidewalk block (raised slightly) */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]}>
-              <planeGeometry args={[2.2, 2.2]} />
-              <meshStandardMaterial color={isPark ? '#84cc16' : '#d6d3d1'} roughness={isPark ? 0.95 : 0.8} />
-            </mesh>
-          </group>
-        )
-      }
-    }
-    return boxes
-  }, [layout])
-
-  const gridGeom = useMemo(() => {
-    const step = 2.5
-    const points: number[] = []
-    const idx: number[] = []
-    let i = 0
-    for (let x = -GRID_SIZE; x <= GRID_SIZE; x += step) {
-      points.push(x, 0.02, -GRID_SIZE, x, 0.02, GRID_SIZE)
-      idx.push(i, i + 1)
-      i += 2
-      points.push(-GRID_SIZE, 0.02, x, GRID_SIZE, 0.02, x)
-      idx.push(i, i + 1)
-      i += 2
-    }
-    const g = new THREE.BufferGeometry()
-    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(points), 3))
-    g.setIndex(new THREE.BufferAttribute(new Uint16Array(idx), 1))
-    return g
-  }, [])
-
-  return (
-    <group>
-      {/* City Blocks Base */}
-      <group>{blocksGeom}</group>
-
-      <lineSegments geometry={gridGeom}>
-        <lineBasicMaterial color="#0d9488" transparent opacity={0.15} />
-      </lineSegments>
-      {layout.map((b, i) => {
-        const weather = getWeatherForScroll(scrollProgress, b.districtId)
-        // Static activity/height — no up-down growth animation
-        const activity = b.deliveryActivity
-        const baseHeight = 0.5 + activity * 3.2
-        const wx = 0.85 + seeded(i + 10) * 0.6
-        const wz = 0.85 + seeded(i + 11) * 0.6
-        const px = b.gridX + (seeded(i + 20) - 0.5) * 1.2
-        const pz = b.gridZ + (seeded(i + 21) - 0.5) * 1.2
-
-        // Tier properties
-        const tiers = 1 + Math.floor(seeded(i + 30) * 3) // 1 to 3 tiers
-        const tierBoxes: JSX.Element[] = []
-        let currentY = 0
-        let currentScale = 1
-
-        const baseColor = weatherToColor(weather, b.temperature)
-        const isEmissive = activity > 0.6
-        // Soft teal glow for daytime visualization with bright sky reflection
-        const emissiveColor = isEmissive ? '#5eead4' : '#000000'
-
-        for (let t = 0; t < tiers; t++) {
-          const tierHeight = (baseHeight / tiers) * (1 - t * 0.2) // higher tiers are shorter
-          const twx = wx * currentScale
-          const twz = wz * currentScale
-
-          tierBoxes.push(
-            <mesh key={t} position={[0, currentY + tierHeight / 2, 0]} castShadow receiveShadow>
-              <boxGeometry args={[twx, tierHeight, twz]} />
-              <meshStandardMaterial
-                color={baseColor}
-                emissiveMap={windowTex}
-                emissive={emissiveColor}
-                emissiveIntensity={isEmissive ? 0.3 : 0}
-                map={windowTex}
-                metalness={0.6}
-                roughness={0.3}
-              />
-            </mesh>
-          )
-          currentY += tierHeight
-          currentScale *= 0.75 // next tier is 75% width/depth
-        }
-
-        const showDataStrip = activity > 0.55
-        const topTwx = wx * Math.pow(0.75, tiers - 1)
-        const topTwz = wz * Math.pow(0.75, tiers - 1)
-
-        return (
-          <group key={i} position={[px, 0, pz]}>
-            {tierBoxes}
-
-            {showDataStrip && (
-              <mesh position={[0, currentY * 0.4, topTwz / 2 + 0.01]} rotation={[0, 0, 0]}>
-                <planeGeometry args={[topTwx * 0.7, currentY * 0.12]} />
-                <meshBasicMaterial color="#0d9488" transparent opacity={0.5} />
-              </mesh>
-            )}
-            <WeatherOnRoof weather={weather} height={currentY * 2} index={i} />
-          </group>
-        )
-      })}
-
-      <Trees layout={layout} />
-      <WeatherParticles scrollProgress={scrollProgress} />
-      <TrafficRings />
-      <DistantAirTraffic />
-    </group>
-  )
-}
-
-function weatherToColor(weather: WeatherType, temp: number): string {
-  switch (weather) {
-    case 'sunny':
-      return temp > 0.5 ? '#f5e6d3' : '#e8e4df'
-    case 'rain':
-      return '#b8c5d4'
-    case 'snow':
-      return '#e2e8ef'
-    case 'fog':
-      return '#c9c6c1'
-    case 'cloudy':
-      return '#d4d1cc'
-    default:
-      return '#d6d3d1'
-  }
-}
-
-function WeatherOnRoof({ weather, height, index }: { weather: WeatherType; height: number; index: number }) {
-  const y = height / 2 + 0.02
-  if (weather === 'sunny') {
-    return (
-      <group position={[0, y, 0]}>
-        <mesh>
-          <circleGeometry args={[0.12, 16]} />
-          <meshBasicMaterial color="#fcd34d" />
-        </mesh>
-      </group>
-    )
-  }
-  if (weather === 'cloudy') {
-    return (
-      <group position={[0, y, 0]} scale={[0.2, 0.08, 0.15]}>
-        <mesh>
-          <boxGeometry args={[1, 1, 1]} />
-          <meshBasicMaterial color="#94a3b8" />
-        </mesh>
-      </group>
-    )
-  }
-  if (weather === 'rain') {
-    return (
-      <group position={[0, y, 0]}>
-        {[0, 1, 2].map((i) => (
-          <mesh key={i} position={[(i - 1) * 0.08, 0, 0]}>
-            <boxGeometry args={[0.02, 0.06, 0.02]} />
-            <meshBasicMaterial color="#64748b" transparent opacity={0.8} />
-          </mesh>
-        ))}
-      </group>
-    )
-  }
-  if (weather === 'snow') {
-    return (
-      <group position={[0, y, 0]}>
-        <mesh>
-          <boxGeometry args={[0.15, 0.04, 0.15]} />
-          <meshBasicMaterial color="#f1f5f9" />
-        </mesh>
-      </group>
-    )
-  }
-  if (weather === 'fog') {
-    return (
-      <group position={[0, y + 0.03, 0]}>
-        <mesh>
-          <planeGeometry args={[0.2, 0.1]} />
-          <meshBasicMaterial color="#94a3b8" transparent opacity={0.4} />
-        </mesh>
-      </group>
-    )
-  }
-  return null
-}
-
-function WeatherParticles({ scrollProgress }: { scrollProgress: number }) {
-  const count = 120
-  const meshRef = useRef<THREE.Points>(null)
-  const weather = getWeatherForScroll(scrollProgress, 0)
-  const isRain = weather === 'rain'
-  const isSnow = weather === 'snow'
-
-  const geom = useMemo(() => {
-    const g = new THREE.BufferGeometry()
-    const pos = new Float32Array(count * 3)
-    for (let i = 0; i < count; i++) {
-      pos[i * 3] = (Math.random() - 0.5) * 50
-      pos[i * 3 + 1] = Math.random() * 35
-      pos[i * 3 + 2] = (Math.random() - 0.5) * 50
-    }
-    g.setAttribute('position', new THREE.BufferAttribute(pos, 3))
-    return g
-  }, [])
-
-  useFrame(() => {
-    if (!meshRef.current || (!isRain && !isSnow)) return
-    const pos = geom.attributes.position.array as Float32Array
-    for (let i = 0; i < count; i++) {
-      pos[i * 3 + 1] -= (isSnow ? 0.08 : 0.25) * 0.016
-      if (pos[i * 3 + 1] < -2) pos[i * 3 + 1] += 37
-    }
-    geom.attributes.position.needsUpdate = true
-  })
-
-  if (!isRain && !isSnow) return null
-  return (
-    <points ref={meshRef} geometry={geom}>
-      <pointsMaterial
-        size={isSnow ? 0.15 : 0.06}
-        color={isSnow ? '#f1f5f9' : '#94a3b8'}
-        transparent
-        opacity={isSnow ? 0.6 : 0.5}
-        sizeAttenuation
-      />
-    </points>
-  )
-}
-
-function TrafficRings() {
+function TrafficRings({ isLowEnd }: { isLowEnd: boolean }) {
   const rings = useRef<THREE.InstancedMesh>(null)
   const dummy = useMemo(() => new THREE.Object3D(), [])
-  const radii = useMemo(() => [9, 14, 19], [])
-  const instancesPerRing = 26
+  const instancesPerRing = isLowEnd ? 8 : 16
+  const radii = useMemo(() => isLowEnd ? [12] : [9, 14, 19], [isLowEnd])
   const total = radii.length * instancesPerRing
+  const frameRef = useRef(0)
 
   useFrame((state) => {
     if (!rings.current) return
+    // Throttle: update every 2 frames
+    frameRef.current++
+    if (frameRef.current % 2 !== 0) return
     const t = state.clock.elapsedTime
     let i = 0
     for (let r = 0; r < radii.length; r++) {
@@ -971,9 +709,7 @@ function TrafficRings() {
       for (let j = 0; j < instancesPerRing; j++) {
         const phase = (j / instancesPerRing) * Math.PI * 2
         const angle = phase + t * 0.28 * dir
-        const x = Math.cos(angle) * radius
-        const z = Math.sin(angle) * radius
-        dummy.position.set(x, 0.16, z)
+        dummy.position.set(Math.cos(angle) * radius, 0.16, Math.sin(angle) * radius)
         dummy.scale.setScalar(0.22)
         dummy.rotation.y = angle
         dummy.updateMatrix()
@@ -985,7 +721,7 @@ function TrafficRings() {
 
   return (
     <instancedMesh ref={rings} args={[undefined, undefined, total]}>
-      <sphereGeometry args={[0.06, 8, 8]} />
+      <sphereGeometry args={[0.06, 6, 6]} />
       <meshBasicMaterial color="#f97316" transparent opacity={0.7} />
     </instancedMesh>
   )
@@ -995,11 +731,15 @@ function DistantAirTraffic() {
   const swarm = useRef<THREE.InstancedMesh>(null)
   const dummy = useMemo(() => new THREE.Object3D(), [])
   const radii = useMemo(() => [16, 22, 28], [])
-  const instancesPerRing = 18
+  const instancesPerRing = 12
   const total = radii.length * instancesPerRing
+  const frameRef = useRef(0)
 
   useFrame((state) => {
     if (!swarm.current) return
+    // Throttle: update every 3 frames
+    frameRef.current++
+    if (frameRef.current % 3 !== 0) return
     const t = state.clock.elapsedTime
     let i = 0
     for (let r = 0; r < radii.length; r++) {
@@ -1008,25 +748,24 @@ function DistantAirTraffic() {
       for (let j = 0; j < instancesPerRing; j++) {
         const phase = (j / instancesPerRing) * Math.PI * 2
         const angle = phase + t * 0.12
-        const x = Math.cos(angle) * radius
-        const z = Math.sin(angle) * radius
-        const wobbleY = Math.sin(t * 0.9 + phase) * 0.35
-        dummy.position.set(x, height + wobbleY, z)
-        const baseScale = 0.16 + (j / instancesPerRing) * 0.06
-        dummy.scale.setScalar(baseScale)
+        dummy.position.set(
+          Math.cos(angle) * radius,
+          height + Math.sin(t * 0.9 + phase) * 0.35,
+          Math.sin(angle) * radius
+        )
+        dummy.scale.setScalar(0.16 + (j / instancesPerRing) * 0.06)
         dummy.updateMatrix()
         swarm.current.setMatrixAt(i++, dummy.matrix)
       }
     }
     swarm.current.instanceMatrix.needsUpdate = true
-
-    const material = swarm.current.material as THREE.MeshBasicMaterial
-    material.opacity = 0.25 + Math.sin(state.clock.elapsedTime * 1.4) * 0.15
+      ; (swarm.current.material as THREE.MeshBasicMaterial).opacity =
+        0.25 + Math.sin(state.clock.elapsedTime * 1.4) * 0.15
   })
 
   return (
     <instancedMesh ref={swarm} args={[undefined, undefined, total]}>
-      <sphereGeometry args={[0.04, 8, 8]} />
+      <sphereGeometry args={[0.04, 6, 6]} />
       <meshBasicMaterial color="#e5e7eb" transparent opacity={0.3} />
     </instancedMesh>
   )
@@ -1037,155 +776,13 @@ function GroundPlane() {
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.015, 0]}>
         <planeGeometry args={[120, 120]} />
-        <meshStandardMaterial color="#fafaf9" metalness={0.1} roughness={0.95} />
+        <meshBasicMaterial color="#7f786f" />
       </mesh>
       {/* Outer fade ring to blend with background fog */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <ringGeometry args={[25, 60, 64]} />
-        <meshBasicMaterial color="#fafaf9" transparent opacity={0.6} />
+        <ringGeometry args={[25, 60, 48]} />
+        <meshBasicMaterial color="#7f786f" transparent opacity={0.8} />
       </mesh>
-    </group>
-  )
-}
-
-function Trees({ layout }: { layout: BuildingData[] }) {
-  const trunksRef = useRef<THREE.InstancedMesh>(null)
-  const bottomLeavesRef = useRef<THREE.InstancedMesh>(null)
-  const midLeavesRef = useRef<THREE.InstancedMesh>(null)
-  const topLeavesRef = useRef<THREE.InstancedMesh>(null)
-
-  const dummy = useMemo(() => new THREE.Object3D(), [])
-
-  const treeData = useMemo(() => {
-    const data: { x: number, z: number, scale: number, phase: number }[] = []
-    let seedIdx = 0
-
-    // Plant trees along sidewalks and heavily in parks
-    layout.forEach((b) => {
-      const isPark = b.deliveryActivity > 0 && b.deliveryActivity < 0.1
-
-      // If it's a park, lots of trees. If pavement/building, fewer trees along the edges
-      const treeCount = isPark ? 6 + Math.floor(seeded(seedIdx++) * 6) : 2 + Math.floor(seeded(seedIdx++) * 3)
-
-      for (let i = 0; i < treeCount; i++) {
-        // Position within block (-1 to 1 local)
-        let lx, lz
-        if (isPark) {
-          // Anywhere in park
-          lx = (seeded(seedIdx++) - 0.5) * 1.8
-          lz = (seeded(seedIdx++) - 0.5) * 1.8
-        } else {
-          // Align along edge (sidewalk)
-          const edge = Math.floor(seeded(seedIdx++) * 4) // 0=Top, 1=Right, 2=Bottom, 3=Left
-          const pos = (seeded(seedIdx++) - 0.5) * 1.8
-          if (edge === 0) { lx = pos; lz = -0.9 }
-          else if (edge === 1) { lx = 0.9; lz = pos }
-          else if (edge === 2) { lx = pos; lz = 0.9 }
-          else { lx = -0.9; lz = pos }
-        }
-
-        data.push({
-          x: b.gridX + lx,
-          z: b.gridZ + lz,
-          scale: 0.6 + seeded(seedIdx++) * 0.8,
-          phase: seeded(seedIdx++) * Math.PI * 2
-        })
-      }
-    })
-    return data
-  }, [layout])
-
-  useFrame((state) => {
-    if (!trunksRef.current || !bottomLeavesRef.current || !midLeavesRef.current || !topLeavesRef.current) return
-    const t = state.clock.elapsedTime
-
-    treeData.forEach((td, i) => {
-      // Wind sway effect - slight rotation of the leaves
-      const swayRotX = Math.sin(t * 1.5 + td.phase) * 0.1
-      const swayRotZ = Math.cos(t * 1.2 + td.phase) * 0.1
-
-      // Update Trunk
-      dummy.position.set(td.x, 0, td.z)
-      dummy.rotation.set(0, 0, 0)
-      dummy.scale.set(td.scale, td.scale, td.scale)
-      dummy.updateMatrix()
-      trunksRef.current!.setMatrixAt(i, dummy.matrix)
-
-      // Base height of the trunk is 0.5 * scale, same as Journey
-      const leavesBaseY = 0.5 * td.scale
-
-      // Calculate base rotation
-      const baseRotation = new THREE.Euler(swayRotX, 0, swayRotZ)
-
-      // Shared leaves properties
-      dummy.rotation.copy(baseRotation)
-      dummy.scale.set(td.scale, td.scale, td.scale)
-
-      // Bottom Layer (starts exactly at the trunk top)
-      dummy.position.set(td.x, leavesBaseY, td.z)
-      dummy.updateMatrix()
-      bottomLeavesRef.current!.setMatrixAt(i, dummy.matrix)
-
-      // Because the parent group is not managing offset, we must offset 
-      // the mid and top layers manually using a Vector3 applying the sway rotation
-      // Mid Layer (0.4 units up relative to scale)
-      const midOffset = new THREE.Vector3(0, 0.4 * td.scale, 0).applyEuler(baseRotation)
-      dummy.position.set(td.x + midOffset.x, leavesBaseY + midOffset.y, td.z + midOffset.z)
-      dummy.updateMatrix()
-      midLeavesRef.current!.setMatrixAt(i, dummy.matrix)
-
-      // Top Layer (0.7 units up relative to scale)
-      const topOffset = new THREE.Vector3(0, 0.7 * td.scale, 0).applyEuler(baseRotation)
-      dummy.position.set(td.x + topOffset.x, leavesBaseY + topOffset.y, td.z + topOffset.z)
-      dummy.updateMatrix()
-      topLeavesRef.current!.setMatrixAt(i, dummy.matrix)
-    })
-
-    bottomLeavesRef.current.instanceMatrix.needsUpdate = true
-    midLeavesRef.current.instanceMatrix.needsUpdate = true
-    topLeavesRef.current.instanceMatrix.needsUpdate = true
-    trunksRef.current.instanceMatrix.needsUpdate = true
-  })
-
-  // Geometries mimicking the AnimatedTree in JourneyScene
-  const trunkGeom = useMemo(() => {
-    const geom = new THREE.CylinderGeometry(0.06, 0.08, 0.5, 16)
-    geom.translate(0, 0.25, 0) // Anchor trunk at base
-    return geom
-  }, [])
-
-  const bottomLeavesGeom = useMemo(() => {
-    const geom = new THREE.ConeGeometry(0.5, 1.0, 16)
-    geom.translate(0, 0.5, 0) // Anchor at base
-    return geom
-  }, [])
-
-  const midLeavesGeom = useMemo(() => {
-    const geom = new THREE.ConeGeometry(0.4, 0.8, 16)
-    geom.translate(0, 0.4, 0) // Anchor at base
-    return geom
-  }, [])
-
-  const topLeavesGeom = useMemo(() => {
-    const geom = new THREE.ConeGeometry(0.3, 0.6, 16)
-    geom.translate(0, 0.3, 0) // Anchor at base
-    return geom
-  }, [])
-
-  return (
-    <group>
-      <instancedMesh ref={trunksRef} args={[trunkGeom, undefined, treeData.length]} castShadow receiveShadow>
-        <meshStandardMaterial color="#57534e" roughness={0.9} />
-      </instancedMesh>
-      <instancedMesh ref={bottomLeavesRef} args={[bottomLeavesGeom, undefined, treeData.length]} castShadow receiveShadow>
-        <meshStandardMaterial color="#4d7c0f" roughness={0.8} />
-      </instancedMesh>
-      <instancedMesh ref={midLeavesRef} args={[midLeavesGeom, undefined, treeData.length]} castShadow receiveShadow>
-        <meshStandardMaterial color="#65a30d" roughness={0.8} />
-      </instancedMesh>
-      <instancedMesh ref={topLeavesRef} args={[topLeavesGeom, undefined, treeData.length]} castShadow receiveShadow>
-        <meshStandardMaterial color="#84cc16" roughness={0.8} />
-      </instancedMesh>
     </group>
   )
 }
