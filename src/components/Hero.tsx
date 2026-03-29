@@ -149,7 +149,7 @@ export default function Hero() {
           data-cursor-hover={hoveredTarget != null ? '' : undefined}
         >
           <Canvas
-            className="absolute inset-0 z-0 h-full w-full"
+            className="absolute inset-0 z-0 h-full w-full touch-pan-y"
             camera={{ position: [0, 3.4, 12.5], fov: heroFov, near: 0.1, far: 200 }}
             dpr={performance.dpr as [number, number]}
             gl={{

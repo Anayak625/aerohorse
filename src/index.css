@@ -30,6 +30,11 @@ html.lenis body {
   height: auto;
 }
 
+/* Prefer vertical panning on touch devices so swipes over WebGL/full-bleed layers scroll predictably. */
+html.lenis {
+  touch-action: pan-y pinch-zoom;
+}
+
 .lenis.lenis-smooth {
   scroll-behavior: auto;
 }

@@ -11,7 +11,10 @@ export function useLenis() {
       orientation: 'vertical',
       smoothWheel: true,
       wheelMultiplier: 1,
-      touchMultiplier: 2,
+      // Touch: sync with Lenis so scroll-linked WebGL stays smooth; finger follows 1:1, inertia uses syncTouchLerp.
+      syncTouch: true,
+      syncTouchLerp: 0.085,
+      touchMultiplier: 1,
       lerp: 0.1,
     })
     lenisRef.current = lenis

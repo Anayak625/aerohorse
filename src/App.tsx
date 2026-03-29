@@ -1,8 +1,8 @@
-import { Suspense, useRef, useEffect } from 'react'
+import { Suspense, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { LenisProvider } from './context/LenisContext'
-import { preloadWebGLModels } from './constants/webglAssets'
 import { CanvasLoadOverlay } from './components/CanvasLoadOverlay'
+import AppSplashLoader from './components/AppSplashLoader'
 import { useResponsiveCanvasFov } from './hooks/useResponsiveCanvasFov'
 import Cursor from './components/Cursor'
 import Header from './components/Header'
@@ -94,7 +94,7 @@ function JourneySection() {
           aria-hidden
         />
         <Canvas
-          className="absolute inset-0 z-0 h-full w-full"
+          className="absolute inset-0 z-0 h-full w-full touch-pan-y"
           camera={{ position: [0, 3.4, 12.5], fov: journeyFov, near: 0.1, far: 200 }}
           dpr={performance.dpr as [number, number]}
           gl={{ antialias: performance.antialias, alpha: false, powerPreference: 'high-performance' }}
@@ -198,12 +198,9 @@ function JourneySection() {
 }
 
 function App() {
-  useEffect(() => {
-    preloadWebGLModels()
-  }, [])
-
   return (
     <LenisProvider>
+      <AppSplashLoader />
       <Cursor />
       <div className="noise-overlay" aria-hidden />
       <Header />
