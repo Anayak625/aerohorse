@@ -2,10 +2,13 @@
 // @ts-nocheck
 import { useRef, useMemo, useState, Suspense } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Float, Sparkles, useGLTF, RoundedBox, useTexture } from '@react-three/drei'
-import { EffectComposer, Bloom } from '@react-three/postprocessing'
+import { Float, Sparkles, useGLTF, RoundedBox, useTexture, ContactShadows, Environment } from '@react-three/drei'
+import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import { useDevicePerformance } from '../hooks/useDevicePerformance'
+import { DRONE_GLTF_URL, AEROHORSE_LOGO_URL } from '../constants/webglAssets'
+import { HeroCityModel, CitySkyGradient, CityGroundPlane, CITY_FOG_COLOR } from './HeroCity'
+import { PodGLTFModel, getHeroParcelLandWorldY } from './PodModel'
 
 export type HoverTarget = 'drone' | 'pod' | null
 
@@ -31,15 +34,7 @@ const DRONE_VIEW_SCROLL_END = 0.65
 const DRONE_VIEW_BLEND_IN = 0.03   // 17%→20% smooth ramp in
 const DRONE_VIEW_BLEND_OUT = 0.03  // 62%→65% smooth ramp out
 
-const DRONE_GLTF_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/drone/scene.gltf'
 const DRONE_TARGET_SIZE = 3
-useGLTF.preload(DRONE_GLTF_URL)
-
-const CROWD_GLTF_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/crowd-circle.gltf'
-useGLTF.preload(CROWD_GLTF_URL)
-
-const CITY_GLTF_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/city/scene.gltf'
-useGLTF.preload(CITY_GLTF_URL)
 
 export default function Scene3D({
   mouse = { normalizedX: 0, normalizedY: 0 },
@@ -53,6 +48,7 @@ export default function Scene3D({
   const targetCamPos = useRef(new THREE.Vector3(0, 5, 12))
   const focusTarget = useRef(new THREE.Vector3(0, 4.8, 1))
   const cameraDroneBlend = useRef(0)
+  const vignetteEffectRef = useRef<any>(null)
 
   // Reuse vectors to avoid per-frame allocations
   const normalTargetPos = useRef(new THREE.Vector3())
@@ -165,26 +161,56 @@ export default function Scene3D({
       const scale = 1 - scrollProgress * 0.15
       groupRef.current.scale.setScalar(scale)
     }
+
+    const v = vignetteEffectRef.current
+    if (v) {
+      const edge = blend * blend * (3 - 2 * blend)
+      v.darkness = 0.5 + edge * 0.26
+      v.offset = 0.1 + edge * 0.12
+    }
   })
 
   return (
     <>
-      <color attach="background" args={['#7f786f']} />
-      <fog attach="fog" args={['#7f786f', 15, 50]} />
+      <CitySkyGradient />
+      <color attach="background" args={['#e2e9f3']} />
+      <fog attach="fog" args={[CITY_FOG_COLOR, 16, 78]} />
 
-      <ambientLight intensity={0.6} />
-      <hemisphereLight args={['#e8f4f8', '#44403c', 0.5]} />
-      <directionalLight position={[8, 15, 8]} intensity={1.2} color="#ffffff" />
-      <pointLight position={[0, 8, 4]} color="#0d9488" intensity={2} distance={25} />
+      <ambientLight intensity={0.52} />
+      <hemisphereLight args={['#d2e8f5', '#8f8278', 0.72]} />
+      <directionalLight
+        position={[10, 18, 12]}
+        intensity={1.22}
+        color="#fff6eb"
+        castShadow={performance.shadows}
+        shadow-mapSize={[2048, 2048]}
+        shadow-camera-near={0.5}
+        shadow-camera-far={55}
+        shadow-camera-left={-22}
+        shadow-camera-right={22}
+        shadow-camera-top={22}
+        shadow-camera-bottom={-22}
+        shadow-bias={-0.00008}
+        shadow-normalBias={0.04}
+        shadow-radius={4}
+      />
+      <directionalLight position={[-14, 9, -8]} intensity={0.42} color="#b8d4e8" />
+      <directionalLight position={[6, 14, -10]} intensity={0.18} color="#fde8c8" />
+      <pointLight position={[0, 8, 4]} color="#14b8a6" intensity={1.85} distance={32} decay={2} />
+      <pointLight position={[-6, 3, 8]} color="#fcd34d" intensity={0.42} distance={22} decay={2} />
+
+      {!performance.isLowEnd && (
+        <Environment preset="dawn" environmentIntensity={0.38} background={false} />
+      )}
 
       <group ref={groupRef}>
         {!performance.isLowEnd && (
-          <Sparkles count={25} scale={35} size={2} speed={0.3} opacity={0.3} color="#0d9488" />
+          <Sparkles count={40} scale={40} size={1.4} speed={0.2} opacity={0.28} color="#5eead4" />
         )}
 
-        <GroundPlane />
+        <CityGroundPlane />
         <Suspense fallback={null}>
-          <CityModel />
+          <HeroCityModel useLitMaterials={!performance.isLowEnd} />
         </Suspense>
         <Suspense fallback={null}>
           <DroneAnimated
@@ -194,6 +220,7 @@ export default function Scene3D({
             focusTargetRef={focusTarget}
           />
         </Suspense>
+        {!performance.isLowEnd && <DroneTrail focusTargetRef={focusTarget} />}
         <Pods onHoverChange={onHoverChange} />
         <DroppingParcel scrollProgress={scrollProgress} />
         <TrafficRings isLowEnd={performance.isLowEnd} />
@@ -201,8 +228,20 @@ export default function Scene3D({
       </group>
 
       {!performance.isLowEnd && (
+        <ContactShadows
+          position={[0, -0.06, 0]}
+          opacity={0.18}
+          scale={46}
+          blur={5.5}
+          far={24}
+          color="#3d3835"
+        />
+      )}
+
+      {!performance.isLowEnd && (
         <EffectComposer multisampling={0}>
-          <Bloom luminanceThreshold={0.55} luminanceSmoothing={0.9} intensity={0.5} mipmapBlur />
+          <Bloom luminanceThreshold={0.52} luminanceSmoothing={0.9} intensity={0.36} mipmapBlur />
+          <Vignette ref={vignetteEffectRef} eskil={false} offset={0.12} darkness={0.55} />
         </EffectComposer>
       )}
     </>
@@ -403,25 +442,19 @@ function DroneAnimated({
   )
 }
 
-// Pod base radius ~0.8, also used to size the in‑pod crowd circle
-const POD_RADIUS = 0.8
-
 // Same parcel as drone's payload: drops from drone position (15% scroll) to pod top (60% scroll)
 const DRONE_SCALE = 3 // match DroneAnimated baseScale so parcel is same size
 const DROP_START_SCROLL = 0.15
 const DROP_END_SCROLL = 0.6
-// Pod ring top y=0.18 + 0.4 lift; parcel height 0.1*DRONE_SCALE → center at lifted pod ring top + half parcel height
 const POD_LIFT = 0.4
-const POD_TOP_Y = POD_LIFT + 0.18 + (0.1 * DRONE_SCALE) / 2
+const POD_TOP_Y = getHeroParcelLandWorldY(POD_LIFT, DRONE_SCALE)
 // Drone at (0, 5.3, 1), scale 3, package local (0, -0.17, -0.02) → world start
 const DROP_START = { x: 0, y: 5.3 + DRONE_SCALE * (-0.17), z: 1 + DRONE_SCALE * (-0.02) }
 const DROP_END = { x: 0, y: POD_TOP_Y, z: 0 }
 
-const LOGO_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/aerohorse-logo.png'
-
 function DroppingParcel({ scrollProgress }: { scrollProgress: number }) {
   const visible = scrollProgress >= DROP_START_SCROLL && scrollProgress <= DROP_END_SCROLL
-  const logoTexture = useTexture(LOGO_URL)
+  const logoTexture = useTexture(AEROHORSE_LOGO_URL)
 
   // Single phase: Drop from drone to pod (15% - 60%)
   const dropT = visible
@@ -516,20 +549,11 @@ function Pod({
   onHoverChange?: (t: HoverTarget) => void
 }) {
   const ref = useRef<THREE.Group>(null)
-  const ringRef = useRef<THREE.Mesh>(null)
-  const glowRef = useRef<THREE.Mesh>(null)
   const [hovered, setHovered] = useState(false)
 
   useFrame((state) => {
     if (ref.current) {
       ref.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 0.6 + delay) * 0.04
-    }
-    const pulse = hovered ? 0.5 + Math.sin(state.clock.elapsedTime * 8) * 0.15 : 0.85
-    if (ringRef.current?.material) {
-      ; (ringRef.current.material as THREE.MeshBasicMaterial).opacity = pulse
-    }
-    if (glowRef.current?.material) {
-      ; (glowRef.current.material as THREE.MeshBasicMaterial).opacity = hovered ? 1 : 0.9
     }
   })
 
@@ -547,130 +571,11 @@ function Pod({
         onHoverChange?.(null)
       }}
     >
-      {/* Hit area */}
-      <mesh position={[0, 0.4, 0]} visible={false}>
-        <cylinderGeometry args={[1, 1, 1.2, 8]} />
+      <mesh position={[0, 0.32, 0]} visible={false}>
+        <cylinderGeometry args={[0.85, 0.92, 1.15, 12]} />
       </mesh>
-      {/* Base */}
-      <mesh position={[0, 0.08, 0]}>
-        <cylinderGeometry args={[0.7, 0.8, 0.15, 6]} />
-        <meshStandardMaterial color="#57534e" metalness={0.85} roughness={0.15} />
-      </mesh>
-
-      {/* Dome */}
-      <mesh position={[0, 0.55, 0]}>
-        <sphereGeometry args={[0.5, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color="#0d9488" transparent opacity={hovered ? 0.4 : 0.25} metalness={0.9} roughness={0.1} />
-      </mesh>
-
-      {/* Ring */}
-      <mesh ref={ringRef} position={[0, 0.18, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.6, 0.68, 32]} />
-        <meshBasicMaterial color="#0d9488" transparent opacity={0.85} side={THREE.DoubleSide} />
-      </mesh>
-
-      {/* Inner glow */}
-      <mesh ref={glowRef} position={[0, 0.35, 0]}>
-        <sphereGeometry args={[0.15, 16, 16]} />
-        <meshBasicMaterial color="#14b8a6" transparent opacity={0.9} />
-      </mesh>
-
-      {/* Crowd circle inside pod */}
-      <CrowdCircleInPod />
-
-      <pointLight position={[0, 0.4, 0]} color="#0d9488" intensity={hovered ? 2.2 : 1.5} distance={3} />
-    </group>
-  )
-}
-
-function CrowdCircleInPod() {
-  const { scene } = useGLTF(CROWD_GLTF_URL)
-
-  const { clonedScene, scale, offset } = useMemo(() => {
-    const clone = scene.clone()
-    clone.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh) {
-        ; (child as THREE.Mesh).castShadow = false
-          ; (child as THREE.Mesh).receiveShadow = false
-      }
-    })
-
-    const box = new THREE.Box3().setFromObject(clone)
-    const size = new THREE.Vector3()
-    const center = new THREE.Vector3()
-    box.getSize(size)
-    box.getCenter(center)
-
-    const maxDim = Math.max(size.x, size.y, size.z) || 1
-    const targetDiameter = POD_RADIUS * 5
-    const s = targetDiameter / maxDim
-
-    return {
-      clonedScene: clone,
-      scale: s,
-      offset: {
-        x: -center.x * s,
-        y: -center.y * s,
-        z: -center.z * s,
-      },
-    }
-  }, [scene])
-
-  const crowdY = 0.55
-
-  const groupRef = useRef<THREE.Group>(null)
-
-  useFrame((state) => {
-    if (!groupRef.current) return
-    const t = state.clock.elapsedTime
-    const pulse = 1 + Math.sin(t * 1.6) * 0.04
-    groupRef.current.scale.set(pulse, 1, pulse)
-    groupRef.current.rotation.y = Math.sin(t * 0.7) * 0.25
-  })
-
-  return (
-    <group ref={groupRef} position={[0 + offset.x, crowdY + offset.y, 0 + offset.z]}>
-      <primitive object={clonedScene} scale={scale} />
-    </group>
-  )
-}
-
-// ─── City GLTF Model ───────────────────────────────────────────────────────
-// Uses the GLTF scene directly (no clone) — safe because this is the only consumer.
-// Shadows disabled: the model uses KHR_materials_unlit and shadows on a ~11M vertex
-// city mesh are prohibitively expensive.
-
-// Shift the auto-centred city so its open plaza square sits at the pod's world position (0,0).
-// Tweak X / Z if the plaza drifts; positive X = right, positive Z = toward viewer.
-const CITY_PLAZA_OFFSET = { x: 2, z: -4 }
-
-function CityModel() {
-  const { scene } = useGLTF(CITY_GLTF_URL)
-
-  // Compute scale + floor-alignment once; never re-run (scene ref is stable).
-  const { scale, offset } = useMemo(() => {
-    const box = new THREE.Box3().setFromObject(scene)
-    const size = new THREE.Vector3()
-    const center = new THREE.Vector3()
-    box.getSize(size)
-    box.getCenter(center)
-    const maxDim = Math.max(size.x, size.y, size.z) || 1
-    const TARGET_SIZE = 44
-    const s = TARGET_SIZE / maxDim
-    return {
-      scale: s,
-      // Center XZ, floor to Y=0, then apply plaza nudge
-      offset: [
-        -center.x * s + CITY_PLAZA_OFFSET.x,
-        -box.min.y * s,
-        -center.z * s + CITY_PLAZA_OFFSET.z,
-      ] as [number, number, number],
-    }
-  }, [scene])
-
-  return (
-    <group position={offset}>
-      <primitive object={scene} scale={scale} />
+      <PodGLTFModel hovered={hovered} />
+      <pointLight position={[0, 0.52, 0]} color="#0d9488" intensity={hovered ? 2.2 : 1.5} distance={4} />
     </group>
   )
 }
@@ -771,18 +676,46 @@ function DistantAirTraffic() {
   )
 }
 
-function GroundPlane() {
+function DroneTrail({ focusTargetRef }: { focusTargetRef: React.MutableRefObject<THREE.Vector3> }) {
+  const trailRef = useRef<THREE.InstancedMesh>(null)
+  const positionsRef = useRef<THREE.Vector3[]>([])
+  const dummy = useMemo(() => new THREE.Object3D(), [])
+  const trailColor = useMemo(() => new THREE.Color(0x0d9488), [])
+  const trailLength = 30
+
+  useFrame(() => {
+    if (!trailRef.current) return
+
+    const currentPos = focusTargetRef.current
+    positionsRef.current.unshift(currentPos.clone())
+    if (positionsRef.current.length > trailLength) {
+      positionsRef.current.pop()
+    }
+
+    for (let i = 0; i < trailLength; i++) {
+      const pos = positionsRef.current[i]
+      if (pos) {
+        dummy.position.copy(pos)
+        const opacity = 1 - i / trailLength
+        dummy.scale.setScalar(0.1 + (1 - i / trailLength) * 0.05)
+        dummy.updateMatrix()
+        trailRef.current.setMatrixAt(i, dummy.matrix)
+        if (trailRef.current.instanceColor) {
+          trailRef.current.instanceColor.setXYZ(i, trailColor.r, trailColor.g, trailColor.b)
+        }
+      }
+    }
+    trailRef.current.instanceMatrix.needsUpdate = true
+    if (trailRef.current.instanceColor) {
+      trailRef.current.instanceColor.needsUpdate = true
+    }
+  })
+
   return (
-    <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.015, 0]}>
-        <planeGeometry args={[120, 120]} />
-        <meshBasicMaterial color="#7f786f" />
-      </mesh>
-      {/* Outer fade ring to blend with background fog */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <ringGeometry args={[25, 60, 48]} />
-        <meshBasicMaterial color="#7f786f" transparent opacity={0.8} />
-      </mesh>
-    </group>
+    <instancedMesh ref={trailRef} args={[undefined, undefined, trailLength]}>
+      <sphereGeometry args={[0.05, 4, 4]} />
+      <meshBasicMaterial color="#0d9488" transparent opacity={0.6} />
+    </instancedMesh>
   )
 }
+

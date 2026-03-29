@@ -21,6 +21,8 @@
 
 html {
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 html.lenis,
@@ -55,6 +57,15 @@ body {
 ::selection {
   background: rgba(13, 148, 136, 0.2);
   color: #292524;
+}
+
+/* Hero / section accent: teal gradient fill on text */
+.gradient-text {
+  background: linear-gradient(120deg, #0f766e 0%, #0d9488 42%, #14b8a6 72%, #2dd4bf 100%);
+  background-size: 140% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 

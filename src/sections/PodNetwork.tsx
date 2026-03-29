@@ -279,6 +279,63 @@ function PodNetworkMap({
     >
       <div ref={containerRef} className="h-full w-full pod-map-container" />
 
+      {/* Animated SVG Routes Overlay */}
+      {mapRef.current && animate && (
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ mixBlendMode: 'multiply' }}>
+          <defs>
+            <style>{`
+              @keyframes dashTravel {
+                0% { stroke-dashoffset: 0; }
+                100% { stroke-dashoffset: -1000px; }
+              }
+              .route-line { animation: dashTravel 8s linear infinite; }
+              @keyframes dotMove {
+                0% { offset-distance: 0%; }
+                100% { offset-distance: 100%; }
+              }
+              .route-dot { animation: dotMove 6s ease-in-out infinite; }
+            `}</style>
+          </defs>
+          {droneRoutes.map((route, idx) => {
+            const fromPod = pods[route.from]
+            const toPod = pods[route.to]
+            if (!fromPod || !toPod) return null
+
+            const from = mapRef.current?.latLngToContainerPoint([fromPod.lat, fromPod.lng])
+            const to = mapRef.current?.latLngToContainerPoint([toPod.lat, toPod.lng])
+            if (!from || !to) return null
+
+            return (
+              <g key={`route-${idx}`}>
+                <line
+                  x1={from.x}
+                  y1={from.y}
+                  x2={to.x}
+                  y2={to.y}
+                  stroke="#0d9488"
+                  strokeWidth="2"
+                  opacity="0.3"
+                  strokeDasharray="10,6"
+                  className="route-line"
+                />
+                <circle
+                  cx={from.x}
+                  cy={from.y}
+                  r="4"
+                  fill="#0d9488"
+                  opacity="0.6"
+                  style={{
+                    offsetPath: `path('M ${from.x} ${from.y} L ${to.x} ${to.y}')`,
+                    offsetDistance: '0%',
+                  } as any}
+                  className="route-dot"
+                />
+              </g>
+            )
+          })}
+        </svg>
+      )}
+
       {/* Legend */}
       <div className="absolute bottom-2 left-2 sm:bottom-4 sm:left-4 z-[1000] flex gap-2 sm:gap-4 rounded-lg sm:rounded-xl border border-stone-200/80 bg-white/95 px-2.5 py-1.5 sm:px-4 sm:py-2.5 shadow-sm backdrop-blur-sm">
         {[

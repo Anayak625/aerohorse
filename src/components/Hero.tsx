@@ -1,9 +1,60 @@
 import { Suspense, useState, useCallback, useEffect, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
+import * as THREE from 'three'
 import Scene3D, { type HoverTarget } from './Scene3D'
 import { TextReveal, LineReveal, FadeIn } from './TextReveal'
+import { CanvasLoadOverlay } from './CanvasLoadOverlay'
 import { useThrottledScrollProgress } from '../hooks/useScrollProgress'
 import { useDevicePerformance } from '../hooks/useDevicePerformance'
+import { useResponsiveCanvasFov } from '../hooks/useResponsiveCanvasFov'
+
+function StatCounter({ target, label }: { target: number; label: string }) {
+  const [count, setCount] = useState(0)
+
+  useEffect(() => {
+    const duration = 1200
+    const start = Date.now()
+    const tick = () => {
+      const elapsed = Date.now() - start
+      const progress = Math.min(1, elapsed / duration)
+      const eased = 1 - Math.pow(1 - progress, 3) // ease-out cubic
+      setCount(Math.floor(target * eased))
+      if (progress < 1) requestAnimationFrame(tick)
+    }
+    tick()
+  }, [target])
+
+  return (
+    <div className="flex flex-col items-start">
+      <div className="text-2xl sm:text-3xl font-bold text-white tabular-nums">{count.toLocaleString()}</div>
+      <div className="text-xs text-white/70 mt-1">{label}</div>
+    </div>
+  )
+}
+
+function StatsHUD({ sceneProgress }: { sceneProgress: number }) {
+  const opacity = Math.max(0, 1 - sceneProgress / 0.15)
+
+  return (
+    <div
+      className="absolute bottom-8 left-8 md:left-12 z-10 hidden sm:block pointer-events-none"
+      style={{ opacity }}
+    >
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-3">
+          <div className="h-2 w-2 rounded-full bg-teal-400 animate-pulse" />
+          <span className="text-xs text-white/60 font-medium uppercase tracking-wider">Live Status</span>
+        </div>
+
+        <div className="grid grid-cols-3 gap-6 p-6 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20">
+          <StatCounter target={1247} label="Deliveries Today" />
+          <StatCounter target={23} label="Active Drones" />
+          <StatCounter target={18} label="Avg Delivery (min)" />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // Match Scene3D: same mouse strength and coefficients so text parallax is in sync with drone/camera
 const MOUSE_STRENGTH_NORMAL = 0.4
@@ -19,6 +70,7 @@ const TILT_TRANSLATE_Z = 40
 
 export default function Hero() {
   const performance = useDevicePerformance()
+  const heroFov = useResponsiveCanvasFov(50)
   const [mouse, setMouse] = useState({ normalizedX: 0, normalizedY: 0 })
   const sceneProgress = useThrottledScrollProgress(
     () => Math.min(1, window.scrollY / (window.innerHeight * 3)),
@@ -88,19 +140,27 @@ export default function Hero() {
     >
       <section
         ref={sectionRef}
-        className="sticky top-0 left-0 right-0 h-screen w-full overflow-hidden"
+        className="sticky top-0 left-0 right-0 h-[100dvh] min-h-[100svh] w-full overflow-hidden"
         onMouseMove={onMouseMove}
         data-cursor-hover={hoveredTarget != null ? '' : undefined}
       >
         <div
-          className="absolute inset-0 z-0"
+          className="absolute inset-0 z-0 isolate"
           data-cursor-hover={hoveredTarget != null ? '' : undefined}
         >
           <Canvas
-            camera={{ position: [0, 5, 12], fov: 50 }}
+            className="absolute inset-0 z-0 h-full w-full"
+            camera={{ position: [0, 5, 12], fov: heroFov, near: 0.1, far: 200 }}
             dpr={performance.dpr as [number, number]}
-            gl={{ antialias: performance.antialias, alpha: false, powerPreference: 'high-performance' }}
+            gl={{
+              antialias: performance.antialias,
+              alpha: false,
+              powerPreference: 'high-performance',
+            }}
             shadows={performance.shadows}
+            onCreated={({ gl }) => {
+              gl.shadowMap.type = THREE.PCFSoftShadowMap
+            }}
           >
             <Suspense fallback={null}>
               <Scene3D
@@ -112,7 +172,14 @@ export default function Hero() {
               />
             </Suspense>
           </Canvas>
+          <CanvasLoadOverlay />
         </div>
+
+        {/* Above WebGL: soft center scrim for headline contrast without hiding the city */}
+        <div
+          className="pointer-events-none absolute inset-0 z-[5] bg-[radial-gradient(ellipse_78%_58%_at_50%_44%,rgba(255,255,255,0.72)_0%,rgba(255,255,255,0.12)_52%,transparent_76%)]"
+          aria-hidden
+        />
 
         {/* Content overlay — perspective wrapper so text tilt reads as real 3D */}
         <div
@@ -145,7 +212,7 @@ export default function Hero() {
                 <TextReveal className="block" delay={0.3} stagger={0.05}>
                   From sky
                 </TextReveal>
-                <TextReveal className="block gradient-text" delay={0.5} stagger={0.05}>
+                <TextReveal className="block" delay={0.5} stagger={0.05}>
                   to your door.
                 </TextReveal>
               </h1>
@@ -182,6 +249,9 @@ export default function Hero() {
 
 
 
+        {/* Hero Stats HUD */}
+        <StatsHUD sceneProgress={sceneProgress} />
+
         {/* Scroll progress bar — shows drone position along path */}
         <div
           className="absolute right-6 top-1/2 z-10 hidden -translate-y-1/2 md:flex flex-col items-center gap-2"
@@ -214,7 +284,7 @@ export default function Hero() {
 
         {/* Bottom gradient fade for smooth transition */}
         <div
-          className="absolute bottom-0 left-0 right-0 h-60 bg-gradient-to-t from-stone-50 via-stone-50/80 to-transparent pointer-events-none z-20"
+          className="absolute bottom-0 left-0 right-0 h-72 bg-gradient-to-t from-[#e6edf6] via-stone-50/80 to-transparent pointer-events-none z-20"
           style={{
             opacity: Math.min(1, sceneProgress * 2),
           }}

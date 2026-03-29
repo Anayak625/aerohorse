@@ -1,11 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // @ts-nocheck
-import { useRef, useEffect, useMemo, useState } from 'react'
+import { useRef, useEffect, useMemo, useState, Suspense } from 'react'
 import { useThree, useFrame } from '@react-three/fiber'
-import { OrbitControls, useGLTF, Sparkles, Html, RoundedBox, useTexture } from '@react-three/drei'
+import { EffectComposer, Bloom, Vignette, DepthOfField } from '@react-three/postprocessing'
+import { OrbitControls, useGLTF, Sparkles, Html, RoundedBox, useTexture, Environment, ContactShadows } from '@react-three/drei'
 import * as THREE from 'three'
-import { useWindowTexture } from '../utils/useWindowTexture'
 import { useDevicePerformance } from '../hooks/useDevicePerformance'
+import { DRONE_GLTF_URL, AEROHORSE_LOGO_URL } from '../constants/webglAssets'
+import { HeroCityModel, CitySkyGradient, CityGroundPlane, CITY_FOG_COLOR } from './HeroCity'
+import { PodGLTFModel, getJourneyParcelLandWorldY } from './PodModel'
 
 const MOBILE_BREAKPOINT = 768
 function useIsSmallDevice() {
@@ -21,44 +24,104 @@ function useIsSmallDevice() {
   return isSmall
 }
 
-const DRONE_GLTF_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/drone/scene.gltf'
-const LOGO_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/aerohorse-logo.png'
 const TRUCK_TARGET_SIZE = 1.2
 const JOURNEY_TRUCK_START = 0.05 // start coming in right away so it feels continuous from previous section
 const JOURNEY_TRUCK_END = 0.65
-const TRUCK_START_X = -20 // start further left so it flies in
-const TRUCK_END_X = 3
-const PARCEL_BACK_OFFSET = 0.1 // 10px back (in world units)
+const TRUCK_START_X = -22 // approach across the shared hero city toward the plaza
+const TRUCK_END_X = 0 // same pod anchor as landing hero (plaza origin)
+const PARCEL_BACK_OFFSET = 0
+/** Pod group Y to match Scene3D `POD_LIFT` */
+const JOURNEY_POD_LIFT = 0.4
 // Parcel stays on truck; at end it goes up then down like a projectile
 const DROP_START = 0.65      // when truck reaches end, parcel is "thrown"
 const DROP_FALL_END = 0.80   // projectile lands on ground
-// Parcel height 0.1 → center 0.05 so bottom sits at y=0 on the surface (not sinking through)
-const PARCEL_GROUND_Y = 0.3
+// Parcel rest height (world): on top of GLTF pod at plaza
+const PARCEL_REST_Y = getJourneyParcelLandWorldY(JOURNEY_POD_LIFT)
 const PARCEL_ARC_HEIGHT = 1.3 // peak height of projectile arc (up then down)
-const PARCEL_FRONT_OFFSET_Z = 1.8 // move toward camera when dropped so user can see it
+/** Delta from drone Z to parcel rest Z (keeps drop landing on plaza when drone flies at z ≈ 1 + baseOffset.z). */
+const DEFAULT_PARCEL_Z_LANDING_DELTA = 1.8
 
-const CAMERA_DISTANCE_MIN = 5
-const CAMERA_DISTANCE_MAX = 14
+const CAMERA_DISTANCE_MIN = 6
+const CAMERA_DISTANCE_MAX = 20
 
 // Cinematic view when parcel lands: zoom into parcel, lower angle
 const CINEMATIC_START = 0.78   // start blending to cinematic as parcel lands
 const CINEMATIC_END = 0.88    // full cinematic by here
 const CINEMATIC_DISTANCE = 5.5
 const CINEMATIC_POLAR = Math.PI / 2.4  // slightly lower angle for dramatic hero shot
-const PARCEL_LANDING_TARGET = new THREE.Vector3(
-  TRUCK_END_X - PARCEL_BACK_OFFSET,
-  PARCEL_GROUND_Y + 0.1,
-  0 + PARCEL_FRONT_OFFSET_Z
-)
 
-useGLTF.preload(DRONE_GLTF_URL)
+function journeyCinematicSmooth(scrollProgress: number) {
+  const t = Math.max(0, Math.min(1, scrollProgress))
+  const cinematicBlend =
+    t < CINEMATIC_START ? 0 : t >= CINEMATIC_END ? 1 : (t - CINEMATIC_START) / (CINEMATIC_END - CINEMATIC_START)
+  return cinematicBlend * cinematicBlend * (3 - 2 * cinematicBlend)
+}
 
-function ScrollZoom({ scrollProgress, controlsRef }: { scrollProgress: number; controlsRef: React.RefObject<any> }) {
+function JourneyPostProcessing({
+  scrollProgress,
+  controlsRef,
+}: {
+  scrollProgress: number
+  controlsRef: React.RefObject<any>
+}) {
+  const vignetteRef = useRef<any>(null)
+  const dofRef = useRef<any>(null)
+  const focusVec = useMemo(() => new THREE.Vector3(0, 1.2, 0), [])
+
+  useFrame(() => {
+    const t = scrollProgress
+    const cine = journeyCinematicSmooth(t)
+    const inArc = t >= DROP_START && t < DROP_FALL_END ? (t - DROP_START) / (DROP_FALL_END - DROP_START) : 0
+    const arcBoost = Math.sin(inArc * Math.PI) * 0.18
+
+    const ctrl = controlsRef.current
+    if (ctrl && dofRef.current?.target) {
+      dofRef.current.target.copy(ctrl.target)
+    }
+
+    if (vignetteRef.current) {
+      vignetteRef.current.darkness = 0.34 + cine * 0.44 + arcBoost * 0.1
+      vignetteRef.current.offset = 0.07 + cine * 0.16 + arcBoost * 0.035
+    }
+
+    if (dofRef.current) {
+      dofRef.current.bokehScale = cine * 3.2 + arcBoost * 1.4
+      dofRef.current.focusRange = 2.4 - cine * 1.1
+    }
+  })
+
+  return (
+    <EffectComposer multisampling={0}>
+      <Bloom luminanceThreshold={0.48} luminanceSmoothing={0.9} intensity={0.36} mipmapBlur />
+      <DepthOfField
+        ref={dofRef}
+        focusDistance={0}
+        focalLength={0.022}
+        focusRange={2.2}
+        bokehScale={0}
+        target={focusVec}
+        height={480}
+      />
+      <Vignette ref={vignetteRef} eskil={false} offset={0.09} darkness={0.36} />
+    </EffectComposer>
+  )
+}
+
+function ScrollZoom({
+  scrollProgress,
+  controlsRef,
+  landingTarget,
+}: {
+  scrollProgress: number
+  controlsRef: React.RefObject<any>
+  landingTarget: THREE.Vector3
+}) {
   const { camera } = useThree()
-  const defaultTarget = useMemo(() => new THREE.Vector3(0, 0, 0), [])
+  const defaultTarget = useMemo(() => new THREE.Vector3(0, 1.2, 0), [])
   const currentTarget = useRef(new THREE.Vector3(0, 0, 0))
-  const spherical = useMemo(() => new THREE.Spherical(), [])
+  const sphericalRef = useRef(new THREE.Spherical())
   const vec = useMemo(() => new THREE.Vector3(), [])
+  const camRel = useRef(new THREE.Vector3())
 
   useFrame(() => {
     const controls = controlsRef.current
@@ -70,7 +133,7 @@ function ScrollZoom({ scrollProgress, controlsRef }: { scrollProgress: number; c
       t < CINEMATIC_START ? 0 : t >= CINEMATIC_END ? 1 : (t - CINEMATIC_START) / (CINEMATIC_END - CINEMATIC_START)
     const smoothBlend = cinematicBlend * cinematicBlend * (3 - 2 * cinematicBlend)
 
-    currentTarget.current.copy(defaultTarget).lerp(PARCEL_LANDING_TARGET, smoothBlend)
+    currentTarget.current.copy(defaultTarget).lerp(landingTarget, smoothBlend)
     const target = currentTarget.current
     const distance =
       CAMERA_DISTANCE_MIN +
@@ -79,7 +142,9 @@ function ScrollZoom({ scrollProgress, controlsRef }: { scrollProgress: number; c
     const polarAngle = Math.PI / 2.2 - (Math.PI / 2.2 - CINEMATIC_POLAR) * smoothBlend
 
     controls.target.copy(target)
-    spherical.setFromVector3(camera.position.clone().sub(controls.target))
+    const spherical = sphericalRef.current
+    camRel.current.copy(camera.position).sub(controls.target)
+    spherical.setFromVector3(camRel.current)
     spherical.radius = distance
     spherical.phi = Math.max(Math.PI / 6, Math.min(Math.PI / 2.2, polarAngle))
     camera.position.copy(controls.target).add(vec.setFromSpherical(spherical))
@@ -99,25 +164,53 @@ export default function JourneyScene({ scrollProgress = 0 }: { scrollProgress: n
   const controlsRef = useRef<any>(null)
   const { camera } = useThree()
   const isSmallDevice = useIsSmallDevice()
+  const performance = useDevicePerformance()
+
+  const landingTarget = useMemo(
+    () => new THREE.Vector3(TRUCK_END_X - PARCEL_BACK_OFFSET, PARCEL_REST_Y + 0.12, 0),
+    []
+  )
 
   useEffect(() => {
-    camera.position.set(0, 4, 8)
+    camera.position.set(0, 5.5, 12)
     if (controlsRef.current) {
       controlsRef.current.update()
     }
-  }, [])
+  }, [camera])
 
   return (
     <>
-      <ScrollZoom scrollProgress={scrollProgress} controlsRef={controlsRef} />
-      <color attach="background" args={['#fafaf9']} />
-      <fog attach="fog" args={['#fafaf9', 20, 60]} />
+      <ScrollZoom scrollProgress={scrollProgress} controlsRef={controlsRef} landingTarget={landingTarget} />
+      <CitySkyGradient />
+      <color attach="background" args={['#e2e9f3']} />
+      <fog attach="fog" args={[CITY_FOG_COLOR, 16, 78]} />
 
-      <ambientLight intensity={1.2} />
-      <directionalLight position={[5, 12, 5]} intensity={1.5} color="#fffbeb" />
-      <pointLight position={[0, 5, 2]} color="#14b8a6" intensity={3} distance={25} />
-      <pointLight position={[4, 3, 1]} color="#94a3b8" intensity={2.5} distance={20} />
-      <pointLight position={[-3, 2, 0]} color="#a8a29e" intensity={2} distance={15} />
+      <ambientLight intensity={0.52} />
+      <hemisphereLight args={['#d2e8f5', '#8f8278', 0.72]} />
+      <directionalLight
+        position={[10, 18, 12]}
+        intensity={1.22}
+        color="#fff6eb"
+        castShadow={performance.shadows}
+        shadow-mapSize={[2048, 2048]}
+        shadow-camera-near={0.5}
+        shadow-camera-far={55}
+        shadow-camera-left={-22}
+        shadow-camera-right={22}
+        shadow-camera-top={22}
+        shadow-camera-bottom={-22}
+        shadow-bias={-0.00008}
+        shadow-normalBias={0.04}
+        shadow-radius={4}
+      />
+      <directionalLight position={[-14, 9, -8]} intensity={0.42} color="#b8d4e8" />
+      <directionalLight position={[6, 14, -10]} intensity={0.18} color="#fde8c8" />
+      <pointLight position={[0, 8, 4]} color="#14b8a6" intensity={1.85} distance={32} decay={2} />
+      <pointLight position={[-6, 3, 8]} color="#fcd34d" intensity={0.42} distance={22} decay={2} />
+
+      {!performance.isLowEnd && (
+        <Environment preset="dawn" environmentIntensity={0.38} background={false} />
+      )}
 
       <OrbitControls
         ref={controlsRef}
@@ -130,24 +223,37 @@ export default function JourneyScene({ scrollProgress = 0 }: { scrollProgress: n
         maxDistance={CAMERA_DISTANCE_MAX}
       />
 
-      {/* City Buildings - Half Planned City */}
-      <CityBlock />
+      <CityGroundPlane />
+      <Suspense fallback={null}>
+        <HeroCityModel useLitMaterials={!performance.isLowEnd} />
+      </Suspense>
 
-      {/* Drone + parcel delivery at ~50% scroll */}
       <JourneyDrone scrollProgress={scrollProgress} />
 
-      <GridFloor />
+      {!performance.isLowEnd && (
+        <ContactShadows
+          position={[0, -0.06, 0]}
+          opacity={0.18}
+          scale={46}
+          blur={5.5}
+          far={24}
+          color="#3d3835"
+        />
+      )}
+
+      {!performance.isLowEnd && (
+        <JourneyPostProcessing scrollProgress={scrollProgress} controlsRef={controlsRef} />
+      )}
     </>
   )
 }
 
 function JourneyDrone({ scrollProgress }: { scrollProgress: number }) {
   const { scene } = useGLTF(DRONE_GLTF_URL)
-  const wingsRef = useRef<THREE.Object3D[]>([])
 
-  const { clonedScene, scale, baseOffset } = useMemo(() => {
+  const { clonedScene, scale, baseOffset, wingNodes } = useMemo(() => {
     const clone = scene.clone()
-    wingsRef.current = []
+    const wings: THREE.Object3D[] = []
 
     clone.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
@@ -155,7 +261,7 @@ function JourneyDrone({ scrollProgress }: { scrollProgress: number }) {
           ; (child as THREE.Mesh).receiveShadow = true
       }
       if (/^Wing\d$/.test(child.name)) {
-        wingsRef.current.push(child)
+        wings.push(child)
       }
     })
     const box = new THREE.Box3().setFromObject(clone)
@@ -168,7 +274,8 @@ function JourneyDrone({ scrollProgress }: { scrollProgress: number }) {
     return {
       clonedScene: clone,
       scale: s,
-      baseOffset: { x: -center.x * s, y: -center.y * s, z: center.z * s },
+      baseOffset: { x: -center.x * s, y: -center.y * s, z: -center.z * s },
+      wingNodes: wings,
     }
   }, [scene])
 
@@ -182,7 +289,8 @@ function JourneyDrone({ scrollProgress }: { scrollProgress: number }) {
   const posX = truckX + baseOffset.x
   const FLIGHT_Y = 2.5
   const posY = FLIGHT_Y
-  const posZ = baseOffset.z
+  const posZ = 1 + baseOffset.z
+  const parcelZLandingDelta = -posZ
 
   const groupRef = useRef<THREE.Group>(null)
 
@@ -190,8 +298,7 @@ function JourneyDrone({ scrollProgress }: { scrollProgress: number }) {
     if (!groupRef.current) return
     const currentTime = state.clock.elapsedTime
 
-    // Spin propellers
-    wingsRef.current.forEach((wing, i) => {
+    wingNodes.forEach((wing, i) => {
       const direction = i % 2 === 0 ? 1 : -1
       wing.rotation.z += 25 * direction * delta
     })
@@ -218,8 +325,20 @@ function JourneyDrone({ scrollProgress }: { scrollProgress: number }) {
           <primitive object={clonedScene} />
         </group>
       )}
-      <DeliveryPod scrollProgress={scrollProgress} x={TRUCK_END_X - PARCEL_BACK_OFFSET} z={posZ + PARCEL_FRONT_OFFSET_Z} />
-      <Parcel scrollProgress={scrollProgress} truckX={posX} truckY={posY} truckZ={posZ} droneScale={scale} />
+      <DeliveryPod
+        scrollProgress={scrollProgress}
+        x={TRUCK_END_X - PARCEL_BACK_OFFSET}
+        z={0}
+        liftY={JOURNEY_POD_LIFT}
+      />
+      <Parcel
+        scrollProgress={scrollProgress}
+        truckX={posX}
+        truckY={posY}
+        truckZ={posZ}
+        droneScale={scale}
+        zLandingDelta={parcelZLandingDelta}
+      />
     </>
   )
 }
@@ -227,58 +346,34 @@ function JourneyDrone({ scrollProgress }: { scrollProgress: number }) {
 function DeliveryPod({
   scrollProgress,
   x,
-  z
+  z,
+  liftY = 0,
 }: {
-  scrollProgress: number,
-  x: number,
+  scrollProgress: number
+  x: number
   z: number
+  liftY?: number
 }) {
   const ref = useRef<THREE.Group>(null)
-
-  // Activate when parcel is dropping or has landed
+  const [hovered, setHovered] = useState(false)
   const isActivated = scrollProgress >= DROP_START
-
-  const ringRef = useRef<THREE.Mesh>(null)
-  const glowRef = useRef<THREE.Mesh>(null)
-
-  useFrame((state) => {
-    // idle pulse is subtle, activated pulse is stronger
-    const pulse = isActivated ? 0.8 + Math.sin(state.clock.elapsedTime * 6) * 0.2 : 0.4
-    if (ringRef.current?.material) {
-      ; (ringRef.current.material as THREE.MeshBasicMaterial).opacity = pulse
-    }
-    if (glowRef.current?.material) {
-      ; (glowRef.current.material as THREE.MeshBasicMaterial).opacity = isActivated ? 1 : 0.3
-    }
-  })
+  const modelHovered = hovered || isActivated
 
   return (
-    <group ref={ref} position={[x, 0, z]}>
-      {/* Base */}
-      <mesh position={[0, 0.08, 0]}>
-        <cylinderGeometry args={[0.7, 0.8, 0.15, 32]} />
-        <meshStandardMaterial color="#57534e" metalness={0.85} roughness={0.15} />
+    <group
+      ref={ref}
+      position={[x, liftY, z]}
+      onPointerOver={(e) => {
+        e.stopPropagation()
+        setHovered(true)
+      }}
+      onPointerOut={() => setHovered(false)}
+    >
+      <mesh position={[0, 0.32, 0]} visible={false}>
+        <cylinderGeometry args={[0.85, 0.92, 1.15, 12]} />
       </mesh>
-
-      {/* Dome */}
-      <mesh position={[0, 0.55, 0]}>
-        <sphereGeometry args={[0.5, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color="#0d9488" transparent opacity={isActivated ? 0.4 : 0.15} metalness={0.9} roughness={0.1} />
-      </mesh>
-
-      {/* Ring */}
-      <mesh ref={ringRef} position={[0, 0.18, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.6, 0.68, 32]} />
-        <meshBasicMaterial color="#0d9488" transparent opacity={0.85} side={THREE.DoubleSide} />
-      </mesh>
-
-      {/* Inner glow */}
-      <mesh ref={glowRef} position={[0, 0.35, 0]}>
-        <sphereGeometry args={[0.15, 16, 16]} />
-        <meshBasicMaterial color="#14b8a6" transparent opacity={0.9} />
-      </mesh>
-
-      <pointLight position={[0, 0.4, 0]} color="#0d9488" intensity={isActivated ? 3 : 1} distance={4} />
+      <PodGLTFModel hovered={modelHovered} />
+      <pointLight position={[0, 0.52, 0]} color="#0d9488" intensity={modelHovered ? 2.8 : 1.2} distance={4} />
     </group>
   )
 }
@@ -289,15 +384,18 @@ function Parcel({
   truckY,
   truckZ,
   droneScale = 1,
+  zLandingDelta = DEFAULT_PARCEL_Z_LANDING_DELTA,
 }: {
   scrollProgress: number
   truckX: number
   truckY: number
   truckZ: number
   droneScale?: number
+  /** World Z delta from drone path to parcel rest (default pulls toward camera). */
+  zLandingDelta?: number
 }) {
   const performance = useDevicePerformance()
-  const logoTexture = useTexture(LOGO_URL)
+  const logoTexture = useTexture(AEROHORSE_LOGO_URL)
   const bobRef = useRef<THREE.Group>(null)
 
   useFrame((state) => {
@@ -339,11 +437,11 @@ function Parcel({
     // Projectile: up then down (parabolic arc), and move to front of view
     const fallT = (scrollProgress - DROP_START) / (DROP_FALL_END - DROP_START)
     const fallEased = fallT * fallT * (3 - 2 * fallT)
-    const d = PARCEL_GROUND_Y - onTruckY
+    const d = PARCEL_REST_Y - onTruckY
     const arcA = 2 * d - 4 * PARCEL_ARC_HEIGHT
     const arcB = 4 * PARCEL_ARC_HEIGHT + d
     x = endX
-    z = truckZ + fallEased * PARCEL_FRONT_OFFSET_Z
+    z = truckZ + fallEased * zLandingDelta
     y = arcA * fallEased * fallEased + arcB * fallEased + onTruckY
 
     // Tumbling rotation during drop
@@ -355,7 +453,7 @@ function Parcel({
   } else {
     // Rest on ground, in front of truck for visibility
     x = endX
-    z = truckZ + PARCEL_FRONT_OFFSET_Z
+    z = truckZ + zLandingDelta
 
     // Bounce effect after landing
     const landT = Math.min(1, (scrollProgress - DROP_FALL_END) / 0.08)
@@ -366,7 +464,7 @@ function Parcel({
     const squashT = Math.sin(landT * Math.PI * 3) * bounceDecay
     scale = 1 + squashT * 0.1
 
-    y = PARCEL_GROUND_Y + bounceY
+    y = PARCEL_REST_Y + bounceY
   }
 
   const visible = t > 0.05
@@ -597,9 +695,9 @@ function LandingCelebration({ landProgress }: { landProgress: number }) {
           style={{
             background: 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
             color: 'white',
-            padding: '6px 14px',
+            padding: '6px clamp(10px, 3vw, 14px)',
             borderRadius: '9999px',
-            fontSize: '13px',
+            fontSize: 'clamp(10px, 2.75vw, 13px)',
             fontWeight: 700,
             letterSpacing: '0.05em',
             textTransform: 'uppercase',
@@ -611,183 +709,6 @@ function LandingCelebration({ landProgress }: { landProgress: number }) {
           Delivered ✓
         </div>
       </Html>
-    </group>
-  )
-}
-
-function CityBlock() {
-  const windowTex = useWindowTexture({
-    width: 256,
-    height: 512,
-    rows: 40,
-    cols: 10,
-    litProbability: 0.15,
-  })
-
-  const BuildingMaterial = ({ color, emissive = true }: { color: string, emissive?: boolean }) => (
-    <meshStandardMaterial
-      color={color}
-      map={windowTex}
-      emissiveMap={windowTex}
-      emissive={emissive ? '#5eead4' : '#000000'}
-      emissiveIntensity={emissive ? 0.3 : 0}
-      metalness={0.6}
-      roughness={0.3}
-    />
-  )
-
-  return (
-    <group position={[4, 0, 0]} rotation={[0, 20 * (Math.PI / 180), 0]}>
-      {/* Tallest building - 2 tiers */}
-      <group position={[2, 0, -2.5]}>
-        <mesh position={[0, 1.5, 0]}>
-          <boxGeometry args={[1.2, 3, 1]} />
-          <BuildingMaterial color="#d6d3d1" />
-        </mesh>
-        <mesh position={[0, 3.5, 0]}>
-          <boxGeometry args={[0.9, 1, 0.75]} />
-          <BuildingMaterial color="#d6d3d1" />
-        </mesh>
-      </group>
-
-      {/* Medium building - 2 tiers */}
-      <group position={[0, 0, -2]}>
-        <mesh position={[0, 1.25, 0]}>
-          <boxGeometry args={[1, 2.5, 1]} />
-          <BuildingMaterial color="#e7e5e4" />
-        </mesh>
-        <mesh position={[0, 2.75, 0]}>
-          <boxGeometry args={[0.7, 0.5, 0.7]} />
-          <BuildingMaterial color="#e7e5e4" />
-        </mesh>
-      </group>
-
-      <mesh position={[4, 1.2, -2]}>
-        <boxGeometry args={[1, 2.4, 0.8]} />
-        <BuildingMaterial color="#e7e5e4" />
-      </mesh>
-
-      <mesh position={[1, 1.8, -3.5]}>
-        <boxGeometry args={[0.9, 3.6, 1]} />
-        <BuildingMaterial color="#d6d3d1" emissive={false} />
-      </mesh>
-
-      {/* Shorter foreground buildings */}
-      <mesh position={[0.5, 0.6, 0]}>
-        <boxGeometry args={[0.8, 1.2, 0.8]} />
-        <BuildingMaterial color="#e7e5e4" />
-      </mesh>
-
-      <mesh position={[2.5, 0.5, 0.5]}>
-        <boxGeometry args={[1, 1, 0.9]} />
-        <BuildingMaterial color="#d6d3d1" />
-      </mesh>
-
-      <mesh position={[3.5, 0.4, -0.5]}>
-        <boxGeometry args={[0.7, 0.8, 0.7]} />
-        <BuildingMaterial color="#e7e5e4" />
-      </mesh>
-      {/* Hand-placed Trees with wind sway animation and layered pine look */}
-      <AnimatedTree position={[1.5, 0, -1.2]} scale={1.2} phase={0} />
-      <AnimatedTree position={[3, 0, -1]} scale={1} phase={2} />
-      <AnimatedTree position={[-0.5, 0, -1.5]} scale={1.4} phase={4} />
-
-      {/* A few extra background trees for density */}
-      <AnimatedTree position={[2, 0, -3.5]} scale={1.1} phase={1} />
-      <AnimatedTree position={[-1, 0, -2.5]} scale={0.9} phase={3} />
-    </group>
-  )
-}
-
-function AnimatedTree({ position, scale = 1, phase = 0 }: { position: [number, number, number], scale?: number, phase?: number }) {
-  const leavesRef = useRef<THREE.Group>(null)
-
-  useFrame((state) => {
-    if (!leavesRef.current) return
-    const t = state.clock.elapsedTime
-    // Subtle wind rotation on the foliage group
-    const swayX = Math.sin(t * 1.5 + phase) * 0.08
-    const swayZ = Math.cos(t * 1.2 + phase) * 0.08
-    leavesRef.current.rotation.set(swayX, 0, swayZ)
-  })
-
-  // Height of the trunk so leaves pivot at the top of it
-  const trunkHeight = 0.5 * scale
-
-  return (
-    <group position={position}>
-      {/* Trunk anchored at bottom */}
-      <mesh position={[0, trunkHeight / 2, 0]}>
-        <cylinderGeometry args={[0.06 * scale, 0.08 * scale, trunkHeight, 16]} />
-        <meshStandardMaterial color="#57534e" roughness={0.9} />
-      </mesh>
-
-      {/* Leaves Group pivoted at top of trunk */}
-      <group ref={leavesRef} position={[0, trunkHeight, 0]}>
-        {/* Bottom layer */}
-        <mesh position={[0, 0.4 * scale, 0]}>
-          <coneGeometry args={[0.5 * scale, 1.0 * scale, 16]} />
-          <meshStandardMaterial color="#4d7c0f" roughness={0.8} />
-        </mesh>
-        {/* Middle layer */}
-        <mesh position={[0, 0.8 * scale, 0]}>
-          <coneGeometry args={[0.4 * scale, 0.8 * scale, 16]} />
-          <meshStandardMaterial color="#65a30d" roughness={0.8} />
-        </mesh>
-        {/* Top layer */}
-        <mesh position={[0, 1.1 * scale, 0]}>
-          <coneGeometry args={[0.3 * scale, 0.6 * scale, 16]} />
-          <meshStandardMaterial color="#84cc16" roughness={0.8} />
-        </mesh>
-      </group>
-    </group>
-  )
-}
-
-function GridFloor() {
-  const gridRef = useRef<THREE.LineSegments>(null)
-
-  const [verts, indices] = useMemo(() => {
-    const size = 30
-    const step = 2
-    const points: number[] = []
-    const idx: number[] = []
-    let i = 0
-    for (let x = -size; x <= size; x += step) {
-      points.push(x, 0.015, -size, x, 0.015, size)
-      idx.push(i, i + 1)
-      i += 2
-      points.push(-size, 0.015, x, size, 0.015, x)
-      idx.push(i, i + 1)
-      i += 2
-    }
-    return [new Float32Array(points), new Uint16Array(idx)]
-  }, [])
-
-  const geom = useMemo(() => {
-    const g = new THREE.BufferGeometry()
-    g.setAttribute('position', new THREE.BufferAttribute(verts, 3))
-    g.setIndex(new THREE.BufferAttribute(indices, 1))
-    return g
-  }, [verts, indices])
-
-  return (
-    <group>
-      {/* Base ground layer */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
-        <planeGeometry args={[60, 60]} />
-        <meshStandardMaterial color="#fafaf9" metalness={0.1} roughness={0.95} />
-      </mesh>
-
-      {/* City Block paved foundation beneath buildings */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[2.5, 0.005, -1.5]}>
-        <planeGeometry args={[6, 5]} />
-        <meshStandardMaterial color="#d6d3d1" roughness={0.9} />
-      </mesh>
-
-      <lineSegments ref={gridRef} geometry={geom}>
-        <lineBasicMaterial color="#0d9488" transparent opacity={0.12} />
-      </lineSegments>
     </group>
   )
 }

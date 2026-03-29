@@ -1,4 +1,5 @@
 import { TextReveal, FadeIn } from '../components/TextReveal'
+import { ScrambleText } from '../components/ScrambleText'
 
 const features = [
   { icon: '🛸', title: 'Autonomous flight', desc: 'AI navigation and real-time obstacle avoidance so every run is safe and on time' },
@@ -19,9 +20,9 @@ export default function Technology() {
               </p>
             </FadeIn>
             <h2 className="text-3xl font-bold tracking-tight text-stone-800 sm:text-4xl md:text-6xl lg:text-7xl">
-              <TextReveal delay={0.1} stagger={0.04}>
-                Drones that fly. Pods that wait.
-              </TextReveal>
+              <div>
+                <ScrambleText text="Drones that fly. Pods that wait." delay={200} speed={35} />
+              </div>
               <TextReveal className="text-stone-400" delay={0.3} stagger={0.04}>
                 Riders that deliver.
               </TextReveal>

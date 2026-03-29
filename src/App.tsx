@@ -1,6 +1,9 @@
-import { Suspense, useRef } from 'react'
+import { Suspense, useRef, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { LenisProvider } from './context/LenisContext'
+import { preloadWebGLModels } from './constants/webglAssets'
+import { CanvasLoadOverlay } from './components/CanvasLoadOverlay'
+import { useResponsiveCanvasFov } from './hooks/useResponsiveCanvasFov'
 import Cursor from './components/Cursor'
 import Header from './components/Header'
 import Hero from './components/Hero'
@@ -34,6 +37,7 @@ function stickScrollToProgress(raw: number): number {
 
 function JourneySection() {
   const performance = useDevicePerformance()
+  const journeyFov = useResponsiveCanvasFov(50)
   const sectionRef = useRef<HTMLElement>(null)
   const scrollProgress = useThrottledScrollProgress(
     () => {
@@ -67,9 +71,10 @@ function JourneySection() {
       id="journey"
       className="relative h-[320vh] sm:h-[380vh] md:h-[420vh] w-full bg-stone-50"
     >
-      <div className="sticky top-0 h-screen w-full overflow-hidden">
+      <div className="sticky top-0 h-[100dvh] min-h-[100svh] w-full overflow-hidden relative isolate">
         <Canvas
-          camera={{ position: [0, 6, 12], fov: 50 }}
+          className="absolute inset-0 z-0 h-full w-full"
+          camera={{ position: [0, 6, 12], fov: journeyFov, near: 0.1, far: 200 }}
           dpr={performance.dpr as [number, number]}
           gl={{ antialias: performance.antialias, alpha: false, powerPreference: 'high-performance' }}
         >
@@ -77,16 +82,17 @@ function JourneySection() {
             <JourneyScene scrollProgress={scrollProgress} />
           </Suspense>
         </Canvas>
+        <CanvasLoadOverlay />
 
         {/* Delivery Receipt - materializes when parcel lands */}
         <DeliveryReceipt scrollProgress={scrollProgress} />
 
         {/* Story arc: Hub — Transit — Delivery */}
         <div
-          className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none px-4 pb-8 sm:px-6 sm:pb-10 md:px-12 md:pb-14"
+          className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none px-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6 sm:pb-10 md:px-12 md:pb-14"
           aria-live="polite"
         >
-          <div className="max-w-2xl border-l-2 border-teal-500/30 pl-4 sm:pl-5 md:pl-6">
+          <div className="max-w-2xl border-l-2 border-teal-500/30 pl-3 sm:pl-5 md:pl-6">
             {/* Step counter */}
             <p
               className="text-[10px] font-medium uppercase tracking-[0.3em] text-stone-400 mb-4 transition-opacity duration-500"
@@ -169,6 +175,10 @@ function JourneySection() {
 }
 
 function App() {
+  useEffect(() => {
+    preloadWebGLModels()
+  }, [])
+
   return (
     <LenisProvider>
       <Cursor />

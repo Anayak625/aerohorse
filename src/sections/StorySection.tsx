@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from 'react'
-import { TextReveal, FadeIn } from '../components/TextReveal'
+import { FadeIn } from '../components/TextReveal'
+import { ScrambleText } from '../components/ScrambleText'
 
 const steps = [
   {
@@ -34,8 +35,23 @@ const steps = [
 
 export default function StorySection() {
   return (
-    <section id="how-it-works" className="relative py-20 sm:py-28 md:py-48 lg:py-64 bg-white">
-      <div className="mx-auto px-4 sm:px-6 md:px-12 lg:px-16">
+    <section id="how-it-works" className="relative py-20 sm:py-28 md:py-48 lg:py-64 bg-white overflow-hidden">
+      {/* Animated Grid Background */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.04 }}>
+        <defs>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="0.5" />
+          </pattern>
+          <radialGradient id="gridFade" cx="50%" cy="30%">
+            <stop offset="0%" stopColor="white" stopOpacity="1" />
+            <stop offset="100%" stopColor="white" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid)" />
+        <rect width="100%" height="100%" fill="url(#gridFade)" />
+      </svg>
+
+      <div className="mx-auto px-4 sm:px-6 md:px-12 lg:px-16 relative z-10">
         <div className="mb-12 sm:mb-20 md:mb-32 lg:mb-40">
           <FadeIn>
             <p className="mb-4 sm:mb-6 text-xs font-medium uppercase tracking-[0.4em] text-teal-600">
@@ -43,9 +59,7 @@ export default function StorySection() {
             </p>
           </FadeIn>
           <h2 className="text-4xl font-bold tracking-tight text-stone-800 sm:text-5xl md:text-7xl lg:text-8xl">
-            <TextReveal delay={0.1} stagger={0.04}>
-              Sky → Pod → Your door.
-            </TextReveal>
+            <ScrambleText text="Sky → Pod → Your door." delay={200} speed={30} />
           </h2>
           <FadeIn delay={0.4} className="mt-4 sm:mt-6 md:mt-8 max-w-2xl">
             <p className="text-base sm:text-lg md:text-xl text-stone-500 leading-relaxed">

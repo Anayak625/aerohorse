@@ -1,4 +1,5 @@
 import { TextReveal, FadeIn } from '../components/TextReveal'
+import { MagneticButton } from '../components/MagneticButton'
 
 export default function CTA() {
   return (
@@ -31,16 +32,14 @@ export default function CTA() {
         </FadeIn>
         
         <FadeIn delay={0.8} className="mt-8 sm:mt-10 md:mt-14 flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-5 items-stretch sm:items-center">
-          <a
-            href="mailto:hello@aerohorse.com"
-            className="group relative inline-flex items-center justify-center gap-3 overflow-hidden rounded-full bg-teal-600 px-6 py-4 sm:px-10 sm:py-5 text-sm font-semibold text-white shadow-lg shadow-teal-600/20 transition-all duration-300 hover:bg-teal-700 hover:scale-105 min-h-[44px]"
-            data-cursor-hover
+          <MagneticButton className="group relative inline-flex items-center justify-center gap-3 overflow-hidden rounded-full bg-teal-600 px-6 py-4 sm:px-10 sm:py-5 text-sm font-semibold text-white shadow-lg shadow-teal-600/20 transition-all duration-300 hover:bg-teal-700 min-h-[44px] cursor-pointer"
+            onClick={() => window.location.href = 'mailto:hello@aerohorse.com'}
           >
             <span>Talk to sales</span>
             <svg className="h-4 w-4 transition-transform group-hover:translate-x-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
             </svg>
-          </a>
+          </MagneticButton>
           <a
             href="#journey"
             className="inline-flex items-center justify-center rounded-full border border-stone-300 bg-white px-6 py-4 sm:px-10 sm:py-5 text-sm font-semibold text-stone-700 transition-all duration-300 hover:border-stone-400 hover:shadow-md hover:scale-105 min-h-[44px]"

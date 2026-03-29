@@ -32,7 +32,7 @@ export default function TransitionSection() {
       style={{ height: '200vh' }}
     >
       <section
-        className="sticky top-0 left-0 right-0 h-screen w-full overflow-hidden"
+        className="sticky top-0 left-0 right-0 h-[100dvh] min-h-[100svh] w-full overflow-hidden"
       >
       {/* Gradient overlay for smooth blend */}
       <div 

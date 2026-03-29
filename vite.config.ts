@@ -8,13 +8,14 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'vendor-react': ['react', 'react-dom'],
           'vendor-three': ['three', '@react-three/fiber', '@react-three/drei', '@react-three/postprocessing'],
         },
       },
     },
-    target: 'esnext',
+    target: 'es2022',
     minify: 'esbuild',
     cssMinify: true,
+    sourcemap: false,
+    chunkSizeWarningLimit: 1300,
   },
 })

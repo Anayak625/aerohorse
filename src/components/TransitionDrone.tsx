@@ -1,17 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // @ts-nocheck
-import { useRef, useMemo, useEffect } from 'react'
+import { useRef, useMemo, useEffect, Suspense } from 'react'
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useDevicePerformance } from '../hooks/useDevicePerformance'
+import { DRONE_GLTF_URL } from '../constants/webglAssets'
+import { CanvasLoadOverlay } from './CanvasLoadOverlay'
 
-const DRONE_GLTF_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/drone/scene.gltf'
 // Slightly larger so it matches the landing drone's presence
 const DRONE_TARGET_SIZE_DESKTOP = 1.8
 const MOBILE_ASPECT_THRESHOLD = 1.2
-
-useGLTF.preload(DRONE_GLTF_URL)
 
 function DroneModel({ progress }: { progress: number }) {
   const { scene } = useGLTF(DRONE_GLTF_URL)
@@ -134,15 +133,19 @@ function Scene({ progress }: { progress: number }) {
 export default function TransitionDrone({ progress }: { progress: number }) {
   const performance = useDevicePerformance()
   return (
-    <div className="absolute inset-0 z-0 pointer-events-none">
+    <div className="absolute inset-0 z-0 pointer-events-none isolate">
       <Canvas
+        className="absolute inset-0 z-0 h-full w-full"
         orthographic
         dpr={performance.dpr as [number, number]}
         gl={{ antialias: performance.antialias, alpha: true, powerPreference: 'high-performance' }}
         style={{ display: 'block' }}
       >
-        <Scene progress={progress} />
+        <Suspense fallback={null}>
+          <Scene progress={progress} />
+        </Suspense>
       </Canvas>
+      <CanvasLoadOverlay className="z-[2]" />
     </div>
   )
 }
