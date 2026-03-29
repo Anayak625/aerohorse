@@ -1,18 +1,5 @@
 import { useRef, useEffect, useState, useMemo } from 'react'
 
-function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(() =>
-    typeof window !== 'undefined' ? window.matchMedia(query).matches : false
-  )
-  useEffect(() => {
-    const m = window.matchMedia(query)
-    const handler = () => setMatches(m.matches)
-    m.addEventListener('change', handler)
-    return () => m.removeEventListener('change', handler)
-  }, [query])
-  return matches
-}
-
 interface DeliveryReceiptProps {
   scrollProgress: number
 }
@@ -26,7 +13,6 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
   const [animatedDist, setAnimatedDist] = useState(0)
   const [animatedCO2, setAnimatedCO2] = useState(0)
   const countUpStartedRef = useRef(false)
-  const isMobile = useMediaQuery('(max-width: 768px)')
 
   const visible = scrollProgress >= RECEIPT_APPEAR
   // Internal content (route, stats, footer) driven by scroll within receipt zone
@@ -91,19 +77,16 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
   return (
     <div
       ref={ref}
-      className="absolute left-4 right-4 md:left-auto md:right-12 md:bottom-auto md:top-1/2 md:-translate-y-1/2 z-20 pointer-events-auto"
+      className="hidden md:block absolute right-12 top-1/2 -translate-y-1/2 z-20 pointer-events-auto"
       style={{
-        ...(isMobile ? { bottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' } : {}),
         opacity: show ? 1 : 0,
-        transform: isMobile
-          ? `scale(${show ? 1 : 0.94}) translateZ(0)`
-          : `translateY(-50%) translateX(${show ? 0 : 32}px) scale(${show ? 1 : 0.94}) translateZ(0)`,
+        transform: `translateY(-50%) translateX(${show ? 0 : 32}px) scale(${show ? 1 : 0.94}) translateZ(0)`,
         transition: 'opacity 0.28s ease-out, transform 0.28s ease-out',
         willChange: 'transform, opacity',
       }}
     >
       <div
-        className="receipt-card glass-panel w-full max-w-[300px] md:max-w-none md:w-[340px] overflow-hidden rounded-3xl mx-auto md:mx-0"
+        className="receipt-card glass-panel w-[340px] overflow-hidden rounded-3xl"
         style={{ contain: 'layout style paint' }}
       >
         {/* Header stripe */}
