@@ -57,8 +57,8 @@ export function PodGLTFModel({ hovered = false }: PodModelProps) {
     c.traverse((obj) => {
       const mesh = obj as THREE.Mesh
       if (!mesh.isMesh || !mesh.material) return
-      mesh.castShadow = true
-      mesh.receiveShadow = true
+      mesh.castShadow = false
+      mesh.receiveShadow = false
       const meshMats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       meshMats.forEach((m) => {
         if (m instanceof THREE.MeshStandardMaterial || m instanceof THREE.MeshPhysicalMaterial) {

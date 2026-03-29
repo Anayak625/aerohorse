@@ -2,7 +2,7 @@
 // @ts-nocheck
 import { useRef, useMemo, useState, Suspense } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Float, Sparkles, useGLTF, RoundedBox, useTexture, ContactShadows, Environment } from '@react-three/drei'
+import { Float, Sparkles, useGLTF, RoundedBox, useTexture, Environment } from '@react-three/drei'
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import { useDevicePerformance } from '../hooks/useDevicePerformance'
@@ -83,13 +83,16 @@ export default function Scene3D({
     const cam = state.camera
     const t = state.clock.elapsedTime
     const focusActiveClick = t < focusDroneUntil
+    const posLerp = performance.isLowEnd ? 0.12 : 0.05
+    const lookLerp = performance.isLowEnd ? 0.14 : 0.08
+    const blendLerp = performance.isLowEnd ? 0.1 : 0.05
 
     // Scroll-based drone view: active from 20% to 60% (while box travels to pod), smooth blend at edges
     const scrollDroneBlend =
       smoothStep(DRONE_VIEW_SCROLL_START - DRONE_VIEW_BLEND_IN, DRONE_VIEW_SCROLL_START, scrollProgress) *
       (1 - smoothStep(DRONE_VIEW_SCROLL_END - DRONE_VIEW_BLEND_OUT, DRONE_VIEW_SCROLL_END, scrollProgress))
     const targetBlend = focusActiveClick ? 1 : scrollDroneBlend
-    cameraDroneBlend.current += (targetBlend - cameraDroneBlend.current) * 0.05
+    cameraDroneBlend.current += (targetBlend - cameraDroneBlend.current) * blendLerp
     const blendRaw = cameraDroneBlend.current
     const blend = blendRaw * blendRaw * (3 - 2 * blendRaw)
 
@@ -171,11 +174,11 @@ export default function Scene3D({
 
     // Blend between normal and drone/parcel camera for smooth transition (no extra shake)
     targetCamPos.current.copy(normalTargetPos.current).lerp(droneCamPos.current, blend)
-    cam.position.lerp(targetCamPos.current, 0.05)
+    cam.position.lerp(targetCamPos.current, posLerp)
 
     // Extra smoothing on the look-at target so pans feel more buttery
     lookTarget.current.lerpVectors(normalLookAt.current, droneLookAt.current, blend)
-    blendedLookAt.current.lerp(lookTarget.current, 0.08)
+    blendedLookAt.current.lerp(lookTarget.current, lookLerp)
     cam.lookAt(blendedLookAt.current)
 
     if (groupRef.current) {
@@ -199,22 +202,7 @@ export default function Scene3D({
 
       <ambientLight intensity={0.52} />
       <hemisphereLight args={['#d2e8f5', '#8f8278', 0.72]} />
-      <directionalLight
-        position={[10, 18, 12]}
-        intensity={1.22}
-        color="#fff6eb"
-        castShadow={performance.shadows}
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-near={0.5}
-        shadow-camera-far={55}
-        shadow-camera-left={-22}
-        shadow-camera-right={22}
-        shadow-camera-top={22}
-        shadow-camera-bottom={-22}
-        shadow-bias={-0.00008}
-        shadow-normalBias={0.04}
-        shadow-radius={4}
-      />
+      <directionalLight position={[10, 18, 12]} intensity={1.22} color="#fff6eb" />
       <directionalLight position={[-14, 9, -8]} intensity={0.42} color="#b8d4e8" />
       <directionalLight position={[6, 14, -10]} intensity={0.18} color="#fde8c8" />
       <pointLight position={[0, 8, 4]} color="#14b8a6" intensity={1.85} distance={32} decay={2} />
@@ -247,17 +235,6 @@ export default function Scene3D({
         <TrafficRings isLowEnd={performance.isLowEnd} />
         {!performance.isLowEnd && <DistantAirTraffic />}
       </group>
-
-      {!performance.isLowEnd && (
-        <ContactShadows
-          position={[0, -0.06, 0]}
-          opacity={0.18}
-          scale={46}
-          blur={5.5}
-          far={24}
-          color="#3d3835"
-        />
-      )}
 
       {!performance.isLowEnd && (
         <EffectComposer multisampling={0}>
@@ -303,8 +280,8 @@ function DroneAnimated({
 
     clone.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
-        (child as THREE.Mesh).castShadow = true
-          ; (child as THREE.Mesh).receiveShadow = true
+        (child as THREE.Mesh).castShadow = false
+          ; (child as THREE.Mesh).receiveShadow = false
         // Make materials transparent for fade-in animation
         const mesh = child as THREE.Mesh
         if (mesh.material) {
@@ -489,13 +466,7 @@ function DroppingParcel({ scrollProgress }: { scrollProgress: number }) {
   return (
     <group position={[x, y, z]} scale={DRONE_SCALE}>
       {/* Main parcel with rounded edges */}
-      <RoundedBox
-        args={[boxWidth, boxHeight, boxDepth]}
-        radius={0.015}
-        smoothness={4}
-        castShadow
-        receiveShadow
-      >
+      <RoundedBox args={[boxWidth, boxHeight, boxDepth]} radius={0.015} smoothness={4}>
         <meshStandardMaterial color="#f97316" />
       </RoundedBox>
 

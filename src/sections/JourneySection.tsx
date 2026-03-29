@@ -1,7 +1,6 @@
 import { useRef, useState, useEffect } from 'react'
 import { Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
-import * as THREE from 'three'
 import JourneyScene from '../components/JourneyScene'
 import { useDevicePerformance } from '../hooks/useDevicePerformance'
 
@@ -62,14 +61,10 @@ export default function JourneySection() {
           <Canvas
             camera={{ position: [0, 3.4, 12.5], fov: 50 }}
             dpr={performance.dpr as [number, number]}
-            shadows={performance.shadows}
             gl={{
               antialias: performance.antialias,
               alpha: false,
-              powerPreference: 'high-performance',
-            }}
-            onCreated={({ gl }) => {
-              gl.shadowMap.type = THREE.PCFSoftShadowMap
+              powerPreference: performance.glPowerPreference,
             }}
           >
             <Suspense fallback={null}>

@@ -26,8 +26,8 @@ function DroneModel({ progress }: { progress: number }) {
     wingsRef.current = []
     clone.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
-        ; (child as THREE.Mesh).castShadow = true
-          ; (child as THREE.Mesh).receiveShadow = true
+        ; (child as THREE.Mesh).castShadow = false
+          ; (child as THREE.Mesh).receiveShadow = false
       }
       // Match landing drone behavior: spin propellers by wing parent nodes
       if (/^Wing\d$/.test(child.name)) wingsRef.current.push(child)

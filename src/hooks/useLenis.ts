@@ -5,15 +5,16 @@ export function useLenis() {
   const lenisRef = useRef<Lenis | null>(null)
 
   useEffect(() => {
+    // On narrow phones, native momentum scroll avoids Lenis + WebGL fighting the same frame budget.
+    const phoneViewport = window.matchMedia('(max-width: 768px)').matches
     const lenis = new Lenis({
       duration: 1.0,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       orientation: 'vertical',
       smoothWheel: true,
       wheelMultiplier: 1,
-      // Touch: sync with Lenis so scroll-linked WebGL stays smooth; finger follows 1:1, inertia uses syncTouchLerp.
-      syncTouch: true,
-      syncTouchLerp: 0.085,
+      syncTouch: !phoneViewport,
+      syncTouchLerp: phoneViewport ? 0.1 : 0.085,
       touchMultiplier: 1,
       lerp: 0.1,
     })

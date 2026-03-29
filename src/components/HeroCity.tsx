@@ -151,8 +151,7 @@ export function CitySkyGradient() {
 }
 
 /**
- * Distant fill + shadow catcher. Kept clearly below the city floor (y≈0) so it never
- * z-fights sidewalk/terrain quads; polygon offset is a second line of defense.
+ * Distant fill below the city floor (y≈0); polygon offset avoids z-fight with terrain.
  */
 function CityGroundShaderMat() {
   const uniforms = useMemo(

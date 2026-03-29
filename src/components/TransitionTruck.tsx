@@ -23,8 +23,8 @@ function TruckModel({ progress }: { progress: number }) {
     const clone = scene.clone()
     clone.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
-        (child as THREE.Mesh).castShadow = true
-          ; (child as THREE.Mesh).receiveShadow = true
+        (child as THREE.Mesh).castShadow = false
+          ; (child as THREE.Mesh).receiveShadow = false
       }
     })
     const box = new THREE.Box3().setFromObject(clone)

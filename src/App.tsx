@@ -97,7 +97,11 @@ function JourneySection() {
           className="absolute inset-0 z-0 h-full w-full touch-pan-y"
           camera={{ position: [0, 3.4, 12.5], fov: journeyFov, near: 0.1, far: 200 }}
           dpr={performance.dpr as [number, number]}
-          gl={{ antialias: performance.antialias, alpha: false, powerPreference: 'high-performance' }}
+          gl={{
+            antialias: performance.antialias,
+            alpha: false,
+            powerPreference: performance.glPowerPreference,
+          }}
         >
           <Suspense fallback={null}>
             <JourneyScene scrollProgress={scrollProgress} />

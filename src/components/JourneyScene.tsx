@@ -3,7 +3,7 @@
 import { useRef, useEffect, useMemo, useState, Suspense } from 'react'
 import { useThree, useFrame } from '@react-three/fiber'
 import { EffectComposer, Bloom, Vignette, DepthOfField } from '@react-three/postprocessing'
-import { OrbitControls, useGLTF, Sparkles, Html, RoundedBox, useTexture, Environment, ContactShadows } from '@react-three/drei'
+import { OrbitControls, useGLTF, Html, RoundedBox, useTexture, Environment } from '@react-three/drei'
 import * as THREE from 'three'
 import { useDevicePerformance } from '../hooks/useDevicePerformance'
 import { DRONE_GLTF_URL, AEROHORSE_LOGO_URL } from '../constants/webglAssets'
@@ -193,22 +193,7 @@ export default function JourneyScene({ scrollProgress = 0 }: { scrollProgress: n
 
       <ambientLight intensity={0.52} />
       <hemisphereLight args={['#d2e8f5', '#8f8278', 0.72]} />
-      <directionalLight
-        position={[10, 18, 12]}
-        intensity={1.22}
-        color="#fff6eb"
-        castShadow={performance.shadows}
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-near={0.5}
-        shadow-camera-far={55}
-        shadow-camera-left={-22}
-        shadow-camera-right={22}
-        shadow-camera-top={22}
-        shadow-camera-bottom={-22}
-        shadow-bias={-0.00008}
-        shadow-normalBias={0.04}
-        shadow-radius={4}
-      />
+      <directionalLight position={[10, 18, 12]} intensity={1.22} color="#fff6eb" />
       <directionalLight position={[-14, 9, -8]} intensity={0.42} color="#b8d4e8" />
       <directionalLight position={[6, 14, -10]} intensity={0.18} color="#fde8c8" />
       <pointLight position={[0, 8, 4]} color="#14b8a6" intensity={1.85} distance={32} decay={2} />
@@ -237,17 +222,6 @@ export default function JourneyScene({ scrollProgress = 0 }: { scrollProgress: n
       <JourneyDrone scrollProgress={scrollProgress} />
 
       {!performance.isLowEnd && (
-        <ContactShadows
-          position={[0, -0.06, 0]}
-          opacity={0.18}
-          scale={46}
-          blur={5.5}
-          far={24}
-          color="#3d3835"
-        />
-      )}
-
-      {!performance.isLowEnd && (
         <JourneyPostProcessing scrollProgress={scrollProgress} controlsRef={controlsRef} />
       )}
     </>
@@ -263,8 +237,8 @@ function JourneyDrone({ scrollProgress }: { scrollProgress: number }) {
 
     clone.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
-        (child as THREE.Mesh).castShadow = true
-          ; (child as THREE.Mesh).receiveShadow = true
+        (child as THREE.Mesh).castShadow = false
+          ; (child as THREE.Mesh).receiveShadow = false
       }
       if (/^Wing\d$/.test(child.name)) {
         wings.push(child)
@@ -400,7 +374,6 @@ function Parcel({
   /** World Z delta from drone path to parcel rest (default pulls toward camera). */
   zLandingDelta?: number
 }) {
-  const performance = useDevicePerformance()
   const logoTexture = useTexture(AEROHORSE_LOGO_URL)
   const bobRef = useRef<THREE.Group>(null)
 
@@ -494,13 +467,7 @@ function Parcel({
       <group ref={bobRef}>
         <group rotation={[rotationX, 0, rotationZ]} scale={scale}>
           {/* Main parcel with rounded edges */}
-          <RoundedBox
-            args={[boxWidth, boxHeight, boxDepth]}
-            radius={0.015}
-            smoothness={4}
-            castShadow
-            receiveShadow
-          >
+          <RoundedBox args={[boxWidth, boxHeight, boxDepth]} radius={0.015} smoothness={4}>
             <meshStandardMaterial
               color="#f97316"
               emissive="#f97316"
@@ -540,19 +507,7 @@ function Parcel({
         </group>
       </group>
 
-      {/* Trail effect during drop */}
-      {isDroppingPhase && (
-        <Sparkles
-          count={performance.isLowEnd ? 4 : 10}
-          scale={0.5}
-          size={0.8}
-          speed={1.5}
-          color="#f97316"
-          opacity={0.6}
-        />
-      )}
-
-      {/* Landing celebration: ripple + sparkles + "Delivered" pop */}
+      {/* Landing celebration: ripples + "Delivered" pop */}
       {landed && (
         <LandingCelebration landProgress={landProgress} />
       )}
@@ -561,7 +516,6 @@ function Parcel({
 }
 
 function LandingCelebration({ landProgress }: { landProgress: number }) {
-  const performance = useDevicePerformance()
   // Multiple ripples with staggered timing for impact effect
   const ripple1T = Math.min(1, landProgress / 0.25)
   const ripple2T = Math.min(1, Math.max(0, (landProgress - 0.08)) / 0.3)
@@ -580,14 +534,6 @@ function LandingCelebration({ landProgress }: { landProgress: number }) {
   const badgeScale = badgeT < 1 ? 1 - Math.pow(1 - badgeT, 3) : 1
   const badgeOvershoot = badgeT < 1 ? 1 + (1 - Math.pow(1 - badgeT, 2)) * 0.35 : 1
   const badgeOpacity = Math.min(1, badgeT * 2.5)
-
-  // Sparkles burst immediately then fade
-  const sparkleOpacity = landProgress < 0.5
-    ? Math.min(1, landProgress / 0.1)
-    : Math.max(0, 1 - (landProgress - 0.5) / 0.5)
-
-  // Rising particles effect
-  const particleRise = Math.min(1, landProgress / 0.6)
 
   return (
     <group>
@@ -654,36 +600,6 @@ function LandingCelebration({ landProgress }: { landProgress: number }) {
           />
         </mesh>
       )}
-
-      {/* Burst sparkles - orange */}
-      <Sparkles
-        count={performance.isLowEnd ? 12 : 35}
-        scale={1.5 + particleRise * 0.5}
-        size={2}
-        speed={0.8}
-        color="#f97316"
-        opacity={sparkleOpacity * 0.9}
-      />
-
-      {/* Secondary sparkles - teal */}
-      <Sparkles
-        count={performance.isLowEnd ? 8 : 22}
-        scale={2 + particleRise * 0.8}
-        size={1.5}
-        speed={0.5}
-        color="#0d9488"
-        opacity={sparkleOpacity * 0.7}
-      />
-
-      {/* Golden accent sparkles */}
-      <Sparkles
-        count={performance.isLowEnd ? 5 : 14}
-        scale={1.2}
-        size={1.8}
-        speed={0.3}
-        color="#fcd34d"
-        opacity={sparkleOpacity * 0.6}
-      />
 
       {/* "Delivered" badge that pops in */}
       <Html

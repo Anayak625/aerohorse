@@ -79,7 +79,8 @@ body {
  */
 @layer components {
   .glass-panel {
-    @apply border border-stone-300/80 backdrop-blur-2xl;
+    /* Lighter blur on small screens — backdrop-filter is costly on mobile Safari. */
+    @apply border border-stone-300/80 backdrop-blur-md md:backdrop-blur-2xl;
     background-color: rgb(255 255 255 / 0.92);
     box-shadow:
       0 12px 40px -10px rgba(0, 0, 0, 0.18),

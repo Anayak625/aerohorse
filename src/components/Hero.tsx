@@ -1,6 +1,5 @@
 import { Suspense, useState, useCallback, useEffect, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
-import * as THREE from 'three'
 import Scene3D, { type HoverTarget } from './Scene3D'
 import { TextReveal, LineReveal, FadeIn } from './TextReveal'
 import { CanvasLoadOverlay } from './CanvasLoadOverlay'
@@ -155,11 +154,7 @@ export default function Hero() {
             gl={{
               antialias: performance.antialias,
               alpha: false,
-              powerPreference: 'high-performance',
-            }}
-            shadows={performance.shadows}
-            onCreated={({ gl }) => {
-              gl.shadowMap.type = THREE.PCFSoftShadowMap
+              powerPreference: performance.glPowerPreference,
             }}
           >
             <Suspense fallback={null}>
