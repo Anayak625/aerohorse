@@ -94,7 +94,11 @@ function JourneySection() {
           aria-hidden
         />
         <Canvas
-          className="absolute inset-0 z-0 h-full w-full touch-pan-y"
+          className={
+            performance.isLowEnd
+              ? 'absolute inset-0 z-0 h-full w-full touch-pan-y pointer-events-none'
+              : 'absolute inset-0 z-0 h-full w-full touch-pan-y pointer-events-none md:pointer-events-auto'
+          }
           camera={{ position: [0, 3.4, 12.5], fov: journeyFov, near: 0.1, far: 200 }}
           dpr={performance.dpr as [number, number]}
           gl={{
