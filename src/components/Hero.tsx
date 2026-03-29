@@ -150,7 +150,7 @@ export default function Hero() {
         >
           <Canvas
             className="absolute inset-0 z-0 h-full w-full"
-            camera={{ position: [0, 5, 12], fov: heroFov, near: 0.1, far: 200 }}
+            camera={{ position: [0, 3.4, 12.5], fov: heroFov, near: 0.1, far: 200 }}
             dpr={performance.dpr as [number, number]}
             gl={{
               antialias: performance.antialias,
@@ -213,13 +213,13 @@ export default function Hero() {
                   From sky
                 </TextReveal>
                 <TextReveal className="block" delay={0.5} stagger={0.05}>
-                  to your door.
+                  to your pod.
                 </TextReveal>
               </h1>
 
               <FadeIn delay={0.8} className="max-w-xl mx-auto">
                 <p className="text-base text-stone-600 md:text-lg leading-relaxed drop-shadow-sm" style={{ textShadow: '0 1px 2px rgba(255,255,255,0.8)' }}>
-                  Drones drop to smart pods every 500m. Local riders handle the last mile.
+                  Drones drop to smart pods every 500m. Pick up on your schedule—secure, climate-controlled, and close by.
                   <span className="text-stone-800 font-medium"> Less traffic. Less carbon. More speed.</span>
                 </p>
               </FadeIn>
@@ -264,7 +264,7 @@ export default function Hero() {
               style={{ height: `${sceneProgress * 100}%`, marginTop: 'auto' }}
             />
           </div>
-          <span className="text-[9px] text-stone-400 tabular-nums">
+          <span className="text-[9px] text-stone-600 tabular-nums">
             {Math.round(sceneProgress * 100)}%
           </span>
         </div>
@@ -274,7 +274,7 @@ export default function Hero() {
           className="absolute bottom-8 sm:bottom-12 left-1/2 z-10 -translate-x-1/2 flex flex-col items-center gap-3 pb-[env(safe-area-inset-bottom)]"
           style={{ opacity: 1 - sceneProgress * 2.5 }}
         >
-          <span className="text-[10px] uppercase tracking-[0.3em] text-stone-400 text-center max-w-[200px]">
+          <span className="text-[10px] uppercase tracking-[0.3em] text-stone-600 text-center max-w-[200px]">
             {hoveredTarget
               ? 'Scroll'
               : 'Scroll'}

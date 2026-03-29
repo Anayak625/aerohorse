@@ -257,7 +257,7 @@ function PodNetworkMap({
         <div class="pod-popup">
           <p class="font-semibold text-stone-800">${pod.name}</p>
           <p class="text-xs text-stone-500">${pod.area}</p>
-          <p class="mt-1 text-xs text-stone-400">${pod.capacity}/${pod.maxCapacity} · ${pod.status}</p>
+          <p class="mt-1 text-xs text-stone-600">${pod.capacity}/${pod.maxCapacity} · ${pod.status}</p>
           <a href="https://www.google.com/maps?q=${pod.lat},${pod.lng}" target="_blank" rel="noopener noreferrer" class="mt-2 inline-block text-xs text-teal-600 hover:underline">Open in Google Maps →</a>
         </div>
       `
@@ -414,7 +414,7 @@ export default function PodNetwork() {
             <TextReveal delay={0.1} stagger={0.04}>
               Goa&apos;s smart pods.
             </TextReveal>
-            <TextReveal className="text-stone-400" delay={0.3} stagger={0.04}>
+            <TextReveal className="text-stone-600" delay={0.3} stagger={0.04}>
               Live status, real locations.
             </TextReveal>
           </h2>
@@ -437,7 +437,7 @@ export default function PodNetwork() {
                 <span className={`text-2xl font-bold tabular-nums sm:text-3xl md:text-4xl ${stat.color}`}>
                   {stat.value}
                 </span>
-                <span className="text-sm text-stone-400">{stat.label}</span>
+                <span className="text-sm text-stone-600">{stat.label}</span>
               </div>
             ))}
           </div>
@@ -459,7 +459,7 @@ export default function PodNetwork() {
                   animate={sectionInView}
                 />
               ) : (
-                <div className="flex h-full items-center justify-center text-stone-400">
+                <div className="flex h-full items-center justify-center text-stone-600">
                   <p className="text-sm">Loading map…</p>
                 </div>
               )}
@@ -494,7 +494,7 @@ export default function PodNetwork() {
                     </svg>
                   </div>
                   <p className="text-lg font-semibold text-stone-700">Pick a pod</p>
-                  <p className="mt-2 max-w-[200px] text-sm text-stone-400">
+                  <p className="mt-2 max-w-[200px] text-sm text-stone-600">
                     Click any pod on the map for live status, or open in Google Maps.
                   </p>
                 </div>
@@ -504,7 +504,7 @@ export default function PodNetwork() {
             {/* Pod list (compact) */}
             <FadeIn delay={1}>
               <div className="rounded-2xl border border-stone-200 bg-white p-4">
-                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-400">
+                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-600">
                   All 10 pods
                 </p>
                 <div className="pod-scroll max-h-[260px] space-y-1.5 overflow-y-auto">
@@ -531,7 +531,7 @@ export default function PodNetwork() {
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-stone-700">{pod.name}</p>
                       </div>
-                      <span className="text-xs tabular-nums text-stone-400">
+                      <span className="text-xs tabular-nums text-stone-600">
                         {pod.capacity}/{pod.maxCapacity}
                       </span>
                     </button>
@@ -603,7 +603,7 @@ function PodDetail({ pod, onClose }: { pod: PodInfo; onClose: () => void }) {
         />
         <span className="text-sm font-medium capitalize text-stone-600">{pod.status}</span>
         {pod.status !== 'maintenance' && (
-          <span className="ml-auto text-xs text-stone-400">
+          <span className="ml-auto text-xs text-stone-600">
             Next pickup <span className="font-semibold text-stone-600">{pod.nextPickup}</span>
           </span>
         )}
@@ -612,14 +612,14 @@ function PodDetail({ pod, onClose }: { pod: PodInfo; onClose: () => void }) {
       {/* Stats */}
       <div className="grid grid-cols-2 gap-px bg-stone-100">
         <div className="bg-white px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Climate</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-600">Climate</p>
           <p className="mt-1 text-xl font-bold text-stone-800">{pod.temperature}</p>
         </div>
         <div className="bg-white px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Drop-offs today</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-600">Drop-offs today</p>
           <p className="mt-1 text-xl font-bold text-stone-800">
             {pod.deliveriesToday}
-            <span className="ml-1 text-xs font-normal text-stone-400">deliveries</span>
+            <span className="ml-1 text-xs font-normal text-stone-600">deliveries</span>
           </p>
         </div>
       </div>
@@ -627,7 +627,7 @@ function PodDetail({ pod, onClose }: { pod: PodInfo; onClose: () => void }) {
       {/* Capacity bar */}
       <div className="px-6 py-4">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Slots</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-600">Slots</p>
           <p className="text-sm font-semibold tabular-nums text-stone-600">
             {pod.capacity}/{pod.maxCapacity}
           </p>
@@ -644,7 +644,7 @@ function PodDetail({ pod, onClose }: { pod: PodInfo; onClose: () => void }) {
             style={{ width: `${capacityPercent}%` }}
           />
         </div>
-        <p className="mt-1.5 text-[10px] text-stone-400">
+        <p className="mt-1.5 text-[10px] text-stone-600">
           {capacityPercent > 80 ? 'Near capacity' : capacityPercent > 0 ? 'Available' : 'Offline'}
         </p>
       </div>

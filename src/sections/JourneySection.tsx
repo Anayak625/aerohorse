@@ -36,7 +36,7 @@ export default function JourneySection() {
   const phases = [
     { title: 'Liftoff from the hub', desc: 'Autonomous drones collect your package and take flight—no traffic, no delays.' },
     { title: 'Touchdown at the pod', desc: 'The drone drops at a secure, climate-controlled pod near you.' },
-    { title: 'Last mile to your door', desc: 'A local rider picks up from the pod and delivers straight to you.' },
+    { title: 'Ready at the pod', desc: 'Your package is secure in the locker. Pick it up when you get the alert.' },
   ]
 
   // Calculate entry opacity - fade in during initial scroll
@@ -60,7 +60,7 @@ export default function JourneySection() {
           style={{ opacity: entryOpacity, transition: 'opacity 0.3s ease-out' }}
         >
           <Canvas
-            camera={{ position: [0, 5.5, 12], fov: 50 }}
+            camera={{ position: [0, 3.4, 12.5], fov: 50 }}
             dpr={performance.dpr as [number, number]}
             shadows={performance.shadows}
             gl={{
@@ -87,7 +87,7 @@ export default function JourneySection() {
                   }`} />
                 <span className={`text-xs uppercase tracking-widest transition-all duration-500 ${phase === i ? 'text-teal-600' : 'text-stone-400'
                   }`}>
-                  {i === 0 ? 'Drone' : i === 1 ? 'Pod' : 'Rider'}
+                  {i === 0 ? 'Drone' : i === 1 ? 'Pod' : 'Pickup'}
                 </span>
               </div>
             ))}

@@ -10,6 +10,13 @@ import { DRONE_GLTF_URL, AEROHORSE_LOGO_URL } from '../constants/webglAssets'
 import { HeroCityModel, CitySkyGradient, CityGroundPlane, CITY_FOG_COLOR } from './HeroCity'
 import { PodGLTFModel, getJourneyParcelLandWorldY } from './PodModel'
 
+/** Same framing as Scene3D at scroll 0: camera (0, 3.4, 12.5), lookAt (0, 1.2, 0). */
+const HERO_FRAMING_TARGET = new THREE.Vector3(0, 1.2, 0)
+const HERO_CAM_OFFSET = new THREE.Vector3(0, 2.2, 12.5)
+const HERO_FRAMING_SPHERICAL = new THREE.Spherical().setFromVector3(HERO_CAM_OFFSET)
+const HERO_CAMERA_DISTANCE = HERO_FRAMING_SPHERICAL.radius
+const HERO_CAMERA_POLAR = HERO_FRAMING_SPHERICAL.phi
+
 const MOBILE_BREAKPOINT = 768
 function useIsSmallDevice() {
   const [isSmall, setSmall] = useState(() =>
@@ -41,7 +48,6 @@ const PARCEL_ARC_HEIGHT = 1.3 // peak height of projectile arc (up then down)
 /** Delta from drone Z to parcel rest Z (keeps drop landing on plaza when drone flies at z ≈ 1 + baseOffset.z). */
 const DEFAULT_PARCEL_Z_LANDING_DELTA = 1.8
 
-const CAMERA_DISTANCE_MIN = 6
 const CAMERA_DISTANCE_MAX = 20
 
 // Cinematic view when parcel lands: zoom into parcel, lower angle
@@ -117,7 +123,7 @@ function ScrollZoom({
   landingTarget: THREE.Vector3
 }) {
   const { camera } = useThree()
-  const defaultTarget = useMemo(() => new THREE.Vector3(0, 1.2, 0), [])
+  const defaultTarget = useMemo(() => HERO_FRAMING_TARGET.clone(), [])
   const currentTarget = useRef(new THREE.Vector3(0, 0, 0))
   const sphericalRef = useRef(new THREE.Spherical())
   const vec = useMemo(() => new THREE.Vector3(), [])
@@ -136,10 +142,10 @@ function ScrollZoom({
     currentTarget.current.copy(defaultTarget).lerp(landingTarget, smoothBlend)
     const target = currentTarget.current
     const distance =
-      CAMERA_DISTANCE_MIN +
-      t * (CAMERA_DISTANCE_MAX - CAMERA_DISTANCE_MIN) * (1 - smoothBlend) +
+      HERO_CAMERA_DISTANCE +
+      t * (CAMERA_DISTANCE_MAX - HERO_CAMERA_DISTANCE) * (1 - smoothBlend) +
       CINEMATIC_DISTANCE * smoothBlend
-    const polarAngle = Math.PI / 2.2 - (Math.PI / 2.2 - CINEMATIC_POLAR) * smoothBlend
+    const polarAngle = HERO_CAMERA_POLAR - (HERO_CAMERA_POLAR - CINEMATIC_POLAR) * smoothBlend
 
     controls.target.copy(target)
     const spherical = sphericalRef.current
@@ -172,7 +178,7 @@ export default function JourneyScene({ scrollProgress = 0 }: { scrollProgress: n
   )
 
   useEffect(() => {
-    camera.position.set(0, 5.5, 12)
+    camera.position.set(0, 3.4, 12.5)
     if (controlsRef.current) {
       controlsRef.current.update()
     }
@@ -219,8 +225,8 @@ export default function JourneyScene({ scrollProgress = 0 }: { scrollProgress: n
         enableRotate={!isSmallDevice}
         minPolarAngle={Math.PI / 6}
         maxPolarAngle={Math.PI / 2.2}
-        minDistance={CAMERA_DISTANCE_MIN}
-        maxDistance={CAMERA_DISTANCE_MAX}
+        minDistance={8}
+        maxDistance={CAMERA_DISTANCE_MAX + 4}
       />
 
       <CityGroundPlane />

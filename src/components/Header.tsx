@@ -136,10 +136,8 @@ export default function Header() {
         onMouseEnter={!isMobile ? expandNav : undefined}
         onMouseLeave={!isMobile ? collapseNav : undefined}
         className={`
-          relative flex items-center justify-center
-          rounded-full border border-stone-200/60
-          bg-white/70 backdrop-blur-2xl
-          shadow-[0_8px_32px_-8px_rgba(0,0,0,0.1),0_0_0_1px_rgba(255,255,255,0.8)_inset]
+          glass-panel relative flex items-center justify-center
+          rounded-full
           transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]
           ${expanded 
             ? 'px-3 py-2 gap-1 md:gap-1' 
@@ -203,7 +201,7 @@ export default function Header() {
           flex items-center overflow-hidden
           transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]
           ${expanded ? 'w-auto max-w-[400px] gap-1 opacity-100' : 'w-0 max-w-0 gap-0 opacity-0'}
-          max-md:absolute max-md:left-1/2 max-md:-translate-x-1/2 max-md:top-full max-md:mt-2 max-md:flex-col max-md:py-2 max-md:rounded-2xl max-md:border max-md:border-stone-200/60 max-md:bg-white/95 max-md:backdrop-blur-xl max-md:shadow-xl max-md:w-[calc(100vw-2rem)] max-md:max-w-[320px]
+          max-md:absolute max-md:left-1/2 max-md:-translate-x-1/2 max-md:top-full max-md:mt-2 max-md:flex-col max-md:py-2 max-md:rounded-2xl max-md:glass-panel max-md:w-[calc(100vw-2rem)] max-md:max-w-[320px]
         `}
         style={{ display: expanded ? 'flex' : undefined }}
         >

@@ -5,7 +5,7 @@ const features = [
   { icon: '🛸', title: 'Autonomous flight', desc: 'AI navigation and real-time obstacle avoidance so every run is safe and on time' },
   { icon: '📍', title: 'Approved flight paths', desc: 'Geofenced corridors—no surprises, just predictable routes' },
   { icon: '🔒', title: 'Secure, climate-controlled pods', desc: 'Your package stays safe and at the right temperature until pickup' },
-  { icon: '⚡', title: 'Live tracking & ETA', desc: 'From dispatch to your door, minute-by-minute updates so you know exactly when to expect it' },
+  { icon: '⚡', title: 'Live tracking & ETA', desc: 'From dispatch to the pod, minute-by-minute updates so you know exactly when to collect' },
 ]
 
 export default function Technology() {
@@ -23,13 +23,13 @@ export default function Technology() {
               <div>
                 <ScrambleText text="Drones that fly. Pods that wait." delay={200} speed={35} />
               </div>
-              <TextReveal className="text-stone-400" delay={0.3} stagger={0.04}>
-                Riders that deliver.
+              <TextReveal className="text-stone-600" delay={0.3} stagger={0.04}>
+                You pick up when you’re ready.
               </TextReveal>
             </h2>
             <FadeIn delay={0.7} className="mt-4 sm:mt-6 md:mt-8">
               <p className="text-base sm:text-lg md:text-xl text-stone-500 leading-relaxed">
-                Drones follow safe corridors to pods. Our system picks the nearest rider and optimizes the last mile. You get live tracking and secure handoff at every step.
+                Drones follow safe corridors to pods. Our system routes each package to the nearest locker and keeps it secure until you arrive. Live tracking and alerts at every step.
               </p>
             </FadeIn>
           </div>

@@ -97,10 +97,10 @@ export default function TransitionSection() {
               transform: enterProgress > 0.1 ? 'translateY(0)' : 'translateY(8px)',
             }}
           >
-            <span className="text-[10px] font-semibold text-teal-600/80 tracking-[0.2em]">
+            <span className="text-[10px] font-semibold text-teal-800 tracking-[0.2em]">
               YOUR PACKAGE'S JOURNEY
             </span>
-            <span className="text-stone-300">·</span>
+            <span className="text-teal-600/70">·</span>
             <div className="h-1.5 w-1.5 rounded-full bg-teal-500 animate-pulse" />
           </div>
           
@@ -131,7 +131,7 @@ export default function TransitionSection() {
               transform: enterProgress > 0.5 ? 'translateY(0)' : 'translateY(10px)',
             }}
           >
-            Hub → drone → pod → your door. Watch the flight, the drop, and the moment it lands.
+            Hub → drone → pod. Watch the flight, the drop, and the moment it’s ready for pickup.
           </p>
 
           {/* Story progress bars with labels — fill as drone moves */}
@@ -148,7 +148,7 @@ export default function TransitionSection() {
                 { label: 'Touchdown', threshold: 0.7 },
               ].map(({ label, threshold }, i) => (
                 <div key={i} className="flex flex-col items-center gap-2">
-                  <div className="h-1.5 w-10 rounded-full bg-stone-200 overflow-hidden">
+                  <div className="h-1.5 w-10 rounded-full bg-stone-300 overflow-hidden">
                     <div 
                     className="h-full bg-teal-500 rounded-full transition-all duration-500 ease-out"
                     style={{ 
@@ -157,8 +157,8 @@ export default function TransitionSection() {
                   />
                   </div>
                   <span 
-                    className={`text-[10px] uppercase tracking-[0.2em] transition-colors duration-300 ${
-                      droneProgress > threshold ? 'text-teal-600' : 'text-stone-300'
+                    className={`text-[10px] font-semibold uppercase tracking-[0.2em] transition-colors duration-300 ${
+                      droneProgress > threshold ? 'text-teal-700' : 'text-stone-500'
                     }`}
                   >
                     {label}
@@ -166,7 +166,7 @@ export default function TransitionSection() {
                 </div>
               ))}
             </div>
-            <span className="text-xs uppercase tracking-widest text-stone-400">
+            <span className="text-xs font-medium uppercase tracking-widest text-stone-600">
               Scroll to continue
             </span>
           </div>

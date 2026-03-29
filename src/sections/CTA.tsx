@@ -26,7 +26,7 @@ export default function CTA() {
         
         <FadeIn delay={0.6} className="mt-4 sm:mt-6 md:mt-8 mx-auto max-w-2xl">
           <p className="text-base sm:text-lg md:text-xl text-stone-500 leading-relaxed">
-            Partner with us for last-mile delivery or explore bringing smart pods to your city. 
+            Partner with us for drone-to-pod delivery or explore bringing smart pods to your city. 
             Less congestion, lower emissions, faster drops.
           </p>
         </FadeIn>
@@ -50,7 +50,7 @@ export default function CTA() {
         </FadeIn>
         
         {/* Trust indicators */}
-        <FadeIn delay={1} className="mt-12 sm:mt-16 md:mt-20 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3 sm:gap-6 md:gap-8 text-stone-400">
+        <FadeIn delay={1} className="mt-12 sm:mt-16 md:mt-20 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3 sm:gap-6 md:gap-8 text-stone-600">
           <span className="text-xs sm:text-sm">Trusted by brands that care about speed and sustainability</span>
           <div className="flex flex-wrap justify-center gap-4 sm:gap-6 md:gap-8">
             {['TechCorp', 'LogiFlow', 'UrbanAir'].map((name) => (

@@ -71,8 +71,7 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
       { label: 'Hub', icon: 'hub', time: '0:00' },
       { label: 'Drone', icon: 'drone', time: '0:04' },
       { label: 'Pod #12', icon: 'pod', time: '0:11' },
-      { label: 'Rider', icon: 'rider', time: '0:19' },
-      { label: 'Door', icon: 'door', time: '0:28' },
+      { label: 'Pickup', icon: 'door', time: '0:22' },
     ],
     []
   )
@@ -104,7 +103,7 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
       }}
     >
       <div
-        className="receipt-card w-full max-w-[300px] md:max-w-none md:w-[340px] overflow-hidden rounded-3xl border border-stone-200/60 bg-white/80 shadow-2xl shadow-stone-900/10 backdrop-blur-xl mx-auto md:mx-0"
+        className="receipt-card glass-panel w-full max-w-[300px] md:max-w-none md:w-[340px] overflow-hidden rounded-3xl mx-auto md:mx-0"
         style={{ contain: 'layout style paint' }}
       >
         {/* Header stripe */}
@@ -141,9 +140,9 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
         </div>
 
         {/* Stats grid — scroll-driven reveal */}
-        <div className="grid grid-cols-3 gap-px bg-stone-100">
+        <div className="grid grid-cols-3 gap-px bg-stone-200/70">
           {[
-            { value: `${animatedTime}`, unit: 'min', label: 'Door-to-door' },
+            { value: `${animatedTime}`, unit: 'min', label: 'Hub to pod' },
             { value: `${animatedDist}`, unit: 'km', label: 'Distance covered' },
             { value: `${animatedCO2}`, unit: 'kg', label: 'Carbon saved' },
           ].map((stat, i) => {
@@ -151,7 +150,7 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
             return (
             <div
               key={stat.label}
-              className="bg-white px-4 py-4 text-center transition-all duration-400 ease-out"
+              className="bg-white/75 px-4 py-4 text-center transition-all duration-400 ease-out backdrop-blur-sm"
               style={{
                 opacity: statVisible ? 1 : 0,
                 transform: statVisible ? 'translateY(0)' : 'translateY(10px)',
@@ -160,9 +159,9 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
             >
               <div className="flex items-baseline justify-center gap-0.5">
                 <span className="text-2xl font-bold tabular-nums text-stone-800">{stat.value}</span>
-                <span className="text-xs font-medium text-stone-400">{stat.unit}</span>
+                <span className="text-xs font-medium text-stone-600">{stat.unit}</span>
               </div>
-              <p className="mt-1 text-[10px] font-medium uppercase tracking-wider text-stone-400">
+              <p className="mt-1 text-[10px] font-medium uppercase tracking-wider text-stone-600">
                 {stat.label}
               </p>
             </div>
@@ -171,8 +170,8 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
         </div>
 
         {/* Route visualization */}
-        <div className="px-6 py-5">
-          <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-400">
+        <div className="px-6 py-5 bg-white/80 backdrop-blur-sm">
+          <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-600">
             How it got there
           </p>
           <div className="relative">
@@ -191,7 +190,7 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
                           ? isLast
                             ? 'border-teal-500 bg-teal-500'
                             : 'border-teal-400 bg-teal-50'
-                          : 'border-stone-200 bg-white'
+                          : 'border-stone-300 bg-stone-50'
                       }`}
                       style={{
                         transform: stepVisible ? 'scale(1)' : 'scale(0.6)',
@@ -201,7 +200,7 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
                       <RouteIcon type={step.icon} active={stepVisible} isLast={isLast} />
                     </div>
                     {!isLast && (
-                      <div className="relative h-4 w-0.5 bg-stone-100">
+                      <div className="relative h-4 w-0.5 bg-stone-200">
                         <div
                           className="absolute inset-x-0 top-0 bg-teal-400 transition-all duration-400"
                           style={{
@@ -225,7 +224,7 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
                     <span className={`text-sm font-medium ${isLast ? 'text-teal-600' : 'text-stone-700'}`}>
                       {step.label}
                     </span>
-                    <span className="text-xs tabular-nums text-stone-400">{step.time}</span>
+                    <span className="text-xs tabular-nums text-stone-600 font-medium">{step.time}</span>
                   </div>
                 </div>
               )
@@ -235,7 +234,7 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
 
         {/* Footer — scroll-driven */}
         <div
-          className="border-t border-stone-100 px-6 py-4 transition-opacity duration-400 ease-out"
+          className="border-t border-stone-200/80 bg-white/70 backdrop-blur-sm px-6 py-4 transition-opacity duration-400 ease-out"
           style={{
             opacity: eased > 0.8 ? 1 : 0,
             transitionDelay: eased > 0.8 ? '0.15s' : '0s',
@@ -244,9 +243,9 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-green-400 receipt-pulse" />
-              <span className="text-xs text-stone-400">Goa Network</span>
+              <span className="text-xs font-medium text-stone-600">Goa Network</span>
             </div>
-            <span className="text-[10px] font-medium uppercase tracking-wider text-stone-300">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-stone-500">
               AH-{Math.floor(Math.random() * 9000 + 1000)}
             </span>
           </div>
@@ -257,7 +256,7 @@ export default function DeliveryReceipt({ scrollProgress }: DeliveryReceiptProps
 }
 
 function RouteIcon({ type, active, isLast }: { type: string; active: boolean; isLast: boolean }) {
-  const color = !active ? '#d6d3d1' : isLast ? '#ffffff' : '#0d9488'
+  const color = !active ? '#78716c' : isLast ? '#ffffff' : '#0d9488'
   const size = 13
 
   switch (type) {
@@ -281,13 +280,6 @@ function RouteIcon({ type, active, isLast }: { type: string; active: boolean; is
           <path d="M12 2L2 7l10 5 10-5-10-5z" />
           <path d="M2 17l10 5 10-5" />
           <path d="M2 12l10 5 10-5" />
-        </svg>
-      )
-    case 'rider':
-      return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="5" r="3" />
-          <path d="M12 8v8M8 21l4-5 4 5" />
         </svg>
       )
     case 'door':

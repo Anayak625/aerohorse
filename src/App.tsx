@@ -35,27 +35,43 @@ function stickScrollToProgress(raw: number): number {
   return PARCEL_DROP_END + ((raw - STICK_SCROLL_END) / (1 - STICK_SCROLL_END)) * (1 - PARCEL_DROP_END)
 }
 
+/**
+ * Raw scroll 0→1 uses (vh - rect.top) / (sectionH + vh). When the sticky scene first pins (rect.top = 0),
+ * raw is already vh/(sectionH+vh) > 0, so scene progress jumps mid-timeline. For the step copy (Hub / In flight /
+ * Delivered) we remap so 0 = first frame of the pinned journey, 1 = end of section.
+ */
+function narrativeProgressFromRaw(raw: number, sectionHeightPx: number, viewportHeight: number): number {
+  const rawAtPin = viewportHeight / (sectionHeightPx + viewportHeight)
+  if (raw <= rawAtPin) return 0
+  return Math.min(1, (raw - rawAtPin) / (1 - rawAtPin))
+}
+
+type JourneyScrollState = { scene: number; narrative: number }
+
 function JourneySection() {
   const performance = useDevicePerformance()
   const journeyFov = useResponsiveCanvasFov(50)
   const sectionRef = useRef<HTMLElement>(null)
-  const scrollProgress = useThrottledScrollProgress(
+  const { scene: scrollProgress, narrative: narrativeScroll } = useThrottledScrollProgress<JourneyScrollState>(
     () => {
       const el = sectionRef.current
-      if (!el) return 0
+      if (!el) return { scene: 0, narrative: 0 }
       const rect = el.getBoundingClientRect()
       const viewportHeight = window.innerHeight
       const sectionHeight = rect.height
-      if (rect.top >= viewportHeight || rect.bottom <= 0) return 0
+      if (rect.top >= viewportHeight || rect.bottom <= 0) return { scene: 0, narrative: 0 }
       const raw = Math.max(0, Math.min(1, (viewportHeight - rect.top) / (sectionHeight + viewportHeight)))
-      return stickScrollToProgress(raw)
+      return {
+        scene: stickScrollToProgress(raw),
+        narrative: narrativeProgressFromRaw(raw, sectionHeight, viewportHeight),
+      }
     },
     0.004,
     []
   )
 
   const narrativePhase =
-    scrollProgress < 0.35 ? 0 : scrollProgress < 0.6 ? 1 : 2
+    narrativeScroll < 0.28 ? 0 : narrativeScroll < 0.62 ? 1 : 2
   const narrativeLines = [
     'The drone leaves the hub. Autopilot on, route locked in.',
     'Across the sky. Your package is under the drone, flying to the pod.',
@@ -63,7 +79,7 @@ function JourneySection() {
   ]
   const phaseLabels = ['Hub', 'In flight', 'Delivered']
   // Crossfade: show current and next line for smooth transition
-  const narrativeOpacity = Math.min(1, scrollProgress * 4)
+  const narrativeOpacity = Math.min(1, narrativeScroll * 3.2 + 0.22)
 
   return (
     <section
@@ -72,9 +88,14 @@ function JourneySection() {
       className="relative h-[320vh] sm:h-[380vh] md:h-[420vh] w-full bg-stone-50"
     >
       <div className="sticky top-0 h-[100dvh] min-h-[100svh] w-full overflow-hidden relative isolate">
+        {/* Soft top wash — reads with fixed glass nav (same stone surface family) */}
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-32 bg-gradient-to-b from-stone-50/95 via-stone-50/40 to-transparent"
+          aria-hidden
+        />
         <Canvas
           className="absolute inset-0 z-0 h-full w-full"
-          camera={{ position: [0, 6, 12], fov: journeyFov, near: 0.1, far: 200 }}
+          camera={{ position: [0, 3.4, 12.5], fov: journeyFov, near: 0.1, far: 200 }}
           dpr={performance.dpr as [number, number]}
           gl={{ antialias: performance.antialias, alpha: false, powerPreference: 'high-performance' }}
         >
@@ -87,30 +108,31 @@ function JourneySection() {
         {/* Delivery Receipt - materializes when parcel lands */}
         <DeliveryReceipt scrollProgress={scrollProgress} />
 
-        {/* Story arc: Hub — Transit — Delivery */}
+        {/* Story arc — .glass-panel in index.css (same frosted chrome as Header nav + DeliveryReceipt) */}
         <div
-          className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none px-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6 sm:pb-10 md:px-12 md:pb-14"
+          className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none px-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:pb-8 md:px-12 md:pb-10"
           aria-live="polite"
         >
-          <div className="max-w-2xl border-l-2 border-teal-500/30 pl-3 sm:pl-5 md:pl-6">
+          <div className="glass-panel max-w-2xl rounded-3xl px-4 py-4 sm:px-5 sm:py-5">
+            <div className="border-l-2 border-teal-500 pl-3 sm:pl-5 md:pl-6">
             {/* Step counter */}
             <p
-              className="text-[10px] font-medium uppercase tracking-[0.3em] text-stone-400 mb-4 transition-opacity duration-500"
+              className="text-[10px] font-medium uppercase tracking-[0.3em] text-teal-700 mb-4 transition-opacity duration-500"
               style={{ opacity: narrativeOpacity }}
             >
               Step {narrativePhase + 1} of 3 · Your delivery
             </p>
 
             {/* Phase labels with connecting line */}
-            <div className="mb-6 flex items-center gap-2">
+            <div className="mb-6 flex items-center gap-2 flex-wrap">
               {phaseLabels.map((label, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <span
                     className={`text-xs font-semibold uppercase tracking-widest transition-all duration-500 ${narrativePhase === i
-                      ? 'text-teal-600'
+                      ? 'text-teal-700'
                       : narrativePhase > i
-                        ? 'text-teal-500/70'
-                        : 'text-stone-300'
+                        ? 'text-teal-600/85'
+                        : 'text-stone-400'
                       }`}
                   >
                     {label}
@@ -134,7 +156,7 @@ function JourneySection() {
               {narrativeLines.map((line, i) => (
                 <p
                   key={i}
-                  className="absolute left-0 right-0 top-0 text-sm sm:text-base md:text-lg text-stone-600 leading-relaxed transition-all duration-500"
+                  className="absolute left-0 right-0 top-0 text-sm sm:text-base md:text-lg text-stone-700 leading-relaxed transition-all duration-500"
                   style={{
                     opacity: narrativePhase === i ? narrativeOpacity : 0,
                     transform:
@@ -159,13 +181,14 @@ function JourneySection() {
                   className="h-1 flex-1 max-w-20 rounded-full bg-stone-200 overflow-hidden"
                 >
                   <div
-                    className="h-full bg-gradient-to-r from-teal-400 to-teal-600 rounded-full transition-all duration-700 ease-out"
+                    className="h-full bg-gradient-to-r from-teal-500 to-teal-600 rounded-full transition-all duration-700 ease-out"
                     style={{
                       width: narrativePhase >= i ? '100%' : '0%',
                     }}
                   />
                 </div>
               ))}
+            </div>
             </div>
           </div>
         </div>

@@ -18,17 +18,11 @@ const steps = [
     gradient: 'from-slate-500/15 to-slate-500/0',
   },
   {
-    id: 'rider',
+    id: 'pickup',
     num: '03',
-    title: 'Riders bring it to you',
-    description: 'A local rider grabs it from the nearest pod and drops it at your door. Fast, predictable, and human when it counts.',
-    gradient: 'from-stone-500/15 to-stone-500/0',
-  },
-  {
-    id: 'door',
-    num: '04',
-    title: 'You get it at home',
-    description: 'Track the whole journey in real time. Same-day and next-day options, with a fraction of the usual carbon cost.',
+    title: 'Pick up at your pod',
+    description:
+      'You get an alert the moment it lands. Head to the secure pod, tap to open your locker, and grab your order—same-day and next-day options, with a fraction of the usual carbon cost.',
     gradient: 'from-teal-500/15 to-teal-500/0',
   },
 ]
@@ -59,11 +53,11 @@ export default function StorySection() {
             </p>
           </FadeIn>
           <h2 className="text-4xl font-bold tracking-tight text-stone-800 sm:text-5xl md:text-7xl lg:text-8xl">
-            <ScrambleText text="Sky → Pod → Your door." delay={200} speed={30} />
+            <ScrambleText text="Sky → Pod → Pickup." delay={200} speed={30} />
           </h2>
           <FadeIn delay={0.4} className="mt-4 sm:mt-6 md:mt-8 max-w-2xl">
             <p className="text-base sm:text-lg md:text-xl text-stone-500 leading-relaxed">
-              One clear path: drones to pods, riders to you. Faster drop-offs and a smaller footprint for your city.
+              One clear path: from hub to pod. Faster drop-offs and a smaller footprint for your city.
             </p>
           </FadeIn>
         </div>
@@ -117,7 +111,7 @@ function StoryCard({
       <div className={`absolute -right-20 -top-20 h-40 w-40 rounded-full bg-gradient-to-br ${step.gradient} blur-3xl transition-all duration-500 group-hover:scale-150`} />
       
       <div className="relative z-10">
-        <span className="text-sm font-medium text-stone-400">{step.num}</span>
+        <span className="text-sm font-medium text-stone-600">{step.num}</span>
         <h3 className="mt-4 text-xl font-bold text-stone-800 sm:text-2xl md:text-3xl">{step.title}</h3>
         <p className="mt-4 text-stone-500 leading-relaxed">{step.description}</p>
         

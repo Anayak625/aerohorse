@@ -35,6 +35,23 @@ const DRONE_VIEW_BLEND_IN = 0.03   // 17%→20% smooth ramp in
 const DRONE_VIEW_BLEND_OUT = 0.03  // 62%→65% smooth ramp out
 
 const DRONE_TARGET_SIZE = 3
+/** Parcel + drop path share this scale with DroneAnimated. */
+const DRONE_SCALE = 3
+
+/** World Y for hero drone hover — kept below old 5.3 so it clears the fixed glass nav (canvas sits under HTML). */
+const HERO_DRONE_ANCHOR_Y = 3.95
+
+const DROP_START_SCROLL = 0.15
+const DROP_END_SCROLL = 0.6
+const POD_LIFT = 0.4
+const POD_TOP_Y = getHeroParcelLandWorldY(POD_LIFT, DRONE_SCALE)
+// Drone at (0, HERO_DRONE_ANCHOR_Y, 1), scale 3, package local (0, -0.17, -0.02) → world start
+const DROP_START = {
+  x: 0,
+  y: HERO_DRONE_ANCHOR_Y + DRONE_SCALE * (-0.17),
+  z: 1 + DRONE_SCALE * (-0.02),
+}
+const DROP_END = { x: 0, y: POD_TOP_Y, z: 0 }
 
 export default function Scene3D({
   mouse = { normalizedX: 0, normalizedY: 0 },
@@ -45,8 +62,8 @@ export default function Scene3D({
 }: SceneProps) {
   const performance = useDevicePerformance()
   const groupRef = useRef<THREE.Group>(null)
-  const targetCamPos = useRef(new THREE.Vector3(0, 5, 12))
-  const focusTarget = useRef(new THREE.Vector3(0, 4.8, 1))
+  const targetCamPos = useRef(new THREE.Vector3(0, 3.4, 12.5))
+  const focusTarget = useRef(new THREE.Vector3(0, HERO_DRONE_ANCHOR_Y - 0.25, 1))
   const cameraDroneBlend = useRef(0)
   const vignetteEffectRef = useRef<any>(null)
 
@@ -77,18 +94,22 @@ export default function Scene3D({
     const blend = blendRaw * blendRaw * (3 - 2 * blendRaw)
 
     const mouseStrength = blend > 0.5 ? 0.08 : 0.4 * (1 - scrollProgress * 0.7)
-    const baseZ = 12 + scrollProgress * 8
-    const baseY = 5 + scrollProgress * 4
+    const s = scrollProgress
+    // Prefer lateral dolly over climbing: less Y lift avoids revealing the city hull / horizon edge.
+    const baseX = s * -3.2
+    const baseZ = 12.5 + s * 7.5
+    const baseY = 3.4 + s * 0.9
 
     // Normal view target (reuse refs)
     normalTargetPos.current.set(
-      mouse.normalizedX * 3.5 * mouseStrength,
+      baseX + mouse.normalizedX * 3.5 * mouseStrength,
       baseY + mouse.normalizedY * 2 * mouseStrength,
       baseZ + mouse.normalizedX * 0.5 * mouseStrength
     )
-    const lookY = 2 - scrollProgress * 2
-    const lookZ = scrollProgress * 5
-    normalLookAt.current.set(mouse.normalizedX * 0.8, lookY, lookZ)
+    const lookY = 1.2 - s * 0.55
+    const lookZ = s * 5.5
+    const lookX = baseX * 0.45 + mouse.normalizedX * 0.8
+    normalLookAt.current.set(lookX, lookY, lookZ)
 
     // Drone-follow view target (base), later blended toward parcel follow-cam during drop
     droneCamPos.current.copy(focusTarget.current).add(followOffset)
@@ -158,7 +179,7 @@ export default function Scene3D({
     cam.lookAt(blendedLookAt.current)
 
     if (groupRef.current) {
-      const scale = 1 - scrollProgress * 0.15
+      const scale = 1 - scrollProgress * 0.09
       groupRef.current.scale.setScalar(scale)
     }
 
@@ -383,7 +404,7 @@ function DroneAnimated({
     // Set position directly — avoids per-frame Vector3 allocation
     ref.current.position.set(
       baseOffset.x + departOffsetX + swayX,
-      5.3 + baseOffset.y + entranceOffsetY + departOffsetY + bobY,
+      HERO_DRONE_ANCHOR_Y + baseOffset.y + entranceOffsetY + departOffsetY + bobY,
       1 + baseOffset.z + entranceOffsetZ + departOffsetZ + swayZ
     )
     if (focusTargetRef) focusTargetRef.current.copy(ref.current.position)
@@ -397,7 +418,7 @@ function DroneAnimated({
     const s = ref.current.scale.x + (targetScale - ref.current.scale.x) * 0.12
     ref.current.scale.setScalar(s)
 
-    ref.current.lookAt(0, 4, 5)
+    ref.current.lookAt(0, 3.35, 5)
     const rollDemand =
       Math.sin(currentTime * 0.3) * 0.05 +
       Math.sin(currentTime * 2.1) * 0.03 * (1 - departT) +
@@ -442,16 +463,6 @@ function DroneAnimated({
   )
 }
 
-// Same parcel as drone's payload: drops from drone position (15% scroll) to pod top (60% scroll)
-const DRONE_SCALE = 3 // match DroneAnimated baseScale so parcel is same size
-const DROP_START_SCROLL = 0.15
-const DROP_END_SCROLL = 0.6
-const POD_LIFT = 0.4
-const POD_TOP_Y = getHeroParcelLandWorldY(POD_LIFT, DRONE_SCALE)
-// Drone at (0, 5.3, 1), scale 3, package local (0, -0.17, -0.02) → world start
-const DROP_START = { x: 0, y: 5.3 + DRONE_SCALE * (-0.17), z: 1 + DRONE_SCALE * (-0.02) }
-const DROP_END = { x: 0, y: POD_TOP_Y, z: 0 }
-
 function DroppingParcel({ scrollProgress }: { scrollProgress: number }) {
   const visible = scrollProgress >= DROP_START_SCROLL && scrollProgress <= DROP_END_SCROLL
   const logoTexture = useTexture(AEROHORSE_LOGO_URL)
@@ -464,7 +475,6 @@ function DroppingParcel({ scrollProgress }: { scrollProgress: number }) {
 
   let x: number, y: number, z: number
 
-  // Directly interpolate from drone start to pod top
   x = DROP_START.x + (DROP_END.x - DROP_START.x) * dropTEased
   y = DROP_START.y + (DROP_END.y - DROP_START.y) * dropTEased
   z = DROP_START.z + (DROP_END.z - DROP_START.z) * dropTEased

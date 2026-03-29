@@ -68,7 +68,19 @@ body {
   color: transparent;
 }
 
-
+/*
+ * Shared frosted chrome (Header <nav>, journey story card, delivery receipt, mobile nav sheet).
+ * Pair with rounded-full (nav) or rounded-2xl / rounded-3xl (cards).
+ */
+@layer components {
+  .glass-panel {
+    @apply border border-stone-300/80 backdrop-blur-2xl;
+    background-color: rgb(255 255 255 / 0.92);
+    box-shadow:
+      0 12px 40px -10px rgba(0, 0, 0, 0.18),
+      0 0 0 1px rgba(255, 255, 255, 0.9) inset;
+  }
+}
 
 /* Story narrative - subtle entrance */
 @keyframes narrativeIn {

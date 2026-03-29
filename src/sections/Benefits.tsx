@@ -16,22 +16,22 @@ const benefits = [
   {
     stat: '< 30',
     unit: 'min',
-    title: 'Door-to-door in under 30',
-    description: 'Pods every 500m keep the last mile short. Same-day and next-day, without sitting in traffic.',
+    title: 'Hub to pod in under 30',
+    description: 'Pods every 500m keep pickup close. Same-day and next-day, without sitting in traffic.',
     color: 'teal',
   },
   {
     stat: '60',
     unit: '%',
     title: 'Up to 60% less carbon',
-    description: 'Drones and riders replace road traffic. Cleaner air, quieter streets, a smaller footprint.',
+    description: 'Drones and dense pod networks replace vans crawling city streets. Cleaner air, quieter blocks, a smaller footprint.',
     color: 'slate',
   },
   {
     stat: '100',
     unit: '%',
     title: 'Track every step',
-    description: 'From warehouse to your door—see where it is and get a clear ETA so you’re never left guessing.',
+    description: 'From warehouse to pod—see where it is and get a clear ETA so you’re never left guessing.',
     color: 'stone',
   },
 ]
@@ -53,7 +53,7 @@ export default function Benefits() {
             <TextReveal delay={0.1} stagger={0.04}>
               Fast for you.
             </TextReveal>
-            <TextReveal className="text-stone-400" delay={0.3} stagger={0.04}>
+            <TextReveal className="text-stone-600" delay={0.3} stagger={0.04}>
               Lighter on the planet.
             </TextReveal>
           </h2>
@@ -148,8 +148,8 @@ function CarbonSavedStrip() {
         <span className="text-lg sm:text-xl font-medium text-teal-600">kg CO₂</span>
         <span className="text-stone-500 text-base sm:text-lg">saved by Aerohorse deliveries this month.</span>
       </div>
-      <p className="text-xs text-stone-400 sm:text-right">
-        Based on drone + rider miles vs. traditional road delivery.
+      <p className="text-xs text-stone-600 sm:text-right">
+        Based on drone + pod network vs. traditional road delivery.
       </p>
     </div>
   )

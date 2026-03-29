@@ -11,7 +11,7 @@ export default function Footer() {
               <span className="text-lg font-bold tracking-tight text-stone-800">Aerohorse</span>
             </div>
             <p className="mt-4 max-w-sm text-stone-500 leading-relaxed">
-              Last-mile delivery, reimagined. Drones, smart pods, and local riders—faster, cleaner, and built to scale.
+              Delivery, reimagined. Drones and smart pods every 500m—faster, cleaner, and built to scale.
             </p>
           </div>
           
@@ -43,7 +43,7 @@ export default function Footer() {
         </div>
         
         <div className="mt-10 sm:mt-12 md:mt-16 flex flex-col items-center justify-between gap-4 border-t border-stone-200 pt-6 md:pt-8 md:flex-row text-center md:text-left">
-          <p className="text-sm text-stone-400">© 2026 Aerohorse. All rights reserved.</p>
+          <p className="text-sm text-stone-600">© 2026 Aerohorse. All rights reserved.</p>
           <div className="flex gap-6">
             {['Twitter', 'LinkedIn', 'Instagram'].map((social) => (
               <a key={social} href="#" className="text-sm text-stone-500 transition-colors hover:text-stone-900" data-cursor-hover>
