@@ -166,7 +166,7 @@ function ScrollZoom({
   return null
 }
 
-export default function JourneyScene({ scrollProgress = 0 }: { scrollProgress: number }) {
+export default function JourneyScene({ scrollProgress = 0 }: { scrollProgress?: number }) {
   const controlsRef = useRef<any>(null)
   const { camera } = useThree()
   const isSmallDevice = useIsSmallDevice()

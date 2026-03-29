@@ -78,7 +78,6 @@ export default function Hero() {
   )
   const [hoveredTarget, setHoveredTarget] = useState<HoverTarget>(null)
   const [focusDroneUntil, setFocusDroneUntil] = useState(0)
-  const sectionRef = useRef<HTMLElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const mouseRef = useRef(mouse)
@@ -138,7 +137,6 @@ export default function Hero() {
       style={{ height: '400vh' }}
     >
       <section
-        ref={sectionRef}
         className="sticky top-0 left-0 right-0 h-[100dvh] min-h-[100svh] w-full overflow-hidden"
         onMouseMove={onMouseMove}
         data-cursor-hover={hoveredTarget != null ? '' : undefined}

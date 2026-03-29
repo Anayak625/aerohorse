@@ -2,7 +2,7 @@
 // @ts-nocheck
 /**
  * Shared landing / journey city: one GLTF URL, one loader cache entry.
- * Each Canvas still clones geometry for materials (hero) or uses the cached scene (low-end).
+ * Each Canvas clones the scene so Hero + Journey both render the city (two WebGL roots cannot share one Object3D).
  */
 import { useMemo } from 'react'
 import { useGLTF } from '@react-three/drei'
@@ -21,7 +21,7 @@ export function HeroCityModel({ useLitMaterials }: { useLitMaterials: boolean })
   const { scene } = useGLTF(CITY_GLTF_URL)
 
   const { cityRoot, scale, offset } = useMemo(() => {
-    const root = useLitMaterials ? scene.clone(true) : scene
+    const root = scene.clone(true)
     if (useLitMaterials) {
       const basicToStandard = new Map<THREE.MeshBasicMaterial, THREE.MeshStandardMaterial>()
 
