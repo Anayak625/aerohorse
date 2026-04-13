@@ -16,6 +16,7 @@ import Technology from './sections/Technology'
 import PodNetwork from './sections/PodNetwork'
 import CTA from './sections/CTA'
 import Footer from './components/Footer'
+import PaymentNoticeBar, { showPaymentNoticeBar } from './components/PaymentNoticeBar'
 import { useThrottledScrollProgress } from './hooks/useScrollProgress'
 import { useDevicePerformance } from './hooks/useDevicePerformance'
 
@@ -212,17 +213,26 @@ function App() {
       <Cursor />
       <div className="noise-overlay" aria-hidden />
       <Header />
-      <main>
-        <Hero />
-        <TransitionSection />
-        <JourneySection />
-        <StorySection />
-        <Benefits />
-        <Technology />
-        <PodNetwork />
-        <CTA />
-      </main>
-      <Footer />
+      <div
+        className={
+          showPaymentNoticeBar
+            ? 'pb-[calc(4.5rem+env(safe-area-inset-bottom))] sm:pb-[calc(3.75rem+env(safe-area-inset-bottom))]'
+            : undefined
+        }
+      >
+        <main>
+          <Hero />
+          <TransitionSection />
+          <JourneySection />
+          <StorySection />
+          <Benefits />
+          <Technology />
+          <PodNetwork />
+          <CTA />
+        </main>
+        <Footer />
+      </div>
+      <PaymentNoticeBar />
     </LenisProvider>
   )
 }

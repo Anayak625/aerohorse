@@ -96,9 +96,6 @@ export default function AppSplashLoader() {
       <p className="mt-5 px-4 text-center text-[10px] font-semibold uppercase tracking-[0.28em] text-stone-500 sm:text-xs">
         Loading Aerohorse
       </p>
-      <p className="mt-2 px-4 text-center text-[11px] text-stone-400 max-w-xs">
-        3D assets and page resources
-      </p>
     </div>
   )
 }
