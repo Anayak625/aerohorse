@@ -1,240 +1,41 @@
-import { Suspense, useRef } from 'react'
-import { Canvas } from '@react-three/fiber'
-import { LenisProvider } from './context/LenisContext'
-import { CanvasLoadOverlay } from './components/CanvasLoadOverlay'
-import AppSplashLoader from './components/AppSplashLoader'
-import { useResponsiveCanvasFov } from './hooks/useResponsiveCanvasFov'
-import Cursor from './components/Cursor'
-import Header from './components/Header'
-import Hero from './components/Hero'
-import TransitionSection from './components/TransitionSection'
-import JourneyScene from './components/JourneyScene'
-import DeliveryReceipt from './components/DeliveryReceipt'
-import StorySection from './sections/StorySection'
-import Benefits from './sections/Benefits'
-import Technology from './sections/Technology'
-import PodNetwork from './sections/PodNetwork'
-import CTA from './sections/CTA'
-import Footer from './components/Footer'
-import PaymentNoticeBar, { showPaymentNoticeBar } from './components/PaymentNoticeBar'
-import { useThrottledScrollProgress } from './hooks/useScrollProgress'
-import { useDevicePerformance } from './hooks/useDevicePerformance'
+import React, { useEffect } from 'react'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { useLenis } from './hooks/useLenis'
 
-// Parcel lands early in section so "landed" + receipt get most of the scroll; How it works appears only after.
-const JOURNEY_DRONE_END = 0.65
-const PARCEL_DROP_END = 0.88
-const STICK_SCROLL_START = 0.32 // raw scroll where drone reaches end
-const STICK_SCROLL_END = 0.42   // parcel lands here; raw 0.42→1 = long hold on receipt view
+import { ScrollProgress } from './components/ui/ScrollProgress'
+import { Header } from './components/ui/Header'
+import { Footer } from './components/ui/Footer'
 
-function stickScrollToProgress(raw: number): number {
-  if (raw <= STICK_SCROLL_START) {
-    return (raw / STICK_SCROLL_START) * JOURNEY_DRONE_END
-  }
-  if (raw <= STICK_SCROLL_END) {
-    return JOURNEY_DRONE_END + ((raw - STICK_SCROLL_START) / (STICK_SCROLL_END - STICK_SCROLL_START)) * (PARCEL_DROP_END - JOURNEY_DRONE_END)
-  }
-  return PARCEL_DROP_END + ((raw - STICK_SCROLL_END) / (1 - STICK_SCROLL_END)) * (1 - PARCEL_DROP_END)
-}
+import { HeroSection } from './components/sections/HeroSection'
+import { ProductsSection } from './components/sections/ProductsSection'
+import { TechnologySection } from './components/sections/TechnologySection'
+import { SolutionsSection } from './components/sections/SolutionsSection'
+import { MissionSection } from './components/sections/MissionSection'
 
-/**
- * Raw scroll 0→1 uses (vh - rect.top) / (sectionH + vh). When the sticky scene first pins (rect.top = 0),
- * raw is already vh/(sectionH+vh) > 0, so scene progress jumps mid-timeline. For the step copy (Hub / In flight /
- * Delivered) we remap so 0 = first frame of the pinned journey, 1 = end of section.
- */
-function narrativeProgressFromRaw(raw: number, sectionHeightPx: number, viewportHeight: number): number {
-  const rawAtPin = viewportHeight / (sectionHeightPx + viewportHeight)
-  if (raw <= rawAtPin) return 0
-  return Math.min(1, (raw - rawAtPin) / (1 - rawAtPin))
-}
+gsap.registerPlugin(ScrollTrigger)
 
-type JourneyScrollState = { scene: number; narrative: number }
+export default function App() {
+  useLenis()
 
-function JourneySection() {
-  const performance = useDevicePerformance()
-  const journeyFov = useResponsiveCanvasFov(50)
-  const sectionRef = useRef<HTMLElement>(null)
-  const { scene: scrollProgress, narrative: narrativeScroll } = useThrottledScrollProgress<JourneyScrollState>(
-    () => {
-      const el = sectionRef.current
-      if (!el) return { scene: 0, narrative: 0 }
-      const rect = el.getBoundingClientRect()
-      const viewportHeight = window.innerHeight
-      const sectionHeight = rect.height
-      if (rect.top >= viewportHeight || rect.bottom <= 0) return { scene: 0, narrative: 0 }
-      const raw = Math.max(0, Math.min(1, (viewportHeight - rect.top) / (sectionHeight + viewportHeight)))
-      return {
-        scene: stickScrollToProgress(raw),
-        narrative: narrativeProgressFromRaw(raw, sectionHeight, viewportHeight),
-      }
-    },
-    0.004,
-    []
-  )
-
-  const narrativePhase =
-    narrativeScroll < 0.28 ? 0 : narrativeScroll < 0.62 ? 1 : 2
-  const narrativeLines = [
-    'The drone leaves the hub. Autopilot on, route locked in.',
-    'Across the sky. Your package is under the drone, flying to the pod.',
-    'Parcel off the drone. Into the pod. Delivered.',
-  ]
-  const phaseLabels = ['Hub', 'In flight', 'Delivered']
-  // Crossfade: show current and next line for smooth transition
-  const narrativeOpacity = Math.min(1, narrativeScroll * 3.2 + 0.22)
+  useEffect(() => {
+    // Sync lenis with GSAP ScrollTrigger
+    ScrollTrigger.refresh()
+    return () => ScrollTrigger.killAll()
+  }, [])
 
   return (
-    <section
-      ref={sectionRef}
-      id="journey"
-      className="relative h-[320vh] sm:h-[380vh] md:h-[420vh] w-full bg-stone-50"
-    >
-      <div className="sticky top-0 h-[100dvh] min-h-[100svh] w-full overflow-hidden relative isolate">
-        {/* Soft top wash — reads with fixed glass nav (same stone surface family) */}
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-32 bg-gradient-to-b from-stone-50/95 via-stone-50/40 to-transparent"
-          aria-hidden
-        />
-        <Canvas
-          className={
-            performance.isLowEnd
-              ? 'absolute inset-0 z-0 h-full w-full touch-pan-y pointer-events-none'
-              : 'absolute inset-0 z-0 h-full w-full touch-pan-y pointer-events-none md:pointer-events-auto'
-          }
-          camera={{ position: [0, 3.4, 12.5], fov: journeyFov, near: 0.1, far: 200 }}
-          dpr={performance.dpr as [number, number]}
-          gl={{
-            antialias: performance.antialias,
-            alpha: false,
-            powerPreference: performance.glPowerPreference,
-          }}
-        >
-          <Suspense fallback={null}>
-            <JourneyScene scrollProgress={scrollProgress} />
-          </Suspense>
-        </Canvas>
-        <CanvasLoadOverlay />
-
-        {/* Delivery Receipt - materializes when parcel lands */}
-        <DeliveryReceipt scrollProgress={scrollProgress} />
-
-        {/* Story arc — .glass-panel in index.css (same frosted chrome as Header nav + DeliveryReceipt) */}
-        <div
-          className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none px-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:pb-8 md:px-12 md:pb-10"
-          aria-live="polite"
-        >
-          <div className="glass-panel max-w-2xl rounded-3xl px-4 py-4 sm:px-5 sm:py-5">
-            <div className="border-l-2 border-teal-500 pl-3 sm:pl-5 md:pl-6">
-            {/* Step counter */}
-            <p
-              className="text-[10px] font-medium uppercase tracking-[0.3em] text-teal-700 mb-4 transition-opacity duration-500"
-              style={{ opacity: narrativeOpacity }}
-            >
-              Step {narrativePhase + 1} of 3 · Your delivery
-            </p>
-
-            {/* Phase labels with connecting line */}
-            <div className="mb-6 flex items-center gap-2 flex-wrap">
-              {phaseLabels.map((label, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span
-                    className={`text-xs font-semibold uppercase tracking-widest transition-all duration-500 ${narrativePhase === i
-                      ? 'text-teal-700'
-                      : narrativePhase > i
-                        ? 'text-teal-600/85'
-                        : 'text-stone-400'
-                      }`}
-                  >
-                    {label}
-                  </span>
-                  {i < phaseLabels.length - 1 && (
-                    <div className="w-8 md:w-12 h-px bg-stone-200 overflow-hidden">
-                      <div
-                        className="h-full bg-teal-500 transition-all duration-700 ease-out"
-                        style={{
-                          width: narrativePhase > i ? '100%' : '0%',
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Narrative line with crossfade */}
-            <div className="relative min-h-[4rem] sm:min-h-[4.5rem] md:min-h-[3.5rem]">
-              {narrativeLines.map((line, i) => (
-                <p
-                  key={i}
-                  className="absolute left-0 right-0 top-0 text-sm sm:text-base md:text-lg text-stone-700 leading-relaxed transition-all duration-500"
-                  style={{
-                    opacity: narrativePhase === i ? narrativeOpacity : 0,
-                    transform:
-                      narrativePhase === i
-                        ? 'translateY(0)'
-                        : narrativePhase > i
-                          ? 'translateY(-10px)'
-                          : 'translateY(10px)',
-                    pointerEvents: 'none',
-                  }}
-                >
-                  {line}
-                </p>
-              ))}
-            </div>
-
-            {/* Story progress: filled path */}
-            <div className="mt-5 flex items-center gap-1">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="h-1 flex-1 max-w-20 rounded-full bg-stone-200 overflow-hidden"
-                >
-                  <div
-                    className="h-full bg-gradient-to-r from-teal-500 to-teal-600 rounded-full transition-all duration-700 ease-out"
-                    style={{
-                      width: narrativePhase >= i ? '100%' : '0%',
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function App() {
-  return (
-    <LenisProvider>
-      <AppSplashLoader />
-      <Cursor />
-      <div className="noise-overlay" aria-hidden />
+    <div className="min-h-screen bg-void text-primary antialiased">
+      <ScrollProgress />
       <Header />
-      <div
-        className={
-          showPaymentNoticeBar
-            ? 'pb-[calc(4.5rem+env(safe-area-inset-bottom))] sm:pb-[calc(3.75rem+env(safe-area-inset-bottom))]'
-            : undefined
-        }
-      >
-        <main>
-          <Hero />
-          <TransitionSection />
-          <JourneySection />
-          <StorySection />
-          <Benefits />
-          <Technology />
-          <PodNetwork />
-          <CTA />
-        </main>
-        <Footer />
-      </div>
-      <PaymentNoticeBar />
-    </LenisProvider>
+      <main>
+        <HeroSection />
+        <ProductsSection />
+        <TechnologySection />
+        <SolutionsSection />
+        <MissionSection />
+      </main>
+      <Footer />
+    </div>
   )
 }
-
-export default App
