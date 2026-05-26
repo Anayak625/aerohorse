@@ -3,6 +3,8 @@ import { motion } from 'framer-motion'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { ArrowRight, Battery, Camera, Radio, Wind, Shield, Wifi, Thermometer } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { TextReveal } from '../ui/TextReveal'
 import { cn } from '../../lib/utils'
 
 gsap.registerPlugin(ScrollTrigger)
@@ -19,6 +21,7 @@ interface Card {
   metric?: { value: string; unit: string }
   icon?: React.FC<{ className?: string }>
   accent: Accent
+  link?: string
 }
 
 const cards: Card[] = [
@@ -29,6 +32,7 @@ const cards: Card[] = [
     title: 'Guardian — Long-Range First Responder',
     desc: 'Autonomous deployment, thermal imaging, 2-way communication, and emergency lighting — on scene in under 70 seconds.',
     accent: 'gold',
+    link: '/guardian'
   },
   {
     id: 'battery',
@@ -53,6 +57,7 @@ const cards: Card[] = [
     title: 'Lemur 2',
     desc: 'Navigate doors, hallways, and confined spaces. Deliver audio communication without officer exposure.',
     accent: 'rose',
+    link: '/lemur'
   },
   {
     id: 'comms',
@@ -69,6 +74,7 @@ const cards: Card[] = [
     title: '1 in 3 Calls Cleared Without Dispatching a Unit',
     desc: 'AeroHorse DFR programs reduce officer exposure and free up resources for priority incidents.',
     accent: 'indigo',
+    link: '/dfr'
   },
   {
     id: 'wind',
@@ -145,26 +151,15 @@ function BentoCard({ card }: { card: Card }) {
   const a = accentStyles[card.accent]
   const Icon = card.icon
 
-  return (
-    <motion.div
-      whileHover={{ scale: 1.015, y: -2 }}
-      transition={{ duration: 0.22, ease: 'easeOut' }}
-      className={cn(
-        colSpan[card.size],
-        'shimmer-card glass border border-border/50 rounded-2xl p-5 lg:p-6 relative overflow-hidden group cursor-pointer',
-        'transition-all duration-300',
-        a.borderHover,
-        a.bgHover,
-      )}
-    >
-      {/* Accent top line */}
+  const innerContent = (
+    <>
       <div className={`absolute top-0 left-0 right-0 h-px bg-gradient-to-r ${a.topLine} opacity-0 group-hover:opacity-100 transition-opacity duration-400`} />
 
       {card.tag && <div className={`${a.chip} mb-4`}>{card.tag}</div>}
 
       {Icon && card.metric && (
-        <div className="mb-3">
-          <Icon className={`w-4 h-4 mb-3 ${a.iconColor}`} />
+        <div className="mb-3 group-hover:-translate-y-1 transition-transform duration-300">
+          <Icon className={`w-4 h-4 mb-3 ${a.iconColor} group-hover:scale-110 transition-transform`} />
           <div className="flex items-end gap-1.5">
             <span className={`metric text-[2.6rem] font-black leading-none ${a.metricColor}`}>
               {card.metric.value}
@@ -186,18 +181,41 @@ function BentoCard({ card }: { card: Card }) {
         <p className="mt-2 text-sm text-secondary leading-relaxed">{card.desc}</p>
       )}
 
-      {card.desc && (
-        <div className="mt-5 flex items-center gap-1.5 text-xs text-tertiary group-hover:text-gold transition-colors duration-200">
-          <span>Learn more</span>
-          <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+      {card.link && (
+        <div className="mt-5 flex items-center gap-1.5 text-xs text-tertiary group-hover:text-primary transition-colors duration-200">
+          <span>Explore Product</span>
+          <ArrowRight className={`w-3 h-3 group-hover:translate-x-0.5 transition-transform ${a.metricColor}`} />
         </div>
       )}
 
-      {/* Accent dot top-right */}
       <div className={cn(
         'absolute top-4 right-4 w-1.5 h-1.5 rounded-full animate-pulse-soft',
         card.accent === 'gold' ? 'bg-gold' : card.accent === 'rose' ? 'bg-rose' : 'bg-indigo'
       )} />
+    </>
+  )
+
+  const cardClasses = cn(
+    'block shimmer-card glass border border-border/50 rounded-2xl p-5 lg:p-6 relative overflow-hidden group cursor-interactive transition-all duration-300 h-full',
+    a.borderHover,
+    a.bgHover
+  );
+
+  return (
+    <motion.div
+      whileHover={{ scale: 1.015, y: -2 }}
+      transition={{ duration: 0.22, ease: 'easeOut' }}
+      className={cn(colSpan[card.size], 'h-full')}
+    >
+      {card.link ? (
+        <Link to={card.link} className={cardClasses} data-cursor="View">
+          {innerContent}
+        </Link>
+      ) : (
+        <div className={cardClasses}>
+          {innerContent}
+        </div>
+      )}
     </motion.div>
   )
 }
@@ -208,42 +226,39 @@ export function ProductsSection() {
   useEffect(() => {
     if (!ref.current) return
     const ctx = gsap.context(() => {
-      gsap.from('.prod-header', {
-        opacity: 0, y: 50, duration: 0.9, ease: 'power3.out',
-        scrollTrigger: { trigger: '.prod-header', start: 'top 85%', once: true },
-      })
       gsap.from('.bcard', {
         opacity: 0, y: 36, scale: 0.96, stagger: 0.07, duration: 0.65, ease: 'power2.out',
-        scrollTrigger: { trigger: '.bento', start: 'top 78%', once: true },
+        scrollTrigger: { trigger: '.bento', start: 'top 85%', once: true },
       })
     }, ref)
     return () => ctx.revert()
   }, [])
 
   return (
-    <section ref={ref} id="products" className="py-24 lg:py-36 relative overflow-hidden">
-      {/* Ambient blobs */}
-      <div className="absolute top-0 right-1/3 w-[500px] h-[500px] bg-gold/3 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-rose/3 blur-[100px] rounded-full pointer-events-none" />
+    <section ref={ref} id="products" className="py-16 lg:py-24 relative overflow-hidden">
+      <div className="absolute top-0 right-1/3 w-[500px] h-[500px] bg-gold/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-rose/5 blur-[100px] rounded-full pointer-events-none" />
 
       <div className="section-container">
         {/* Header */}
-        <div className="prod-header flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-14">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-10 lg:mb-12">
           <div className="space-y-5">
-            <span className="chip chip-gold">Our Fleet</span>
+            <span className="chip chip-gold opacity-0 animate-fade-up" style={{ animationDelay: '0.2s', animationFillMode: 'forwards' }}>Our Fleet</span>
             <h2 className="text-4xl lg:text-[3.25rem] font-black tracking-tight leading-tight text-primary">
-              End-to-End Programs
+              <TextReveal text="End-to-End Programs" type="words" delay={0.1} />
               <br />
-              <span className="text-gold">Built for Public Safety</span>
+              <span className="text-gold">
+                <TextReveal text="Built for Public Safety" type="words" delay={0.4} />
+              </span>
             </h2>
           </div>
-          <p className="max-w-sm text-sm text-secondary leading-relaxed lg:text-right">
+          <p className="max-w-sm text-sm text-secondary leading-relaxed lg:text-right opacity-0 animate-fade-up" style={{ animationDelay: '0.8s', animationFillMode: 'forwards' }}>
             Hardware, software, and services — fully supported by one partner, manufactured right here in the USA.
           </p>
         </div>
 
         {/* Bento */}
-        <div className="bento">
+        <div className="bento grid grid-cols-12 gap-4 lg:gap-6 auto-rows-fr">
           {cards.map(c => (
             <div key={c.id} className={cn('bcard', colSpan[c.size])}>
               <BentoCard card={c} />

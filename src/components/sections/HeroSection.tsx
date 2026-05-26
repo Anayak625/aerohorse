@@ -4,6 +4,8 @@ import { Float, Environment, MeshDistortMaterial } from '@react-three/drei'
 import { motion, AnimatePresence } from 'framer-motion'
 import { gsap } from 'gsap'
 import { ArrowRight, Shield, Zap, Users } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { TextReveal } from '../ui/TextReveal'
 import * as THREE from 'three'
 
 /* ── 3D Drone Body ── */
@@ -16,13 +18,10 @@ function DroneGeometry() {
   })
   return (
     <group ref={group}>
-      {/* Body */}
       <mesh castShadow>
         <boxGeometry args={[0.7, 0.12, 0.7]} />
         <meshStandardMaterial color="#1a2332" metalness={0.92} roughness={0.08} envMapIntensity={2.5} />
       </mesh>
-
-      {/* Arms + propellers */}
       {[45, 135, 225, 315].map((deg, i) => {
         const r = (deg * Math.PI) / 180
         const px = Math.cos(r) * 0.65
@@ -33,12 +32,10 @@ function DroneGeometry() {
               <boxGeometry args={[0.55, 0.035, 0.05]} />
               <meshStandardMaterial color="#111827" metalness={0.95} roughness={0.05} />
             </mesh>
-            {/* Motor */}
             <mesh position={[0, 0.035, 0]}>
               <cylinderGeometry args={[0.09, 0.09, 0.07, 16]} />
               <meshStandardMaterial color="#1e2d3d" metalness={0.85} roughness={0.15} />
             </mesh>
-            {/* Propeller */}
             <mesh position={[0, 0.09, 0]}>
               <boxGeometry args={[0.65, 0.008, 0.05]} />
               <MeshDistortMaterial
@@ -51,14 +48,10 @@ function DroneGeometry() {
           </group>
         )
       })}
-
-      {/* Camera ball */}
       <mesh position={[0, -0.1, 0.22]}>
         <sphereGeometry args={[0.07, 20, 20]} />
         <meshStandardMaterial color="#f59e0b" emissive="#d97706" emissiveIntensity={0.6} metalness={0.9} roughness={0.1} />
       </mesh>
-
-      {/* Front LEDs */}
       {[[-0.3, 0, -0.3], [0.3, 0, -0.3]].map(([x, y, z], i) => (
         <mesh key={i} position={[x, y, z]}>
           <sphereGeometry args={[0.022, 8, 8]} />
@@ -95,7 +88,6 @@ function AmbientRings() {
   )
 }
 
-/* ── Cycling words ── */
 const WORDS = ['Autonomous.', 'Lifesaving.', 'Responsive.', 'Intelligent.']
 
 function RotatingWord() {
@@ -108,11 +100,11 @@ function RotatingWord() {
     <AnimatePresence mode="wait">
       <motion.span
         key={i}
-        initial={{ opacity: 0, y: 16, filter: 'blur(6px)' }}
-        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-        exit={{ opacity: 0, y: -16, filter: 'blur(6px)' }}
-        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-        className="text-gold"
+        initial={{ opacity: 0, y: 20, filter: 'blur(8px)', rotateX: -30 }}
+        animate={{ opacity: 1, y: 0, filter: 'blur(0px)', rotateX: 0 }}
+        exit={{ opacity: 0, y: -20, filter: 'blur(8px)', rotateX: 30 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        className="text-gold inline-block origin-bottom"
       >
         {WORDS[i]}
       </motion.span>
@@ -133,58 +125,51 @@ export function HeroSection() {
     if (!ref.current) return
     const ctx = gsap.context(() => {
       gsap.from('.h-chip',  { opacity: 0, y: 20, duration: 0.6, delay: 0.1 })
-      gsap.from('.h-title', { opacity: 0, y: 30, duration: 0.8, delay: 0.25, ease: 'power3.out' })
-      gsap.from('.h-sub',   { opacity: 0, y: 20, duration: 0.7, delay: 0.5 })
-      gsap.from('.h-ctas',  { opacity: 0, y: 20, duration: 0.6, delay: 0.7 })
-      gsap.from('.h-stat',  { opacity: 0, y: 20, stagger: 0.1, duration: 0.6, delay: 0.9 })
+      gsap.from('.h-ctas',  { opacity: 0, y: 20, duration: 0.6, delay: 0.9 })
+      gsap.from('.h-stat',  { opacity: 0, y: 20, stagger: 0.1, duration: 0.6, delay: 1.1 })
     }, ref)
     return () => ctx.revert()
   }, [])
 
   return (
-    <section ref={ref} className="relative min-h-screen flex flex-col overflow-hidden pt-32">
-      {/* Background layers */}
-      <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
-      <div className="absolute inset-0 bg-radial-soft pointer-events-none" />
-      <div className="absolute inset-0 bg-radial-rose pointer-events-none" />
-      <div className="absolute inset-0 bg-radial-indigo pointer-events-none" />
-
-      <div className="section-container relative z-10 flex flex-col lg:flex-row items-center gap-12 lg:gap-20 flex-1 py-12">
-        {/* ── Left: Text ── */}
-        <div className="flex-1 flex flex-col gap-6 max-w-xl">
-          <div className="h-chip">
-            <span className="chip chip-sage">
+    <section ref={ref} className="relative min-h-screen flex flex-col pt-32 pb-6 cursor-interactive" data-cursor="Scroll">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.08),transparent_70%)] pointer-events-none" />
+      
+      <div className="section-container relative z-10 flex flex-col lg:flex-row items-center gap-12 lg:gap-20 flex-1 py-6 lg:py-8">
+        <div className="flex-1 flex flex-col gap-6 max-w-xl relative z-20">
+          <div className="h-chip w-fit">
+            <span className="chip chip-sage cursor-interactive" data-cursor="View Fleet">
               <span className="live-dot" />
               Live Deployments — Guardian Fleet
             </span>
           </div>
 
-          <h1 className="h-title text-5xl sm:text-6xl lg:text-[4.5rem] font-black tracking-tight leading-[1.05] text-primary">
-            Drones That Are
-            <br />
+          <h1 className="text-5xl sm:text-6xl lg:text-[4.5rem] font-black tracking-tight leading-[1.05] text-primary" style={{ perspective: '1000px', lineHeight:'4.4rem' }}>
+            <TextReveal text="Drones That Are" type="words" delay={0.2} />
             <RotatingWord />
           </h1>
 
-          <p className="h-sub text-base lg:text-lg text-secondary leading-relaxed">
-            AeroHorse delivers a connected ecosystem of autonomous drones, AI software,
-            and intelligent docking stations — built exclusively for public safety in the USA.
-          </p>
+          <TextReveal 
+            text="AeroHorse delivers a connected ecosystem of autonomous drones, AI software, and intelligent docking stations — built exclusively for public safety in the USA."
+            type="words"
+            delay={0.6}
+            className="text-base lg:text-lg text-secondary leading-relaxed"
+          />
 
-          <div className="h-ctas flex flex-wrap gap-3">
-            <a href="#contact" className="btn-primary group">
+          <div className="h-ctas flex flex-wrap gap-4">
+            <Link to="/contact" className="btn-primary group cursor-interactive" data-cursor="Book">
               Request a Demo
               <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-            </a>
-            <a href="#products" className="btn-outline">
+            </Link>
+            <Link to="/guardian" className="btn-outline cursor-interactive" data-cursor="Guardian">
               Explore Fleet
-            </a>
+            </Link>
           </div>
 
-          {/* Stats */}
-          <div className="h-stat grid grid-cols-3 gap-4 pt-8 mt-2 border-t border-border/40">
+          <div className="h-stat grid grid-cols-3 gap-4 pt-6 border-t border-border/40">
             {stats.map(({ value, label, icon: Icon, color }) => (
-              <div key={label} className="flex flex-col gap-1.5">
-                <Icon className={`w-4 h-4 ${color === 'text-gold' ? 'text-gold' : color === 'text-rose-grad' ? 'text-rose' : 'text-indigo'} opacity-70`} />
+              <div key={label} className="flex flex-col gap-1.5 group cursor-interactive">
+                <Icon className={`w-4 h-4 ${color === 'text-gold' ? 'text-gold' : color === 'text-rose-grad' ? 'text-rose' : 'text-indigo'} opacity-70 group-hover:scale-110 transition-transform`} />
                 <span className={`metric font-black text-2xl text-primary`}>{value}</span>
                 <p className="text-xs text-tertiary leading-tight">{label}</p>
               </div>
@@ -192,21 +177,18 @@ export function HeroSection() {
           </div>
         </div>
 
-        {/* ── Right: 3D canvas ── */}
-        <div className="flex-1 h-[420px] lg:h-[560px] w-full relative">
-          {/* Corner brackets */}
+        <div className="flex-1 h-[380px] lg:h-[500px] w-full relative group">
           {['top-0 left-0 border-t border-l', 'top-0 right-0 border-t border-r', 'bottom-0 left-0 border-b border-l', 'bottom-0 right-0 border-b border-r'].map((cls, i) => (
-            <div key={i} className={`absolute w-6 h-6 ${cls} border-gold/30 z-10`} />
+            <div key={i} className={`absolute w-6 h-6 ${cls} border-gold/30 z-10 opacity-50 group-hover:opacity-100 transition-opacity`} />
           ))}
 
-          {/* HUD overlays */}
-          <div className="absolute top-4 right-5 z-10 font-mono text-xs text-secondary/60 text-right space-y-0.5">
+          <div className="absolute top-4 right-5 z-10 font-mono text-xs text-secondary/60 text-right space-y-0.5 pointer-events-none">
             <div>UNIT · GRD-007</div>
             <div>ALT · 120m AGL</div>
             <div>BATT · 94%</div>
-            <div className="text-sage">ONLINE</div>
+            <div className="text-sage animate-pulse">ONLINE</div>
           </div>
-          <div className="absolute bottom-4 left-5 z-10 font-mono text-xs text-secondary/60">
+          <div className="absolute bottom-4 left-5 z-10 font-mono text-xs text-secondary/60 pointer-events-none">
             <span className="text-gold">LIVE</span> · 4K / 60fps · ENC
           </div>
 
@@ -214,6 +196,7 @@ export function HeroSection() {
             camera={{ position: [0, 0.6, 3.8], fov: 42 }}
             gl={{ antialias: true, alpha: true }}
             style={{ background: 'transparent' }}
+            className="pointer-events-none"
           >
             <ambientLight intensity={0.4} />
             <pointLight position={[3, 3, 3]} color="#f59e0b" intensity={2.5} />
@@ -228,8 +211,7 @@ export function HeroSection() {
         </div>
       </div>
 
-      {/* Scroll cue */}
-      <div className="relative z-10 flex justify-center pb-10">
+      <div className="relative z-10 flex justify-center pb-6 mt-auto">
         <motion.div
           animate={{ y: [0, 10, 0] }}
           transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}

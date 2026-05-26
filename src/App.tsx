@@ -1,41 +1,41 @@
-import React, { useEffect } from 'react'
-import { gsap } from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { useLenis } from './hooks/useLenis'
+import React from 'react';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 
-import { ScrollProgress } from './components/ui/ScrollProgress'
-import { Header } from './components/ui/Header'
-import { Footer } from './components/ui/Footer'
+import { Layout } from './components/Layout';
 
-import { HeroSection } from './components/sections/HeroSection'
-import { ProductsSection } from './components/sections/ProductsSection'
-import { TechnologySection } from './components/sections/TechnologySection'
-import { SolutionsSection } from './components/sections/SolutionsSection'
-import { MissionSection } from './components/sections/MissionSection'
+// Pages
+import { HomePage } from './pages/HomePage';
+import { GuardianPage } from './pages/GuardianPage';
+import { LemurPage } from './pages/LemurPage';
+import { DFRPage } from './pages/DFRPage';
+import { SolutionsPage } from './pages/SolutionsPage';
+import { ContactPage } from './pages/ContactPage';
 
-gsap.registerPlugin(ScrollTrigger)
+// Wrapper for AnimatePresence to work with routes
+function AnimatedRoutes() {
+  const location = useLocation();
+  
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/guardian" element={<GuardianPage />} />
+        <Route path="/lemur" element={<LemurPage />} />
+        <Route path="/dfr" element={<DFRPage />} />
+        <Route path="/solutions" element={<SolutionsPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+      </Routes>
+    </AnimatePresence>
+  );
+}
 
 export default function App() {
-  useLenis()
-
-  useEffect(() => {
-    // Sync lenis with GSAP ScrollTrigger
-    ScrollTrigger.refresh()
-    return () => ScrollTrigger.killAll()
-  }, [])
-
   return (
-    <div className="min-h-screen bg-void text-primary antialiased">
-      <ScrollProgress />
-      <Header />
-      <main>
-        <HeroSection />
-        <ProductsSection />
-        <TechnologySection />
-        <SolutionsSection />
-        <MissionSection />
-      </main>
-      <Footer />
-    </div>
-  )
+    <BrowserRouter>
+      <Layout>
+        <AnimatedRoutes />
+      </Layout>
+    </BrowserRouter>
+  );
 }
