@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react'
+import { useRef, useEffect } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { motion } from 'framer-motion'
@@ -18,6 +18,7 @@ const solutions = [
     body: 'Deploy a drone the instant a 911 call comes in. Stream live 4K video, assess threats, and even de-escalate — before the first unit arrives.',
     metrics: [{ label: 'Faster Assessment', value: '3.4×' }, { label: 'Risk Reduction', value: '62%' }],
     metricColor: 'text-gold',
+    hoverText: 'group-hover:text-gold',
     borderGlow: 'hover:border-gold/25 hover:shadow-gold',
     topBar: 'bg-gradient-to-r from-gold/60 to-goldDim/20',
     link: '/solutions'
@@ -31,6 +32,7 @@ const solutions = [
     body: 'From station to scene in under 70 seconds, fully autonomous. AeroHorse\'s DFR program works 24/7 with no pilot required.',
     metrics: [{ label: 'Avg. Arrival', value: '< 70s' }, { label: 'Calls Cleared', value: '1 in 3' }],
     metricColor: 'text-rose',
+    hoverText: 'group-hover:text-rose',
     borderGlow: 'hover:border-rose/25 hover:shadow-rose',
     topBar: 'bg-gradient-to-r from-rose/60 to-roseDim/20',
     link: '/dfr'
@@ -44,6 +46,7 @@ const solutions = [
     body: 'Thermal imaging, wide-area search patterns, and real-time terrain mapping help SAR teams cover ground in a fraction of the time.',
     metrics: [{ label: 'Search Area/hr', value: '12 km²' }, { label: 'Success Rate', value: '↑ 78%' }],
     metricColor: 'text-indigo',
+    hoverText: 'group-hover:text-indigo',
     borderGlow: 'hover:border-indigo/25 hover:shadow-indigo',
     topBar: 'bg-gradient-to-r from-indigo/60 to-indigoDim/20',
     link: '/solutions'
@@ -57,6 +60,7 @@ const solutions = [
     body: 'Give incident commanders a real-time aerial view of structure fires, wildland incidents, and hazmat scenes — live, from a safe altitude.',
     metrics: [{ label: 'Perimeter Mapping', value: 'Live' }, { label: 'IR Detection', value: '640p' }],
     metricColor: 'text-sage',
+    hoverText: 'group-hover:text-sage',
     borderGlow: 'hover:border-sage/25',
     topBar: 'bg-gradient-to-r from-sage/60 to-sageDim/20',
     link: '/solutions'
@@ -80,7 +84,7 @@ export function SolutionsSection() {
   return (
     <section ref={ref} id="solutions" className="py-16 lg:py-24 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-ink/50 to-transparent pointer-events-none" />
-      <div className="absolute right-0 top-1/3 w-[400px] h-[500px] bg-rose/3 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute right-0 top-1/3 w-[400px] h-[500px] bg-rose/[0.03] blur-[120px] rounded-full pointer-events-none" />
 
       <div className="section-container">
         <div className="flex flex-col gap-5 mb-10 lg:mb-12 max-w-xl">
@@ -136,7 +140,7 @@ export function SolutionsSection() {
                     ))}
                   </div>
 
-                  <div className={`flex items-center gap-2 text-xs text-tertiary group-hover:${sol.metricColor} transition-colors duration-200 mt-auto pt-2`}>
+                  <div className={`flex items-center gap-2 text-xs text-tertiary ${sol.hoverText} transition-colors duration-200 mt-auto pt-2`}>
                     <span>See use cases</span>
                     <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                   </div>

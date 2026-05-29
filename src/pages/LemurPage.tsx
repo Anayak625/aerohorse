@@ -1,4 +1,3 @@
-import React from 'react';
 import { PageTransition } from '../components/ui/PageTransition';
 import { TextReveal } from '../components/ui/TextReveal';
 import { Shield, Radio, Volume2, Video } from 'lucide-react';

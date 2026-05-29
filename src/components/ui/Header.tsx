@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Wind, ChevronDown } from 'lucide-react';
@@ -11,21 +11,23 @@ export function Header() {
   const location = useLocation();
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 50);
+    const onScroll = () => {
+      setScrolled(window.scrollY > 50);
+      setActiveDropdown(null);
+    };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   // Close menus on route change
   useEffect(() => {
-    setMobileOpen(false);
-    setActiveDropdown(null);
-  }, [location.pathname]);
+    const frame = window.requestAnimationFrame(() => {
+      setMobileOpen(false);
+      setActiveDropdown(null);
+    });
 
-  const toggleDropdown = (name: string) => {
-    if (activeDropdown === name) setActiveDropdown(null);
-    else setActiveDropdown(name);
-  };
+    return () => window.cancelAnimationFrame(frame);
+  }, [location.pathname]);
 
   return (
     <motion.header
@@ -68,7 +70,11 @@ export function Header() {
               onMouseEnter={() => setActiveDropdown('products')}
               onMouseLeave={() => setActiveDropdown(null)}
             >
-              <button className="px-4 py-2 text-sm text-secondary hover:text-primary transition-colors duration-200 rounded-lg flex items-center gap-1 cursor-interactive">
+              <button
+                type="button"
+                aria-expanded={activeDropdown === 'products'}
+                className="px-4 py-2 text-sm text-secondary hover:text-primary transition-colors duration-200 rounded-lg flex items-center gap-1 cursor-interactive"
+              >
                 Products
                 <ChevronDown className={cn("w-3 h-3 transition-transform duration-300", activeDropdown === 'products' ? "rotate-180" : "")} />
               </button>
@@ -131,6 +137,9 @@ export function Header() {
 
           {/* Mobile toggle */}
           <button
+            type="button"
+            aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
+            aria-expanded={mobileOpen}
             onClick={() => setMobileOpen(!mobileOpen)}
             className="md:hidden p-2 rounded-lg border border-border/60 text-secondary hover:text-primary hover:border-border transition-colors cursor-interactive"
           >

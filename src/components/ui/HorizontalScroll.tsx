@@ -1,11 +1,11 @@
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect, type ReactNode } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
 
 interface HorizontalScrollProps {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }
 
@@ -17,7 +17,7 @@ export function HorizontalScroll({ children, className = '' }: HorizontalScrollP
     if (!containerRef.current || !trackRef.current) return;
     
     // We want the total scroll distance to match the width of the track minus viewport width
-    const panels = gsap.utils.toArray('.horizontal-scroll-panel', trackRef.current);
+    const panels = gsap.utils.toArray<HTMLElement>('.horizontal-scroll-panel', trackRef.current);
     
     if (panels.length < 2) return; // Need at least 2 panels to scroll
 
@@ -41,7 +41,7 @@ export function HorizontalScroll({ children, className = '' }: HorizontalScrollP
       });
       
       // We can also trigger animations within each panel as they come into view
-      panels.forEach((panel: any, i) => {
+      panels.forEach((panel) => {
         // Find elements to animate inside panel
         const animElements = panel.querySelectorAll('.panel-anim');
         if (animElements.length > 0) {

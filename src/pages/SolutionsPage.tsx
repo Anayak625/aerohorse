@@ -1,7 +1,6 @@
-import React from 'react';
 import { PageTransition } from '../components/ui/PageTransition';
 import { TextReveal } from '../components/ui/TextReveal';
-import { ArrowRight, Flame, Shield, Users } from 'lucide-react';
+import { Flame, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export function SolutionsPage() {

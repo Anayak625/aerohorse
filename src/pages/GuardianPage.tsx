@@ -1,4 +1,3 @@
-import React, { useRef, useEffect } from 'react';
 import { PageTransition } from '../components/ui/PageTransition';
 import { TextReveal } from '../components/ui/TextReveal';
 import { HorizontalScroll } from '../components/ui/HorizontalScroll';

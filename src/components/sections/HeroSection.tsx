@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Float, Environment, MeshDistortMaterial } from '@react-three/drei'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -132,19 +132,19 @@ export function HeroSection() {
   }, [])
 
   return (
-    <section ref={ref} className="relative min-h-screen flex flex-col pt-32 pb-6 cursor-interactive" data-cursor="Scroll">
+    <section ref={ref} className="relative min-h-screen flex flex-col pt-32 pb-6">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.08),transparent_70%)] pointer-events-none" />
       
       <div className="section-container relative z-10 flex flex-col lg:flex-row items-center gap-12 lg:gap-20 flex-1 py-6 lg:py-8">
         <div className="flex-1 flex flex-col gap-6 max-w-xl relative z-20">
           <div className="h-chip w-fit">
-            <span className="chip chip-sage cursor-interactive" data-cursor="View Fleet">
+            <span className="chip chip-sage">
               <span className="live-dot" />
               Live Deployments — Guardian Fleet
             </span>
           </div>
 
-          <h1 className="text-5xl sm:text-6xl lg:text-[4.5rem] font-black tracking-tight leading-[1.05] text-primary" style={{ perspective: '1000px', lineHeight:'4.4rem' }}>
+          <h1 className="text-5xl sm:text-6xl lg:text-[4.5rem] font-black tracking-tight leading-[1.02] text-primary" style={{ perspective: '1000px' }}>
             <TextReveal text="Drones That Are" type="words" delay={0.2} />
             <RotatingWord />
           </h1>
@@ -168,7 +168,7 @@ export function HeroSection() {
 
           <div className="h-stat grid grid-cols-3 gap-4 pt-6 border-t border-border/40">
             {stats.map(({ value, label, icon: Icon, color }) => (
-              <div key={label} className="flex flex-col gap-1.5 group cursor-interactive">
+              <div key={label} className="flex flex-col gap-1.5 group">
                 <Icon className={`w-4 h-4 ${color === 'text-gold' ? 'text-gold' : color === 'text-rose-grad' ? 'text-rose' : 'text-indigo'} opacity-70 group-hover:scale-110 transition-transform`} />
                 <span className={`metric font-black text-2xl text-primary`}>{value}</span>
                 <p className="text-xs text-tertiary leading-tight">{label}</p>
@@ -194,7 +194,8 @@ export function HeroSection() {
 
           <Canvas
             camera={{ position: [0, 0.6, 3.8], fov: 42 }}
-            gl={{ antialias: true, alpha: true }}
+            dpr={[1, 1.35]}
+            gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
             style={{ background: 'transparent' }}
             className="pointer-events-none"
           >

@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { useLenis } from '../hooks/useLenis';
+import { getLenis, useLenis } from '../hooks/useLenis';
 
 import { Header } from './ui/Header';
 import { Footer } from './ui/Footer';
@@ -23,11 +23,18 @@ export function Layout({ children }: LayoutProps) {
 
   // Scroll to top on route change
   useEffect(() => {
-    window.scrollTo(0, 0);
-    // Give DOM a moment to update then refresh ScrollTrigger
-    setTimeout(() => {
+    const lenis = getLenis();
+    if (lenis) {
+      lenis.scrollTo(0, { immediate: true, force: true });
+    } else {
+      window.scrollTo(0, 0);
+    }
+
+    const refresh = window.setTimeout(() => {
       ScrollTrigger.refresh();
     }, 100);
+
+    return () => window.clearTimeout(refresh);
   }, [location.pathname]);
 
   return (

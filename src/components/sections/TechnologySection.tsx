@@ -1,9 +1,9 @@
-import React, { useRef, useEffect } from 'react'
+import { useRef, useEffect } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { motion } from 'framer-motion'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, Environment } from '@react-three/drei'
+import { Environment } from '@react-three/drei'
 import { TextReveal } from '../ui/TextReveal'
 import * as THREE from 'three'
 
@@ -16,6 +16,8 @@ const steps = [
     body: 'The moment a call is logged in your CAD system, the DFR trigger activates automatically — zero manual steps.',
     badge: 'T + 0s',
     color: 'border-gold/30 text-gold',
+    hover: 'group-hover:border-gold/50 group-hover:shadow-gold/20',
+    number: 'group-hover:text-gold',
   },
   {
     num: '02',
@@ -23,6 +25,8 @@ const steps = [
     body: 'The nearest Guardian drone lifts off from its dock and navigates to the scene via pre-approved flight corridors.',
     badge: 'T + 5s',
     color: 'border-rose/30 text-rose',
+    hover: 'group-hover:border-rose/50 group-hover:shadow-rose/20',
+    number: 'group-hover:text-rose',
   },
   {
     num: '03',
@@ -30,6 +34,8 @@ const steps = [
     body: '4K thermal video, GPS location, and 2-way audio stream directly to dispatch and responding units in real time.',
     badge: 'T + 70s',
     color: 'border-indigo/30 text-indigo',
+    hover: 'group-hover:border-indigo/50 group-hover:shadow-indigo/20',
+    number: 'group-hover:text-indigo',
   },
   {
     num: '04',
@@ -37,6 +43,8 @@ const steps = [
     body: '1 in 3 calls cleared by drone alone. For the rest, officers arrive with full situational awareness.',
     badge: 'T + 5min',
     color: 'border-sage/30 text-sage',
+    hover: 'group-hover:border-sage/50 group-hover:shadow-sage/20',
+    number: 'group-hover:text-sage',
   },
 ]
 
@@ -144,12 +152,10 @@ export function TechnologySection() {
                 <div className={cn_simple(
                   'flex-shrink-0 w-12 h-12 rounded-xl border flex items-center justify-center z-10 transition-all duration-300',
                   'bg-deep group-hover:bg-panel shadow-sm',
-                  step.color.includes('gold') ? 'group-hover:border-gold/50 group-hover:shadow-gold/20' :
-                  step.color.includes('rose') ? 'group-hover:border-rose/50 group-hover:shadow-rose/20' :
-                  step.color.includes('indigo') ? 'group-hover:border-indigo/50 group-hover:shadow-indigo/20' : 'group-hover:border-sage/50 group-hover:shadow-sage/20',
+                  step.hover,
                   'border-border/60'
                 )}>
-                  <span className={`font-mono text-sm font-bold transition-colors duration-300 text-tertiary group-hover:${step.color.split(' ')[1]}`}>
+                  <span className={`font-mono text-sm font-bold transition-colors duration-300 text-tertiary ${step.number}`}>
                     {step.num}
                   </span>
                 </div>
@@ -169,17 +175,21 @@ export function TechnologySection() {
             ))}
           </div>
 
-          <div className="h-[400px] lg:h-[500px] relative group cursor-interactive" data-cursor="Rotate">
+          <div className="h-[400px] lg:h-[500px] relative group cursor-interactive" data-cursor="View">
             {['top-0 left-0 border-t border-l', 'top-0 right-0 border-t border-r', 'bottom-0 left-0 border-b border-l', 'bottom-0 right-0 border-b border-r'].map((cls, i) => (
               <div key={i} className={`absolute w-6 h-6 ${cls} border-gold/30 z-10 opacity-50 group-hover:opacity-100 transition-opacity duration-300`} />
             ))}
             <div className="absolute top-4 left-5 z-10 font-mono text-xs text-secondary/50 pointer-events-none">AI CORE · v3.2</div>
             <div className="absolute bottom-4 right-5 z-10 font-mono text-xs text-secondary/50 pointer-events-none">ENCRYPTED</div>
 
-            <Canvas camera={{ position: [0, 0, 5], fov: 42 }} gl={{ antialias: true, alpha: true }} className="group-hover:scale-105 transition-transform duration-1000">
+            <Canvas
+              camera={{ position: [0, 0, 5], fov: 42 }}
+              dpr={[1, 1.35]}
+              gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+              className="pointer-events-none group-hover:scale-[1.02] transition-transform duration-700"
+            >
               <Environment preset="sunset" />
               <OrbScene />
-              <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.8} />
             </Canvas>
           </div>
         </div>

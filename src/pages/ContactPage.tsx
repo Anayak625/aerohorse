@@ -1,4 +1,3 @@
-import React from 'react';
 import { PageTransition } from '../components/ui/PageTransition';
 import { Send, MapPin, Mail, Phone } from 'lucide-react';
 

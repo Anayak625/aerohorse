@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 
 export function MagneticCursor() {
@@ -7,9 +7,8 @@ export function MagneticCursor() {
   const textRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // We only want the custom cursor on desktop
-    const isTouch = matchMedia('(hover: none) and (pointer: coarse)').matches;
-    if (isTouch) return;
+    const supportsFinePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    if (!supportsFinePointer) return;
 
     let mouseX = window.innerWidth / 2;
     let mouseY = window.innerHeight / 2;
@@ -17,74 +16,95 @@ export function MagneticCursor() {
     let dotY = mouseY;
     let ringX = mouseX;
     let ringY = mouseY;
-    
-    // Track mouse
-    const onMouseMove = (e: MouseEvent) => {
+    let currentTarget: HTMLElement | null = null;
+    let hasMoved = false;
+
+    const interactiveSelector = [
+      'a',
+      'button',
+      'input',
+      'textarea',
+      'select',
+      '[role="button"]',
+      '[data-cursor]',
+    ].join(',');
+
+    document.documentElement.classList.add('custom-cursor-active');
+
+    const setCursorTarget = (target: HTMLElement | null) => {
+      if (target === currentTarget) return;
+      currentTarget = target;
+
+      if (!target || target.hasAttribute('disabled') || target.getAttribute('aria-disabled') === 'true') {
+        document.body.classList.remove('cursor-hover');
+        if (textRef.current) textRef.current.textContent = '';
+        return;
+      }
+
+      document.body.classList.add('cursor-hover');
+      if (textRef.current) {
+        textRef.current.textContent = target.getAttribute('data-cursor') || '';
+      }
+    };
+
+    const resolveTarget = (target: EventTarget | null) => {
+      if (!(target instanceof Element)) return null;
+      return target.closest<HTMLElement>(interactiveSelector);
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
       mouseX = e.clientX;
       mouseY = e.clientY;
+      hasMoved = true;
+      setCursorTarget(resolveTarget(e.target));
+    };
+
+    const onPointerOut = (e: PointerEvent) => {
+      if (!e.relatedTarget) {
+        setCursorTarget(null);
+        hasMoved = false;
+      }
+    };
+
+    const onBlur = () => {
+      setCursorTarget(null);
+      hasMoved = false;
     };
     
-    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('pointerout', onPointerOut, { passive: true });
+    window.addEventListener('blur', onBlur);
 
-    // Animation loop for smooth trailing
-    const ticker = gsap.ticker.add(() => {
-      // Dot follows closely
+    const ticker = () => {
       dotX += (mouseX - dotX) * 0.4;
       dotY += (mouseY - dotY) * 0.4;
-      
-      // Ring trails behind
       ringX += (mouseX - ringX) * 0.15;
       ringY += (mouseY - ringY) * 0.15;
 
       if (dotRef.current) {
-        dotRef.current.style.left = `${dotX}px`;
-        dotRef.current.style.top = `${dotY}px`;
+        dotRef.current.style.transform = `translate3d(${dotX}px, ${dotY}px, 0) translate(-50%, -50%)`;
+        dotRef.current.style.opacity = hasMoved ? '1' : '0';
       }
       
       if (ringRef.current) {
-        ringRef.current.style.left = `${ringX}px`;
-        ringRef.current.style.top = `${ringY}px`;
+        ringRef.current.style.transform = `translate3d(${ringX}px, ${ringY}px, 0) translate(-50%, -50%)`;
+        ringRef.current.style.opacity = hasMoved && !currentTarget ? '1' : '0';
       }
 
       if (textRef.current) {
-        textRef.current.style.left = `${dotX}px`;
-        textRef.current.style.top = `${dotY}px`;
+        textRef.current.style.transform = `translate3d(${dotX}px, ${dotY}px, 0) translate(-50%, -50%)`;
       }
-    });
-
-    // Hover interactions
-    const addHoverStates = () => {
-      const interactiveElements = document.querySelectorAll('a, button, .cursor-interactive');
-      
-      interactiveElements.forEach((el) => {
-        el.addEventListener('mouseenter', () => {
-          document.body.classList.add('cursor-hover');
-          // If it's a specific product card or something, we can add text
-          const cursorText = el.getAttribute('data-cursor');
-          if (cursorText && textRef.current) {
-            textRef.current.innerText = cursorText;
-          } else if (textRef.current) {
-             textRef.current.innerText = '';
-          }
-        });
-        
-        el.addEventListener('mouseleave', () => {
-          document.body.classList.remove('cursor-hover');
-          if (textRef.current) textRef.current.innerText = '';
-        });
-      });
     };
 
-    addHoverStates();
-
-    // Re-bind hover states when DOM changes (simple MutationObserver)
-    const observer = new MutationObserver(addHoverStates);
-    observer.observe(document.body, { childList: true, subtree: true });
+    gsap.ticker.add(ticker);
 
     return () => {
-      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerout', onPointerOut);
+      window.removeEventListener('blur', onBlur);
       gsap.ticker.remove(ticker);
-      observer.disconnect();
+      document.body.classList.remove('cursor-hover');
+      document.documentElement.classList.remove('custom-cursor-active');
     };
   }, []);
 

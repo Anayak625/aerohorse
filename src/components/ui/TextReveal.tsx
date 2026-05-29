@@ -17,8 +17,12 @@ export function TextReveal({ text, className = '', type = 'chars', delay = 0 }: 
   useEffect(() => {
     if (!containerRef.current) return;
     
-    // Select elements based on type
     const elements = containerRef.current.querySelectorAll(type === 'chars' ? '.split-char' : '.split-word');
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      gsap.set(elements, { opacity: 1, y: 0, rotateX: 0 });
+      return;
+    }
     
     const ctx = gsap.context(() => {
       gsap.to(elements, {
@@ -32,12 +36,13 @@ export function TextReveal({ text, className = '', type = 'chars', delay = 0 }: 
         scrollTrigger: {
           trigger: containerRef.current,
           start: 'top 85%',
+          once: true,
         }
       });
     }, containerRef);
     
     return () => ctx.revert();
-  }, [type, delay]);
+  }, [text, type, delay]);
 
   // Split logic
   const renderContent = () => {
@@ -49,12 +54,17 @@ export function TextReveal({ text, className = '', type = 'chars', delay = 0 }: 
       ));
     }
     
-    return text.split(' ').map((word, i) => (
-      <span key={i} className="inline-block overflow-hidden mr-2">
-        <span className="split-word" style={{ opacity: 0, transform: 'translateY(100%)' }}>
-          {word}
+    const words = text.split(' ');
+
+    return words.map((word, i) => (
+      <React.Fragment key={`${word}-${i}`}>
+        <span className="inline-block overflow-hidden mr-[0.25em]">
+          <span className="split-word" style={{ opacity: 0, transform: 'translateY(100%)' }}>
+            {word}
+          </span>
         </span>
-      </span>
+        {i < words.length - 1 ? ' ' : null}
+      </React.Fragment>
     ));
   };
 
