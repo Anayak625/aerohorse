@@ -1,5 +1,6 @@
 import { PageTransition } from '../components/ui/PageTransition';
 import { Send, MapPin, Mail, Phone } from 'lucide-react';
+import { contact } from '../lib/site';
 
 export function ContactPage() {
   return (
@@ -68,19 +69,19 @@ export function ContactPage() {
                 <div className="glass p-8 rounded-2xl border-border/50 cursor-interactive">
                   <MapPin className="w-6 h-6 text-gold mb-4" />
                   <h3 className="font-bold mb-2">Headquarters</h3>
-                  <p className="text-sm text-secondary">123 Aviation Blvd.<br/>Seattle, WA 98108<br/>United States</p>
+                  <p className="text-sm text-secondary">{contact.address[0]}<br/>{contact.address[1]}<br/>{contact.address[2]}</p>
                 </div>
                 
                 <div className="glass p-8 rounded-2xl border-border/50 cursor-interactive">
                   <Mail className="w-6 h-6 text-rose mb-4" />
                   <h3 className="font-bold mb-2">Email</h3>
-                  <p className="text-sm text-secondary">sales@aerohorse.com<br/>support@aerohorse.com</p>
+                  <p className="text-sm text-secondary">{contact.sales}<br/>{contact.support}</p>
                 </div>
                 
                 <div className="glass p-8 rounded-2xl border-border/50 cursor-interactive">
                   <Phone className="w-6 h-6 text-indigo mb-4" />
                   <h3 className="font-bold mb-2">Phone</h3>
-                  <p className="text-sm text-secondary">+1 (800) 555-0199</p>
+                  <p className="text-sm text-secondary">{contact.phone}</p>
                 </div>
               </div>
             </div>

@@ -1,19 +1,21 @@
 import { Link } from 'react-router-dom';
 import { Wind, Globe, GitFork, Link2 } from 'lucide-react';
+import { contact } from '../../lib/site';
 
 const links = {
   Products: [
     { label: 'Guardian', to: '/guardian' },
     { label: 'Lemur 2', to: '/lemur' },
+    { label: 'DFR Program', to: '/dfr' },
   ],
   Solutions: [
     { label: 'Law Enforcement', to: '/solutions' },
-    { label: 'Drone as First Responder', to: '/dfr' },
     { label: 'Search & Rescue', to: '/solutions' },
+    { label: 'Firefighting', to: '/solutions' },
   ],
   Company: [
-    { label: 'About Us', to: '/' },
-    { label: 'Contact', to: '/contact' },
+    { label: 'Solutions', to: '/solutions' },
+    { label: 'Request a Demo', to: '/contact' },
   ],
 };
 
@@ -38,6 +40,9 @@ export function Footer() {
             <p className="text-sm text-secondary leading-relaxed max-w-[210px]">
               Technology in the service of life. Autonomous drones built for public safety.
             </p>
+            <a href={`mailto:${contact.email}`} className="text-sm text-secondary hover:text-gold transition-colors w-fit cursor-interactive">
+              {contact.email}
+            </a>
             <div className="flex items-center gap-2.5">
               {[Globe, GitFork, Link2].map((Icon, i) => (
                 <a

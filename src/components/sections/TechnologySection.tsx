@@ -1,13 +1,9 @@
-import { useRef, useEffect } from 'react'
-import { gsap } from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Environment } from '@react-three/drei'
 import { TextReveal } from '../ui/TextReveal'
 import * as THREE from 'three'
-
-gsap.registerPlugin(ScrollTrigger)
 
 const steps = [
   {
@@ -101,21 +97,8 @@ function OrbScene() {
 }
 
 export function TechnologySection() {
-  const ref = useRef<HTMLElement>(null)
-
-  useEffect(() => {
-    if (!ref.current) return
-    const ctx = gsap.context(() => {
-      gsap.from('.step', {
-        opacity: 0, x: -36, stagger: 0.14, duration: 0.7, ease: 'power2.out',
-        scrollTrigger: { trigger: '.steps', start: 'top 85%', once: true },
-      })
-    }, ref)
-    return () => ctx.revert()
-  }, [])
-
   return (
-    <section ref={ref} id="technology" className="py-16 lg:py-24 relative overflow-hidden">
+    <section id="technology" className="py-16 lg:py-24 relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_left,rgba(30,45,61,0.4),transparent_60%)] pointer-events-none" />
       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[350px] h-[600px] bg-gold/5 blur-[120px] rounded-full pointer-events-none" />
 
@@ -125,7 +108,7 @@ export function TechnologySection() {
           <h2 className="text-4xl lg:text-[3.25rem] font-black tracking-tight leading-tight">
             <TextReveal text="From 911 Call to" type="words" delay={0.2} />
             <br />
-            <span className="text-gold">
+            <span className="grad-gold">
               <TextReveal text="Scene in 70 Seconds" type="words" delay={0.5} />
             </span>
           </h2>
@@ -141,8 +124,11 @@ export function TechnologySection() {
             {steps.map((step, i) => (
               <motion.div
                 key={step.num}
+                initial={{ opacity: 0, x: -36 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, amount: 0.4 }}
                 whileHover={{ x: 12 }}
-                transition={{ duration: 0.25, ease: 'easeOut' }}
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: i * 0.12 }}
                 className="step flex gap-6 relative group cursor-interactive" data-cursor="View"
               >
                 {i < steps.length - 1 && (

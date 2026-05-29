@@ -1,13 +1,9 @@
-import React, { useRef, useEffect } from 'react'
+import React from 'react'
 import { motion } from 'framer-motion'
-import { gsap } from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { ArrowRight, Battery, Camera, Radio, Wind, Shield, Wifi, Thermometer } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { TextReveal } from '../ui/TextReveal'
 import { cn } from '../../lib/utils'
-
-gsap.registerPlugin(ScrollTrigger)
 
 type Accent = 'gold' | 'rose' | 'indigo'
 type Size = 'hero' | 'wide' | 'tall' | 'small'
@@ -147,7 +143,7 @@ const accentStyles: Record<Accent, {
   },
 }
 
-function BentoCard({ card }: { card: Card }) {
+function BentoCard({ card, index }: { card: Card; index: number }) {
   const a = accentStyles[card.accent]
   const Icon = card.icon
 
@@ -203,8 +199,11 @@ function BentoCard({ card }: { card: Card }) {
 
   return (
     <motion.div
+      initial={{ opacity: 0, y: 36, scale: 0.96 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      viewport={{ once: true, amount: 0.2 }}
       whileHover={{ scale: 1.015, y: -2 }}
-      transition={{ duration: 0.22, ease: 'easeOut' }}
+      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: (index % 6) * 0.06 }}
       className={cn(colSpan[card.size], 'h-full')}
     >
       {card.link ? (
@@ -221,21 +220,8 @@ function BentoCard({ card }: { card: Card }) {
 }
 
 export function ProductsSection() {
-  const ref = useRef<HTMLElement>(null)
-
-  useEffect(() => {
-    if (!ref.current) return
-    const ctx = gsap.context(() => {
-      gsap.from('.bcard', {
-        opacity: 0, y: 36, scale: 0.96, stagger: 0.07, duration: 0.65, ease: 'power2.out',
-        scrollTrigger: { trigger: '.bento', start: 'top 85%', once: true },
-      })
-    }, ref)
-    return () => ctx.revert()
-  }, [])
-
   return (
-    <section ref={ref} id="products" className="py-16 lg:py-24 relative overflow-hidden">
+    <section id="products" className="py-16 lg:py-24 relative overflow-hidden">
       <div className="absolute top-0 right-1/3 w-[500px] h-[500px] bg-gold/5 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-rose/5 blur-[100px] rounded-full pointer-events-none" />
 
@@ -247,7 +233,7 @@ export function ProductsSection() {
             <h2 className="text-4xl lg:text-[3.25rem] font-black tracking-tight leading-tight text-primary">
               <TextReveal text="End-to-End Programs" type="words" delay={0.1} />
               <br />
-              <span className="text-gold">
+              <span className="grad-gold">
                 <TextReveal text="Built for Public Safety" type="words" delay={0.4} />
               </span>
             </h2>
@@ -259,9 +245,9 @@ export function ProductsSection() {
 
         {/* Bento */}
         <div className="bento grid grid-cols-12 gap-4 lg:gap-6 auto-rows-fr">
-          {cards.map(c => (
-            <div key={c.id} className={cn('bcard', colSpan[c.size])}>
-              <BentoCard card={c} />
+          {cards.map((c, i) => (
+            <div key={c.id} className={cn(colSpan[c.size])}>
+              <BentoCard card={c} index={i} />
             </div>
           ))}
         </div>

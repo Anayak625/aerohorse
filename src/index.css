@@ -212,6 +212,17 @@ html.lenis, html.lenis body { height: auto; }
 .text-indigo-grad { background: linear-gradient(135deg, #c7d2fe, #818cf8 55%, #4f46e5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 .text-sage-grad { background: linear-gradient(135deg, #bbf7d0, #34d399 55%, #059669); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 
+/*
+ * Heading gradients that ALSO paint nested split text (TextReveal word/char spans).
+ * `background` isn't inherited, so the descendant selector re-applies it per span —
+ * this prevents accent headings from rendering invisible.
+ */
+.grad-gold, .grad-gold *   { background-image: linear-gradient(135deg, #fde68a, #f59e0b 55%, #d97706); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+.grad-rose, .grad-rose *   { background-image: linear-gradient(135deg, #fecdd3, #fb7185 55%, #e11d48); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+.grad-indigo, .grad-indigo * { background-image: linear-gradient(135deg, #c7d2fe, #818cf8 55%, #4f46e5); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+.grad-sage, .grad-sage *   { background-image: linear-gradient(135deg, #bbf7d0, #34d399 55%, #059669); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+.grad-multi, .grad-multi * { background-image: linear-gradient(135deg, #fbbf24, #fb7185 50%, #818cf8); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+
 /* ─── Live dot ─── */
 .live-dot {
   display: inline-block; width: 7px; height: 7px; border-radius: 50%;

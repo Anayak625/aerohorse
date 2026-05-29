@@ -1,5 +1,6 @@
 import { PageTransition } from '../components/ui/PageTransition';
 import { TextReveal } from '../components/ui/TextReveal';
+import { stats } from '../lib/site';
 
 export function DFRPage() {
   return (
@@ -34,19 +35,19 @@ export function DFRPage() {
         <div className="section-container">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center p-8 glass rounded-2xl border-indigo/20 cursor-interactive">
-              <div className="text-indigo font-mono text-5xl md:text-7xl font-black mb-4">70<span className="text-3xl">%</span></div>
+              <div className="text-indigo font-mono text-5xl md:text-7xl font-black mb-4">{stats.fasterResponse.replace('%', '')}<span className="text-3xl">%</span></div>
               <h4 className="text-lg font-bold mb-2">Faster Response</h4>
               <p className="text-sm text-secondary">Average reduction in time to get eyes on scene compared to traditional patrols.</p>
             </div>
             <div className="text-center p-8 glass rounded-2xl border-indigo/20 cursor-interactive">
-              <div className="text-indigo font-mono text-5xl md:text-7xl font-black mb-4">25<span className="text-3xl">%</span></div>
-              <h4 className="text-lg font-bold mb-2">Call Resolution</h4>
-              <p className="text-sm text-secondary">Of 911 calls can be cleared by DFR without requiring an officer dispatch.</p>
+              <div className="text-indigo font-mono text-5xl md:text-7xl font-black mb-4">{stats.callsCleared}</div>
+              <h4 className="text-lg font-bold mb-2">Calls Cleared</h4>
+              <p className="text-sm text-secondary">Calls for service can be cleared by DFR without requiring an officer dispatch.</p>
             </div>
             <div className="text-center p-8 glass rounded-2xl border-indigo/20 cursor-interactive">
-              <div className="text-indigo font-mono text-5xl md:text-7xl font-black mb-4">0</div>
-              <h4 className="text-lg font-bold mb-2">Blind Spots</h4>
-              <p className="text-sm text-secondary">Complete aerial overwatch providing absolute situational awareness.</p>
+              <div className="text-indigo font-mono text-5xl md:text-7xl font-black mb-4">{stats.coverage}</div>
+              <h4 className="text-lg font-bold mb-2">Always On</h4>
+              <p className="text-sm text-secondary">Round-the-clock autonomous overwatch with no pilot required.</p>
             </div>
           </div>
         </div>
@@ -92,7 +93,7 @@ export function DFRPage() {
               </div>
               <div className="pl-20 md:pl-0 md:w-1/2 md:pr-16 md:text-right cursor-interactive">
                 <h3 className="text-2xl font-bold mb-3">Eyes on Scene</h3>
-                <p className="text-secondary">Arriving in &lt; 90 seconds, the drone begins streaming 4K and thermal video directly to command and responding units' MDTs.</p>
+                <p className="text-secondary">Arriving in {stats.arrivalTimeLong}, the drone begins streaming 4K and thermal video directly to command and responding units' MDTs.</p>
               </div>
               <div className="hidden md:block w-1/2" />
             </div>

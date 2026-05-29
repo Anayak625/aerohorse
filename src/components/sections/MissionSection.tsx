@@ -1,17 +1,8 @@
-import { useRef, useEffect } from 'react'
-import { gsap } from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { motion } from 'framer-motion'
 import { ArrowRight, Mail, Phone, MapPin, Star } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { TextReveal } from '../ui/TextReveal'
-
-gsap.registerPlugin(ScrollTrigger)
-
-const partners = [
-  'LAPD', 'SFPD', 'Miami PD', 'Denver Fire', 'Travis County', 'Phoenix PD',
-  'Clark County SAR', 'NYPD ESU', 'Seattle FD', 'Dallas PD', 'Austin PD', 'Chicago FD',
-]
+import { partnerAgencies as partners, contact, stats } from '../../lib/site'
 
 const testimonials = [
   {
@@ -35,29 +26,8 @@ const testimonials = [
 ]
 
 export function MissionSection() {
-  const ref = useRef<HTMLElement>(null)
-
-  useEffect(() => {
-    if (!ref.current) return
-    const ctx = gsap.context(() => {
-      gsap.from('.miss-left', {
-        opacity: 0, x: -50, duration: 0.9, ease: 'power3.out',
-        scrollTrigger: { trigger: '.miss-left', start: 'top 85%', once: true },
-      })
-      gsap.from('.miss-right', {
-        opacity: 0, x: 50, duration: 0.9, ease: 'power3.out',
-        scrollTrigger: { trigger: '.miss-right', start: 'top 85%', once: true },
-      })
-      gsap.from('.testimonial-card', {
-        opacity: 0, y: 40, stagger: 0.15, duration: 0.7, ease: 'power2.out',
-        scrollTrigger: { trigger: '.testimonials', start: 'top 85%', once: true },
-      })
-    }, ref)
-    return () => ctx.revert()
-  }, [])
-
   return (
-    <section ref={ref} id="mission" className="relative overflow-hidden">
+    <section id="mission" className="relative overflow-hidden">
       {/* Marquee */}
       <div className="border-y border-border/40 bg-ink/60 py-4 overflow-hidden cursor-interactive" data-cursor="Partners">
         <div className="flex gap-0 animate-marquee whitespace-nowrap" style={{ width: 'max-content' }}>
@@ -83,8 +53,11 @@ export function MissionSection() {
             {testimonials.map((t, i) => (
               <motion.div
                 key={i}
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.2 }}
                 whileHover={{ y: -6 }}
-                transition={{ duration: 0.25, ease: 'easeOut' }}
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: i * 0.12 }}
                 className="testimonial-card shimmer-card glass border border-border/50 rounded-2xl p-7 relative overflow-hidden group cursor-interactive" data-cursor="Review"
               >
                 <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold/30 to-transparent group-hover:via-gold/70 transition-colors duration-500" />
@@ -112,13 +85,19 @@ export function MissionSection() {
         <div className="section-container relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
             {/* Left — Mission */}
-            <div className="miss-left flex flex-col gap-6">
+            <motion.div
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, amount: 0.15 }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+              className="miss-left flex flex-col gap-6"
+            >
               <div className="space-y-5">
                 <span className="chip chip-rose">Our Mission</span>
                 <h2 className="text-4xl lg:text-[3.25rem] font-black tracking-tight leading-tight">
                   <TextReveal text="Technology in the" type="words" delay={0.1} />
                   <br />
-                  <span className="text-gold">
+                  <span className="grad-gold">
                     <TextReveal text="Service of Life" type="words" delay={0.4} />
                   </span>
                 </h2>
@@ -147,18 +126,25 @@ export function MissionSection() {
 
               {/* Large number */}
               <div className="glass-gold rounded-2xl p-8 flex flex-col gap-2 cursor-interactive group" data-cursor="Trust">
-                <span className="number-huge text-gold group-hover:scale-105 origin-left transition-transform duration-500">40+</span>
-                <p className="text-sm text-secondary">agencies actively deploying AeroHorse technology across the USA</p>
+                <span className="number-huge text-gold group-hover:scale-105 origin-left transition-transform duration-500">{stats.agencies}</span>
+                <p className="text-sm text-secondary">agencies actively deploying AeroHorse technology across {stats.states} states</p>
               </div>
 
               <Link to="/contact" className="btn-primary w-fit group cursor-interactive" data-cursor="Read">
                 Learn Our Story
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </Link>
-            </div>
+            </motion.div>
 
             {/* Right — Contact form */}
-            <div id="contact" className="miss-right">
+            <motion.div
+              id="contact"
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, amount: 0.15 }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+              className="miss-right"
+            >
               <div className="glass border border-border/50 rounded-2xl p-8 relative overflow-hidden group">
                 <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent group-hover:via-gold/70 transition-colors duration-700" />
                 <div className="absolute -top-8 left-8 w-24 h-24 bg-gold/5 blur-2xl rounded-full" />
@@ -208,9 +194,9 @@ export function MissionSection() {
 
                   <div className="flex flex-col gap-3">
                     {[
-                      { icon: Mail, text: 'contact@aerohorse.io' },
-                      { icon: Phone, text: '+1 (800) 273-7626' },
-                      { icon: MapPin, text: 'Seattle, WA · Made in USA' },
+                      { icon: Mail, text: contact.email },
+                      { icon: Phone, text: contact.phone },
+                      { icon: MapPin, text: contact.location },
                     ].map(({ icon: Icon, text }) => (
                       <div key={text} className="flex items-center gap-3 text-sm text-secondary cursor-interactive w-fit hover:text-primary transition-colors">
                         <Icon className="w-4 h-4 text-gold/60 flex-shrink-0" strokeWidth={1.5} />
@@ -220,7 +206,7 @@ export function MissionSection() {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>

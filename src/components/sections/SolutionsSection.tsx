@@ -1,12 +1,7 @@
-import { useRef, useEffect } from 'react'
-import { gsap } from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { motion } from 'framer-motion'
 import { Map, Siren, FlameKindling, Users, ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { TextReveal } from '../ui/TextReveal'
-
-gsap.registerPlugin(ScrollTrigger)
 
 const solutions = [
   {
@@ -68,21 +63,8 @@ const solutions = [
 ]
 
 export function SolutionsSection() {
-  const ref = useRef<HTMLElement>(null)
-
-  useEffect(() => {
-    if (!ref.current) return
-    const ctx = gsap.context(() => {
-      gsap.from('.sol-card', {
-        opacity: 0, y: 40, stagger: 0.12, duration: 0.7, ease: 'power2.out',
-        scrollTrigger: { trigger: '.sol-grid', start: 'top 85%', once: true },
-      })
-    }, ref)
-    return () => ctx.revert()
-  }, [])
-
   return (
-    <section ref={ref} id="solutions" className="py-16 lg:py-24 relative overflow-hidden">
+    <section id="solutions" className="py-16 lg:py-24 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-ink/50 to-transparent pointer-events-none" />
       <div className="absolute right-0 top-1/3 w-[400px] h-[500px] bg-rose/[0.03] blur-[120px] rounded-full pointer-events-none" />
 
@@ -92,9 +74,9 @@ export function SolutionsSection() {
           <h2 className="text-4xl lg:text-[3.25rem] font-black tracking-tight leading-tight">
             <TextReveal text="Upgrade Your Agency With" type="words" delay={0.2} />
             <br />
-            <span className="text-rose-grad">
-              <TextReveal text="Airborne Intelligence" type="words" delay={0.5} />
-            </span>
+          <span className="grad-rose">
+            <TextReveal text="Airborne Intelligence" type="words" delay={0.5} />
+          </span>
           </h2>
           <div className="mt-2 opacity-0 animate-fade-up" style={{ animationDelay: '1s', animationFillMode: 'forwards' }}>
             <p className="text-secondary text-base leading-relaxed">
@@ -105,13 +87,16 @@ export function SolutionsSection() {
         </div>
 
         <div className="sol-grid grid grid-cols-1 md:grid-cols-2 gap-6">
-          {solutions.map((sol) => {
+          {solutions.map((sol, i) => {
             const Icon = sol.icon
             return (
               <motion.div
                 key={sol.id}
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.2 }}
                 whileHover={{ y: -6 }}
-                transition={{ duration: 0.25, ease: 'easeOut' }}
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: (i % 2) * 0.1 }}
                 className="h-full"
               >
                 <Link 

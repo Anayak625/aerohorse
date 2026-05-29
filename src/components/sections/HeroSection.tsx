@@ -6,6 +6,7 @@ import { gsap } from 'gsap'
 import { ArrowRight, Shield, Zap, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { TextReveal } from '../ui/TextReveal'
+import { stats } from '../../lib/site'
 import * as THREE from 'three'
 
 /* ── 3D Drone Body ── */
@@ -112,10 +113,10 @@ function RotatingWord() {
   )
 }
 
-const stats = [
-  { value: '< 70s', label: 'Avg. scene arrival', icon: Zap, color: 'text-gold' },
-  { value: '1 in 3', label: 'Calls cleared solo', icon: Shield, color: 'text-rose-grad' },
-  { value: '54%', label: 'Faster response', icon: Users, color: 'text-indigo-grad' },
+const heroMetrics = [
+  { value: stats.arrivalTime, label: 'Avg. scene arrival', icon: Zap, color: 'text-gold' },
+  { value: stats.callsCleared, label: 'Calls cleared solo', icon: Shield, color: 'text-rose-grad' },
+  { value: stats.fasterResponse, label: 'Faster response', icon: Users, color: 'text-indigo-grad' },
 ]
 
 export function HeroSection() {
@@ -167,7 +168,7 @@ export function HeroSection() {
           </div>
 
           <div className="h-stat grid grid-cols-3 gap-4 pt-6 border-t border-border/40">
-            {stats.map(({ value, label, icon: Icon, color }) => (
+            {heroMetrics.map(({ value, label, icon: Icon, color }) => (
               <div key={label} className="flex flex-col gap-1.5 group">
                 <Icon className={`w-4 h-4 ${color === 'text-gold' ? 'text-gold' : color === 'text-rose-grad' ? 'text-rose' : 'text-indigo'} opacity-70 group-hover:scale-110 transition-transform`} />
                 <span className={`metric font-black text-2xl text-primary`}>{value}</span>
