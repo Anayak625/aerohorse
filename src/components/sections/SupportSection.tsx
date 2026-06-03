@@ -13,12 +13,10 @@ const stages = [
 export function SupportSection() {
   return (
     <section className="py-16 lg:py-24 relative overflow-hidden">
-      <div className="absolute bottom-0 left-1/3 w-[500px] h-[400px] bg-gold/[0.04] blur-[120px] rounded-full pointer-events-none" />
-
-      <div className="section-container relative z-10">
+      <div className="px-4 md:px-8 lg:px-10 xl:px-12 2xl:px-16 relative z-10">
         <div className="text-center max-w-2xl mx-auto mb-12 lg:mb-16">
           <span className="chip chip-sage opacity-0 animate-fade-up" style={{ animationDelay: '0.1s', animationFillMode: 'forwards' }}>Dedicated Support</span>
-          <h2 className="text-4xl lg:text-[3.25rem] font-black tracking-tight leading-tight text-primary mt-5">
+          <h2 className="text-4xl lg:text-[3.25rem] font-black tracking-tight leading-[1.08] text-primary mt-5">
             <TextReveal text="Your Partner at Every Stage" type="words" delay={0.2} />
           </h2>
           <p className="text-secondary text-base leading-relaxed mt-5 opacity-0 animate-fade-up" style={{ animationDelay: '0.7s', animationFillMode: 'forwards' }}>
@@ -57,8 +55,7 @@ export function SupportSection() {
 
         {/* Final CTA */}
         <div className="glass-gold rounded-3xl p-8 lg:p-14 relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(245,158,11,0.12),transparent_60%)] pointer-events-none" />
-          <div className="absolute -top-10 right-10 w-40 h-40 bg-gold/10 blur-3xl rounded-full pointer-events-none" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(37,99,235,0.08),transparent_60%)] pointer-events-none" />
 
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
             <div className="max-w-xl">

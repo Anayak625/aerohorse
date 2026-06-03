@@ -42,7 +42,7 @@ export function MissionSection() {
 
       {/* Testimonials */}
       <div className="py-16 lg:py-20 border-b border-border/40">
-        <div className="section-container">
+        <div className="px-4 md:px-8 lg:px-10 xl:px-12 2xl:px-16 ">
           <div className="text-center mb-12">
             <span className="chip chip-gold opacity-0 animate-fade-up" style={{ animationDelay: '0.1s', animationFillMode: 'forwards' }}>Trusted by Agencies</span>
             <h2 className="text-3xl lg:text-4xl font-black tracking-tight mt-5 text-primary">
@@ -80,9 +80,8 @@ export function MissionSection() {
       {/* Mission + Contact */}
       <div className="py-16 lg:py-24 relative">
         <div className="absolute inset-0 bg-dots opacity-25 pointer-events-none" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-gold/[0.04] blur-[100px] rounded-full pointer-events-none" />
 
-        <div className="section-container relative z-10">
+        <div className="px-4 md:px-8 lg:px-10 xl:px-12 2xl:px-16 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
             {/* Left — Mission */}
             <motion.div
@@ -94,7 +93,7 @@ export function MissionSection() {
             >
               <div className="space-y-5">
                 <span className="chip chip-rose">Our Mission</span>
-                <h2 className="text-4xl lg:text-[3.25rem] font-black tracking-tight leading-tight">
+                <h2 className="text-4xl lg:text-[3.25rem] font-black tracking-tight leading-[1.08]">
                   <TextReveal text="Technology in the" type="words" delay={0.1} />
                   <br />
                   <span className="grad-gold">
@@ -147,7 +146,6 @@ export function MissionSection() {
             >
               <div className="glass border border-border/50 rounded-2xl p-8 relative overflow-hidden group">
                 <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent group-hover:via-gold/70 transition-colors duration-700" />
-                <div className="absolute -top-8 left-8 w-24 h-24 bg-gold/5 blur-2xl rounded-full" />
 
                 <div className="flex flex-col gap-6 relative z-10">
                   <div>

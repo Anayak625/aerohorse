@@ -1,18 +1,15 @@
 import { Link } from 'react-router-dom';
-import { Wind, Globe, GitFork, Link2 } from 'lucide-react';
+import { Globe, GitFork, Link2 } from 'lucide-react';
 import { contact } from '../../lib/site';
+import { solutionNavLinks } from '../../data/solutionsContent';
 
 const links = {
   Products: [
     { label: 'Guardian', to: '/guardian' },
     { label: 'Lemur 2', to: '/lemur' },
-    { label: 'DFR Program', to: '/dfr' },
+    { label: 'All Drones', to: '/drones' },
   ],
-  Solutions: [
-    { label: 'Law Enforcement', to: '/solutions' },
-    { label: 'Search & Rescue', to: '/solutions' },
-    { label: 'Firefighting', to: '/solutions' },
-  ],
+  Solutions: solutionNavLinks.map(({ label, href }) => ({ label, to: href })),
   Company: [
     { label: 'Solutions', to: '/solutions' },
     { label: 'Request a Demo', to: '/contact' },
@@ -25,17 +22,16 @@ export function Footer() {
       {/* Gold top line */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold/25 to-transparent" />
 
-      <div className="section-container py-16">
+      <div className="px-4 md:px-8 lg:px-10 xl:px-12 2xl:px-16  py-16">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-14">
           {/* Brand col */}
           <div className="col-span-2 flex flex-col gap-5">
-            <Link to="/" className="flex items-center gap-2.5 w-fit group cursor-interactive">
-              <div className="w-8 h-8 rounded-xl glass-gold flex items-center justify-center transition-all duration-300 group-hover:shadow-gold">
-                <Wind className="w-4 h-4 text-gold" strokeWidth={2} />
-              </div>
-              <span className="text-base font-bold text-primary">
-                Aero<span className="text-gold">Horse</span>
-              </span>
+            <Link to="/" className="flex items-center w-fit group cursor-interactive">
+              <img
+                src="/light_logo.png"
+                alt="AeroHorse"
+                className="h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+              />
             </Link>
             <p className="text-sm text-secondary leading-relaxed max-w-[210px]">
               Technology in the service of life. Autonomous drones built for public safety.

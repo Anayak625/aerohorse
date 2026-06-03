@@ -1,82 +1,109 @@
-import { PageTransition } from '../components/ui/PageTransition';
-import { TextReveal } from '../components/ui/TextReveal';
-import { Flame, Shield } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom'
+import { ArrowRight } from 'lucide-react'
+import { PageTransition } from '../components/ui/PageTransition'
+import { TextReveal } from '../components/ui/TextReveal'
+import { SolutionsOverviewGrid } from '../components/sections/SolutionsOverviewGrid'
+import { stats } from '../lib/site'
+
+const quickStats = [
+  { value: '6', label: 'Mission programs' },
+  { value: stats.agencies, label: 'Agencies deployed' },
+  { value: stats.fasterResponse, label: 'Faster response' },
+  { value: stats.coverage, label: 'Program uptime' },
+]
 
 export function SolutionsPage() {
   return (
     <PageTransition>
-      <section className="pt-32 pb-24 bg-void border-b border-border/40 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.1),transparent_70%)] z-0" />
-        
-        <div className="section-container relative z-10 text-center">
-          <div className="max-w-4xl mx-auto">
-            <TextReveal 
-              text="Solutions" 
-              type="chars" 
-              className="text-[4rem] md:text-[6rem] font-black tracking-tighter text-primary mb-6"
+      <section className="hero-fullscreen relative border-b border-border/40 bg-ink">
+        <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_center,rgba(37,99,235,0.08),transparent_65%)]" />
+
+        <div className="relative z-10 mx-auto flex h-full w-full max-w-5xl flex-col px-6 pb-8 pt-[6.5rem] md:pt-28">
+          <div className="hero-fullscreen-content flex flex-1 flex-col items-center justify-center text-center">
+            <div
+              className="chip chip-indigo mb-6 opacity-0 animate-fade-up"
+              style={{ animationDelay: '0.2s', animationFillMode: 'forwards' }}
+            >
+              Mission programs overview
+            </div>
+
+            <TextReveal
+              text="Solutions"
+              type="chars"
+              playOnMount
+              className="mb-6 block w-full text-[4rem] font-black leading-none tracking-tighter text-primary sm:text-[6rem] md:text-[7.5rem]"
+              delay={0.3}
             />
-            <TextReveal 
-              text="Purpose-built drone ecosystems for public safety agencies. We provide the hardware and software to fundamentally change how you respond to emergencies."
+
+            <TextReveal
+              text="Six tailored programs — each with its own page covering use cases, recommended aircraft, and how to deploy with AeroHorse."
               type="words"
-              className="text-lg md:text-xl text-secondary leading-relaxed"
-              delay={0.5}
+              playOnMount
+              className="mx-auto mb-10 block w-full max-w-2xl text-center text-lg leading-relaxed text-secondary md:text-xl"
+              delay={0.9}
             />
+
+            <div
+              className="flex flex-wrap justify-center gap-4 opacity-0 animate-fade-up"
+              style={{ animationDelay: '1.6s', animationFillMode: 'forwards' }}
+            >
+              <a href="#programs" className="btn-primary cursor-interactive" data-cursor="Explore">
+                Browse programs
+              </a>
+              <Link to="/contact" className="btn-outline cursor-interactive" data-cursor="Contact">
+                Talk to our team
+              </Link>
+            </div>
+          </div>
+
+          <div
+            className="pointer-events-none flex shrink-0 flex-col items-center gap-2 opacity-0 animate-fade-up"
+            style={{ animationDelay: '2s', animationFillMode: 'forwards' }}
+          >
+            <div className="h-12 w-px bg-gradient-to-b from-transparent via-indigo/35 to-indigo/20" aria-hidden />
+            <span className="text-[10px] uppercase tracking-[0.2em] text-tertiary">Scroll to discover</span>
           </div>
         </div>
       </section>
 
-      <section className="py-24 bg-ink">
-        <div className="section-container">
-          <div className="space-y-16">
-            
-            {/* Law Enforcement */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-              <div className="h-[400px] rounded-2xl overflow-hidden relative cursor-interactive" data-cursor="View">
-                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1588656606086-fb15bb03d980?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-60 mix-blend-luminosity hover:scale-105 transition-transform duration-700" />
-                <div className="absolute inset-0 bg-gradient-to-t from-ink via-transparent to-transparent" />
-                <Shield className="absolute bottom-6 left-6 w-10 h-10 text-gold" />
+      <section className="border-b border-border/40 bg-void py-12">
+        <div className="px-4 md:px-8 lg:px-10 xl:px-12 2xl:px-16">
+          <div className="mx-auto grid max-w-6xl grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
+            {quickStats.map((stat, i) => (
+              <div
+                key={stat.label}
+                className="glass rounded-xl border border-border/50 px-4 py-5 text-center opacity-0 animate-fade-up"
+                style={{ animationDelay: `${0.1 + i * 0.08}s`, animationFillMode: 'forwards' }}
+              >
+                <p className="metric text-2xl font-black text-primary lg:text-3xl">{stat.value}</p>
+                <p className="mt-2 text-[10px] font-mono uppercase tracking-widest text-tertiary">{stat.label}</p>
               </div>
-              <div className="animate-fade-up">
-                <h2 className="text-3xl md:text-4xl font-black mb-4">Law Enforcement</h2>
-                <p className="text-secondary text-lg mb-8">From active shooter situations to barricaded suspects and warrant executions, AeroHorse drones provide crucial intelligence that saves lives and de-escalates dangerous situations.</p>
-                <div className="space-y-4 mb-8">
-                  <div className="flex items-center gap-3 border-l-2 border-gold/50 pl-4 py-1">
-                    <span className="font-bold">Recommended:</span>
-                    <Link to="/lemur" className="text-gold hover:underline">Lemur 2 for indoor clearance</Link>
-                  </div>
-                  <div className="flex items-center gap-3 border-l-2 border-indigo/50 pl-4 py-1">
-                    <span className="font-bold">Recommended:</span>
-                    <Link to="/dfr" className="text-indigo hover:underline">DFR for patrol support</Link>
-                  </div>
-                </div>
-                <Link to="/contact" className="btn-outline">Discuss your agency's needs</Link>
-              </div>
-            </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-            {/* Firefighting */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-              <div className="order-2 md:order-1 animate-fade-up">
-                <h2 className="text-3xl md:text-4xl font-black mb-4">Fire & Rescue</h2>
-                <p className="text-secondary text-lg mb-8">Identify hotspots through thick smoke with thermal imaging, assess structural integrity before sending crews in, and locate victims faster during critical moments.</p>
-                <div className="space-y-4 mb-8">
-                  <div className="flex items-center gap-3 border-l-2 border-gold/50 pl-4 py-1">
-                    <span className="font-bold">Recommended:</span>
-                    <Link to="/guardian" className="text-gold hover:underline">Guardian for overwatch</Link>
-                  </div>
-                </div>
-                <Link to="/contact" className="btn-outline">Discuss your agency's needs</Link>
-              </div>
-              <div className="order-1 md:order-2 h-[400px] rounded-2xl overflow-hidden relative cursor-interactive" data-cursor="View">
-                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1484837562475-40b904e5d4cb?q=80&w=2072&auto=format&fit=crop')] bg-cover bg-center opacity-60 mix-blend-luminosity hover:scale-105 transition-transform duration-700" />
-                <div className="absolute inset-0 bg-gradient-to-t from-ink via-transparent to-transparent" />
-                <Flame className="absolute bottom-6 left-6 w-10 h-10 text-rose" />
-              </div>
-            </div>
+      <SolutionsOverviewGrid />
 
+      <section className="relative overflow-hidden border-t border-border/40 bg-ink py-28 lg:py-32">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(37,99,235,0.06),transparent_70%)]" />
+        <div className="relative z-10 px-6 text-center">
+          <h2 className="mb-6 text-4xl font-black text-primary md:text-6xl">Not sure where to start?</h2>
+          <p className="mx-auto mb-10 max-w-xl text-lg text-secondary">
+            Our team will help you choose the right program — DFR, tactical indoor, SAR, fire, healthcare, or
+            logistics — and the right mix of Guardian and Lemur 2.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <Link to="/contact" className="btn-primary cursor-interactive px-8 py-4 text-lg" data-cursor="Contact">
+              Request Demo
+              <ArrowRight className="h-5 w-5" />
+            </Link>
+            <Link to="/guardian" className="btn-outline cursor-interactive" data-cursor="Explore">
+              View products
+            </Link>
           </div>
         </div>
       </section>
     </PageTransition>
-  );
+  )
 }

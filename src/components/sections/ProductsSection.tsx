@@ -64,13 +64,13 @@ const cards: Card[] = [
     accent: 'indigo',
   },
   {
-    id: 'dfr',
+    id: 'catalog',
     size: 'wide',
-    tag: 'Drone as First Responder',
-    title: '1 in 3 Calls Cleared Without Dispatching a Unit',
-    desc: 'AeroHorse DFR programs reduce officer exposure and free up resources for priority incidents.',
+    tag: 'Full aircraft catalog',
+    title: 'Explore Every Platform in Interactive 3D',
+    desc: 'Orbit Guardian and Lemur 2, inspect hotspots, and compare specifications side by side.',
     accent: 'indigo',
-    link: '/dfr'
+    link: '/drones'
   },
   {
     id: 'wind',
@@ -222,15 +222,12 @@ function BentoCard({ card, index }: { card: Card; index: number }) {
 export function ProductsSection() {
   return (
     <section id="products" className="py-16 lg:py-24 relative overflow-hidden">
-      <div className="absolute top-0 right-1/3 w-[500px] h-[500px] bg-gold/5 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-rose/5 blur-[100px] rounded-full pointer-events-none" />
-
-      <div className="section-container">
+      <div className="px-4 md:px-8 lg:px-10 xl:px-12 2xl:px-16 ">
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-10 lg:mb-12">
           <div className="space-y-5">
             <span className="chip chip-gold opacity-0 animate-fade-up" style={{ animationDelay: '0.2s', animationFillMode: 'forwards' }}>Our Fleet</span>
-            <h2 className="text-4xl lg:text-[3.25rem] font-black tracking-tight leading-tight text-primary">
+            <h2 className="text-4xl lg:text-[3.25rem] font-black tracking-tight leading-[1.08] text-primary">
               <TextReveal text="End-to-End Programs" type="words" delay={0.1} />
               <br />
               <span className="grad-gold">

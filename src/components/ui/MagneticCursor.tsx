@@ -8,7 +8,8 @@ export function MagneticCursor() {
 
   useEffect(() => {
     const supportsFinePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-    if (!supportsFinePointer) return;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!supportsFinePointer || prefersReducedMotion) return;
 
     let mouseX = window.innerWidth / 2;
     let mouseY = window.innerHeight / 2;
@@ -22,10 +23,15 @@ export function MagneticCursor() {
     const interactiveSelector = [
       'a',
       'button',
+      'label',
+      'summary',
       'input',
       'textarea',
       'select',
       '[role="button"]',
+      '[role="tab"]',
+      '[role="link"]',
+      '.cursor-interactive',
       '[data-cursor]',
     ].join(',');
 
@@ -37,13 +43,26 @@ export function MagneticCursor() {
 
       if (!target || target.hasAttribute('disabled') || target.getAttribute('aria-disabled') === 'true') {
         document.body.classList.remove('cursor-hover');
-        if (textRef.current) textRef.current.textContent = '';
+        if (textRef.current) {
+          textRef.current.textContent = '';
+          textRef.current.style.opacity = '0';
+        }
         return;
       }
 
-      document.body.classList.add('cursor-hover');
-      if (textRef.current) {
-        textRef.current.textContent = target.getAttribute('data-cursor') || '';
+      const label = target.getAttribute('data-cursor')?.trim();
+      if (label) {
+        document.body.classList.add('cursor-hover');
+        if (textRef.current) {
+          textRef.current.textContent = label;
+          textRef.current.style.opacity = '1';
+        }
+      } else {
+        document.body.classList.remove('cursor-hover');
+        if (textRef.current) {
+          textRef.current.textContent = '';
+          textRef.current.style.opacity = '0';
+        }
       }
     };
 
@@ -85,7 +104,7 @@ export function MagneticCursor() {
         dotRef.current.style.transform = `translate3d(${dotX}px, ${dotY}px, 0) translate(-50%, -50%)`;
         dotRef.current.style.opacity = hasMoved ? '1' : '0';
       }
-      
+
       if (ringRef.current) {
         ringRef.current.style.transform = `translate3d(${ringX}px, ${ringY}px, 0) translate(-50%, -50%)`;
         ringRef.current.style.opacity = hasMoved && !currentTarget ? '1' : '0';

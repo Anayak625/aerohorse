@@ -8,8 +8,8 @@ export function ContactPage() {
       <section className="pt-32 pb-24 bg-void min-h-screen relative overflow-hidden">
         <div className="absolute inset-0 bg-grid opacity-30" />
         
-        <div className="section-container relative z-10">
-          <div className="max-w-5xl mx-auto">
+        <div className="px-4 md:px-8 lg:px-10 xl:px-12 2xl:px-16 relative z-10">
+          <div className="">
             <div className="text-center mb-16 animate-fade-up">
               <h1 className="text-4xl md:text-6xl font-black mb-6">Request a Demo</h1>
               <p className="text-secondary text-lg max-w-2xl mx-auto">Experience the future of public safety. See our systems in action and learn how AeroHorse can integrate with your agency's operations.</p>

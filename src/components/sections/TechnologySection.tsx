@@ -12,7 +12,7 @@ const steps = [
     body: 'The moment a call is logged in your CAD system, the DFR trigger activates automatically — zero manual steps.',
     badge: 'T + 0s',
     color: 'border-gold/30 text-gold',
-    hover: 'group-hover:border-gold/50 group-hover:shadow-gold/20',
+    hover: 'group-hover:border-gold/40',
     number: 'group-hover:text-gold',
   },
   {
@@ -21,7 +21,7 @@ const steps = [
     body: 'The nearest Guardian drone lifts off from its dock and navigates to the scene via pre-approved flight corridors.',
     badge: 'T + 5s',
     color: 'border-rose/30 text-rose',
-    hover: 'group-hover:border-rose/50 group-hover:shadow-rose/20',
+    hover: 'group-hover:border-gold/40',
     number: 'group-hover:text-rose',
   },
   {
@@ -30,7 +30,7 @@ const steps = [
     body: '4K thermal video, GPS location, and 2-way audio stream directly to dispatch and responding units in real time.',
     badge: 'T + 70s',
     color: 'border-indigo/30 text-indigo',
-    hover: 'group-hover:border-indigo/50 group-hover:shadow-indigo/20',
+    hover: 'group-hover:border-gold/40',
     number: 'group-hover:text-indigo',
   },
   {
@@ -39,7 +39,7 @@ const steps = [
     body: '1 in 3 calls cleared by drone alone. For the rest, officers arrive with full situational awareness.',
     badge: 'T + 5min',
     color: 'border-sage/30 text-sage',
-    hover: 'group-hover:border-sage/50 group-hover:shadow-sage/20',
+    hover: 'group-hover:border-gold/40',
     number: 'group-hover:text-sage',
   },
 ]
@@ -63,19 +63,19 @@ function OrbScene() {
     <group>
       <mesh ref={ico}>
         <icosahedronGeometry args={[1, 4]} />
-        <meshStandardMaterial color="#111827" metalness={0.97} roughness={0.03} envMapIntensity={3} />
+        <meshStandardMaterial color="#cbd5e1" metalness={0.97} roughness={0.05} envMapIntensity={2.5} />
       </mesh>
       <mesh ref={wire}>
         <icosahedronGeometry args={[1.01, 4]} />
-        <meshStandardMaterial color="#f59e0b" wireframe transparent opacity={0.06} />
+        <meshStandardMaterial color="#2563eb" wireframe transparent opacity={0.08} />
       </mesh>
       <mesh ref={ring1} rotation={[Math.PI / 3, 0, 0]}>
         <torusGeometry args={[1.6, 0.007, 8, 160]} />
-        <meshStandardMaterial color="#f59e0b" emissive="#f59e0b" emissiveIntensity={5} />
+        <meshStandardMaterial color="#2563eb" emissive="#2563eb" emissiveIntensity={5} />
       </mesh>
       <mesh ref={ring2} rotation={[Math.PI / 5, Math.PI / 3, 0]}>
         <torusGeometry args={[1.35, 0.005, 8, 128]} />
-        <meshStandardMaterial color="#fb7185" emissive="#fb7185" emissiveIntensity={4} transparent opacity={0.75} />
+        <meshStandardMaterial color="#93c5fd" emissive="#93c5fd" emissiveIntensity={4} transparent opacity={0.75} />
       </mesh>
       {[0, 1, 2, 3].map((i) => {
         const a = (i / 4) * Math.PI * 2
@@ -83,15 +83,15 @@ function OrbScene() {
           <mesh key={i} position={[Math.cos(a) * 1.6, Math.sin(a * 0.4) * 0.3, Math.sin(a) * 1.6]}>
             <sphereGeometry args={[0.03, 8, 8]} />
             <meshStandardMaterial
-              color={i % 2 === 0 ? '#f59e0b' : '#fb7185'}
-              emissive={i % 2 === 0 ? '#f59e0b' : '#fb7185'}
+              color={i % 2 === 0 ? '#2563eb' : '#93c5fd'}
+              emissive={i % 2 === 0 ? '#2563eb' : '#93c5fd'}
               emissiveIntensity={6}
             />
           </mesh>
         )
       })}
-      <pointLight position={[3, 2, 3]} color="#f59e0b" intensity={2} />
-      <pointLight position={[-3, -2, -2]} color="#fb7185" intensity={1.5} />
+      <pointLight position={[3, 2, 3]} color="#2563eb" intensity={2} />
+      <pointLight position={[-3, -2, -2]} color="#93c5fd" intensity={1.5} />
     </group>
   )
 }
@@ -99,13 +99,12 @@ function OrbScene() {
 export function TechnologySection() {
   return (
     <section id="technology" className="py-16 lg:py-24 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_left,rgba(30,45,61,0.4),transparent_60%)] pointer-events-none" />
-      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[350px] h-[600px] bg-gold/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_left,rgba(37,99,235,0.04),transparent_60%)] pointer-events-none" />
 
-      <div className="section-container relative z-10">
+      <div className="px-4 md:px-8 lg:px-10 xl:px-12 2xl:px-16 relative z-10">
         <div className="flex flex-col gap-4 mb-10 lg:mb-12 max-w-xl">
           <span className="chip chip-gold w-fit opacity-0 animate-fade-up" style={{ animationDelay: '0.1s', animationFillMode: 'forwards' }}>How It Works</span>
-          <h2 className="text-4xl lg:text-[3.25rem] font-black tracking-tight leading-tight">
+          <h2 className="text-4xl lg:text-[3.25rem] font-black tracking-tight leading-[1.08]">
             <TextReveal text="From 911 Call to" type="words" delay={0.2} />
             <br />
             <span className="grad-gold">
@@ -174,7 +173,7 @@ export function TechnologySection() {
               gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
               className="pointer-events-none group-hover:scale-[1.02] transition-transform duration-700"
             >
-              <Environment preset="sunset" />
+              <Environment preset="city" />
               <OrbScene />
             </Canvas>
           </div>

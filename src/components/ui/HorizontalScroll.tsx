@@ -7,19 +7,28 @@ gsap.registerPlugin(ScrollTrigger);
 interface HorizontalScrollProps {
   children: ReactNode;
   className?: string;
+  id?: string;
 }
 
-export function HorizontalScroll({ children, className = '' }: HorizontalScrollProps) {
+export function HorizontalScroll({ children, className = '', id }: HorizontalScrollProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!containerRef.current || !trackRef.current) return;
-    
-    // We want the total scroll distance to match the width of the track minus viewport width
+
     const panels = gsap.utils.toArray<HTMLElement>('.horizontal-scroll-panel', trackRef.current);
-    
-    if (panels.length < 2) return; // Need at least 2 panels to scroll
+    if (panels.length < 2) return;
+
+    const setPanelWidths = () => {
+      const w = containerRef.current?.offsetWidth ?? window.innerWidth;
+      panels.forEach((panel) => {
+        panel.style.width = `${w}px`;
+        panel.style.flexBasis = `${w}px`;
+      });
+    };
+    setPanelWidths();
+    window.addEventListener('resize', setPanelWidths);
 
     const ctx = gsap.context(() => {
       // Create the horizontal scroll tween
@@ -40,32 +49,38 @@ export function HorizontalScroll({ children, className = '' }: HorizontalScrollP
         }
       });
       
-      // We can also trigger animations within each panel as they come into view
-      panels.forEach((panel) => {
-        // Find elements to animate inside panel
+      panels.forEach((panel, index) => {
         const animElements = panel.querySelectorAll('.panel-anim');
-        if (animElements.length > 0) {
-          gsap.from(animElements, {
-            y: 30,
-            opacity: 0,
-            duration: 0.8,
-            stagger: 0.1,
-            scrollTrigger: {
-              trigger: panel,
-              containerAnimation: tween, // Link to the horizontal scroll tween
-              start: 'left center',
-            }
-          });
+        if (animElements.length === 0) return;
+
+        if (index === 0) {
+          gsap.set(animElements, { opacity: 1, y: 0 });
+          return;
         }
+
+        gsap.from(animElements, {
+          y: 30,
+          opacity: 0,
+          duration: 0.8,
+          stagger: 0.1,
+          scrollTrigger: {
+            trigger: panel,
+            containerAnimation: tween,
+            start: 'left center',
+          },
+        });
       });
       
     }, containerRef);
     
-    return () => ctx.revert();
+    return () => {
+      window.removeEventListener('resize', setPanelWidths);
+      ctx.revert();
+    };
   }, [children]);
 
   return (
-    <section ref={containerRef} className={`horizontal-scroll-section ${className}`}>
+    <section ref={containerRef} id={id} className={`horizontal-scroll-section ${className}`}>
       <div ref={trackRef} className="horizontal-scroll-track">
         {children}
       </div>

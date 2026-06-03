@@ -42,9 +42,32 @@ export function Layout({ children }: LayoutProps) {
     };
   }, []);
 
-  // Scroll to top on route change
+  // Scroll to top on route change, or to hash target when present
   useEffect(() => {
     const lenis = getLenis();
+    const hash = location.hash;
+
+    const scrollToHash = () => {
+      if (!hash) return;
+      const el = document.querySelector(hash) as HTMLElement | null;
+      if (!el) return;
+      if (lenis) {
+        lenis.scrollTo(el, { offset: -112, duration: 0.8 });
+      } else {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+
+    if (hash) {
+      const timers = [
+        window.setTimeout(scrollToHash, 80),
+        window.setTimeout(scrollToHash, 500),
+        window.setTimeout(() => ScrollTrigger.refresh(), 120),
+        window.setTimeout(() => ScrollTrigger.refresh(), 800),
+      ];
+      return () => timers.forEach(window.clearTimeout);
+    }
+
     if (lenis) {
       lenis.scrollTo(0, { immediate: true, force: true });
     } else {
@@ -57,7 +80,7 @@ export function Layout({ children }: LayoutProps) {
     ];
 
     return () => timers.forEach(window.clearTimeout);
-  }, [location.pathname]);
+  }, [location.pathname, location.hash]);
 
   return (
     <>

@@ -33,13 +33,12 @@ export function CapabilitiesSection() {
   return (
     <section className="py-16 lg:py-24 relative overflow-hidden border-y border-border/40 bg-ink/40">
       <div className="absolute inset-0 bg-dots opacity-20 pointer-events-none" />
-      <div className="absolute top-0 right-1/4 w-[450px] h-[450px] bg-indigo/[0.04] blur-[120px] rounded-full pointer-events-none" />
 
-      <div className="section-container relative z-10">
+      <div className="px-4 md:px-8 lg:px-10 xl:px-12 2xl:px-16 relative z-10">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-12 lg:mb-14">
           <div className="space-y-5 max-w-xl">
             <span className="chip chip-indigo opacity-0 animate-fade-up" style={{ animationDelay: '0.1s', animationFillMode: 'forwards' }}>Purpose Built</span>
-            <h2 className="text-4xl lg:text-[3.25rem] font-black tracking-tight leading-tight text-primary">
+            <h2 className="text-4xl lg:text-[3.25rem] font-black tracking-tight leading-[1.08] text-primary">
               <TextReveal text="Engineered for the" type="words" delay={0.15} />
               <br />
               <span className="grad-indigo"><TextReveal text="Missions That Matter" type="words" delay={0.4} /></span>

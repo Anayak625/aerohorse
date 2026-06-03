@@ -1,16 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Wind, ChevronDown, Building2, Siren, Map, FlameKindling } from 'lucide-react';
+import { Menu, X, ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { stats } from '../../lib/site';
-
-const solutionLinks = [
-  { label: 'Law Enforcement', desc: 'Eyes on scene before officers arrive', to: '/solutions', icon: Building2 },
-  { label: 'Drone as First Responder', desc: 'Autonomous 911 response at scale', to: '/dfr', icon: Siren },
-  { label: 'Search & Rescue', desc: 'Find them faster, bring them home', to: '/solutions', icon: Map },
-  { label: 'Firefighting', desc: 'Situational awareness from above', to: '/solutions', icon: FlameKindling },
-];
+import { solutionNavLinks } from '../../data/solutionsContent';
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
@@ -45,29 +39,28 @@ export function Header() {
       className={cn(
         'fixed top-0 left-0 right-0 z-50 transition-all duration-500',
         scrolled || mobileOpen || activeDropdown
-          ? 'bg-ink/95 backdrop-blur-2xl border-b border-border/50 shadow-elevated'
-          : 'bg-transparent'
+          ? 'bg-void/95 backdrop-blur-2xl border-b border-border/60 shadow-elevated'
+          : 'bg-void/80 backdrop-blur-md'
       )}
     >
       {/* Announcement bar */}
-      <div className="bg-gradient-to-r from-gold/10 via-gold/5 to-rose/10 border-b border-gold/15 py-2 px-4 text-center cursor-interactive" data-cursor="View">
-        <Link to="/guardian" className="text-xs font-mono text-gold/80 tracking-wide hover:text-gold transition-colors">
+      <div className="bg-goldGlow border-b border-gold/15 py-2 px-4 text-center cursor-interactive" data-cursor="View">
+        <Link to="/guardian" className="text-xs font-mono text-goldDim tracking-wide hover:text-gold transition-colors">
           <span className="live-dot mr-2" />
           Guardian Series — Now Deploying Across {stats.agencies} US Agencies
           <span className="ml-3 text-secondary hidden sm:inline">· NDAA Compliant · Made in USA</span>
         </Link>
       </div>
 
-      <div className="section-container relative">
+      <div className="px-4 md:px-8 lg:px-10 xl:px-12 2xl:px-16 relative">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5 group cursor-interactive" data-cursor="Home">
-            <div className="w-8 h-8 rounded-xl glass-gold flex items-center justify-center transition-all duration-300 group-hover:shadow-gold">
-              <Wind className="w-4 h-4 text-gold" strokeWidth={2} />
-            </div>
-            <span className="text-base font-bold tracking-tight text-primary">
-              Aero<span className="text-gold">Horse</span>
-            </span>
+            <img
+              src="/light_logo.png"
+              alt="AeroHorse"
+              className="h-9 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+            />
           </Link>
 
           {/* Desktop nav */}
@@ -94,13 +87,23 @@ export function Header() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.98 }}
                     transition={{ duration: 0.2 }}
-                    className="absolute top-full left-1/2 -translate-x-1/2 w-[360px] glass bg-ink/95 border border-border/60 rounded-xl mt-2 p-3 shadow-elevated flex flex-col gap-1"
+                    className="absolute top-full left-1/2 -translate-x-1/2 w-[360px] glass bg-void border border-border/60 rounded-xl mt-2 p-3 shadow-elevated flex flex-col gap-1"
                   >
+                    <Link
+                      to="/drones"
+                      className="group flex items-center gap-3 p-3 rounded-lg bg-panel/40 border border-gold/15 hover:border-gold/30 transition-colors cursor-interactive mb-1"
+                    >
+                      <div className="w-9 h-9 rounded-md bg-goldGlow border border-gold/20 flex items-center justify-center flex-shrink-0 text-gold font-bold text-[10px]">
+                        3D
+                      </div>
+                      <div>
+                        <span className="block text-sm font-bold text-primary group-hover:text-gold transition-colors">All Drones</span>
+                        <span className="block text-xs text-secondary mt-0.5">Interactive catalog & specs</span>
+                      </div>
+                    </Link>
                     <span className="px-3 pt-2 pb-1 text-[10px] font-mono text-tertiary uppercase tracking-widest">Outdoor Operations</span>
                     <Link to="/guardian" className="group flex items-start gap-3 p-3 rounded-lg hover:bg-panel/50 transition-colors cursor-interactive">
-                      <div className="w-9 h-9 rounded-md bg-deep border border-border/50 flex items-center justify-center flex-shrink-0">
-                        <Wind className="w-4 h-4 text-gold group-hover:scale-110 transition-transform" strokeWidth={1.5} />
-                      </div>
+                      <div className="w-9 h-9 rounded-md bg-goldGlow border border-gold/15 flex items-center justify-center flex-shrink-0 text-gold font-bold text-xs">G</div>
                       <div>
                         <span className="flex items-center text-sm font-bold text-primary group-hover:text-gold transition-colors">Guardian <span className="chip chip-gold ml-2 py-0 px-1.5 text-[9px]">New</span></span>
                         <span className="block text-xs text-secondary mt-0.5">Long-range drone as first responder</span>
@@ -108,9 +111,7 @@ export function Header() {
                     </Link>
                     <span className="px-3 pt-3 pb-1 text-[10px] font-mono text-tertiary uppercase tracking-widest">Indoor Operations</span>
                     <Link to="/lemur" className="group flex items-start gap-3 p-3 rounded-lg hover:bg-panel/50 transition-colors cursor-interactive">
-                      <div className="w-9 h-9 rounded-md bg-deep border border-border/50 flex items-center justify-center flex-shrink-0">
-                        <Wind className="w-4 h-4 text-rose group-hover:scale-110 transition-transform" strokeWidth={1.5} />
-                      </div>
+                      <div className="w-9 h-9 rounded-md bg-deep border border-border/50 flex items-center justify-center flex-shrink-0 text-rose font-bold text-xs">L</div>
                       <div>
                         <span className="block text-sm font-bold text-primary group-hover:text-rose transition-colors">Lemur 2</span>
                         <span className="block text-xs text-secondary mt-0.5">Indoor tactical reconnaissance</span>
@@ -143,10 +144,10 @@ export function Header() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.98 }}
                     transition={{ duration: 0.2 }}
-                    className="absolute top-full left-1/2 -translate-x-1/2 w-[340px] glass bg-ink/95 border border-border/60 rounded-xl mt-2 p-3 shadow-elevated flex flex-col gap-1"
+                    className="absolute top-full left-1/2 -translate-x-1/2 w-[360px] max-h-[min(70vh,420px)] overflow-y-auto glass bg-void border border-border/60 rounded-xl mt-2 p-3 shadow-elevated flex flex-col gap-1 [-ms-overflow-style:none] [scrollbar-width:thin]"
                   >
-                    {solutionLinks.map(({ label, desc, to, icon: Icon }) => (
-                      <Link key={label} to={to} className="group flex items-start gap-3 p-3 rounded-lg hover:bg-panel/50 transition-colors cursor-interactive">
+                    {solutionNavLinks.map(({ label, desc, href, icon: Icon }) => (
+                      <Link key={label} to={href} className="group flex items-start gap-3 p-3 rounded-lg hover:bg-panel/50 transition-colors cursor-interactive">
                         <div className="w-9 h-9 rounded-md bg-deep border border-border/50 flex items-center justify-center flex-shrink-0">
                           <Icon className="w-4 h-4 text-gold group-hover:scale-110 transition-transform" strokeWidth={1.5} />
                         </div>
@@ -161,8 +162,8 @@ export function Header() {
               </AnimatePresence>
             </div>
 
-            <Link to="/dfr" className="px-4 py-2 text-sm text-secondary hover:text-primary transition-colors duration-200 rounded-lg cursor-interactive">
-              DFR Program
+            <Link to="/drones" className="px-4 py-2 text-sm text-secondary hover:text-primary transition-colors duration-200 rounded-lg cursor-interactive">
+              Drones
             </Link>
           </nav>
 
@@ -194,11 +195,16 @@ export function Header() {
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
             className="md:hidden glass border-t border-border/40"
           >
-            <div className="section-container py-4 flex flex-col gap-1">
+            <div className="px-4 md:px-8 lg:px-10 xl:px-12 2xl:px-16  py-4 flex flex-col gap-1">
+              <Link to="/drones" className="px-4 py-3 text-sm text-secondary hover:text-primary hover:bg-panel/60 rounded-lg transition-colors">All Drones</Link>
               <Link to="/guardian" className="px-4 py-3 text-sm text-secondary hover:text-primary hover:bg-panel/60 rounded-lg transition-colors">Guardian</Link>
               <Link to="/lemur" className="px-4 py-3 text-sm text-secondary hover:text-primary hover:bg-panel/60 rounded-lg transition-colors">Lemur 2</Link>
-              <Link to="/dfr" className="px-4 py-3 text-sm text-secondary hover:text-primary hover:bg-panel/60 rounded-lg transition-colors">DFR Program</Link>
-              <Link to="/solutions" className="px-4 py-3 text-sm text-secondary hover:text-primary hover:bg-panel/60 rounded-lg transition-colors">Solutions</Link>
+              <Link to="/solutions" className="px-4 py-3 text-sm text-secondary hover:text-primary hover:bg-panel/60 rounded-lg transition-colors">All solutions</Link>
+              {solutionNavLinks.map(({ label, href }) => (
+                <Link key={href} to={href} className="px-4 py-2.5 pl-6 text-sm text-tertiary hover:text-primary hover:bg-panel/60 rounded-lg transition-colors">
+                  {label}
+                </Link>
+              ))}
               
               <div className="pt-4 border-t border-border/40 flex flex-col gap-2">
                 <Link to="/contact" className="btn-primary text-sm text-center justify-center">Request Demo</Link>

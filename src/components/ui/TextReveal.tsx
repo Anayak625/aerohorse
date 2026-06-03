@@ -9,10 +9,12 @@ interface TextRevealProps {
   className?: string;
   type?: 'chars' | 'words';
   delay?: number;
+  /** Use on above-the-fold heroes so copy animates on load, not on scroll */
+  playOnMount?: boolean;
 }
 
-export function TextReveal({ text, className = '', type = 'chars', delay = 0 }: TextRevealProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+export function TextReveal({ text, className = '', type = 'chars', delay = 0, playOnMount = false }: TextRevealProps) {
+  const containerRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -33,16 +35,20 @@ export function TextReveal({ text, className = '', type = 'chars', delay = 0 }: 
         stagger: type === 'chars' ? 0.02 : 0.05,
         ease: 'power3.out',
         delay: delay,
-        scrollTrigger: {
-          trigger: containerRef.current,
-          start: 'top 85%',
-          once: true,
-        }
+        ...(playOnMount
+          ? {}
+          : {
+              scrollTrigger: {
+                trigger: containerRef.current,
+                start: 'top 85%',
+                once: true,
+              },
+            }),
       });
     }, containerRef);
     
     return () => ctx.revert();
-  }, [text, type, delay]);
+  }, [text, type, delay, playOnMount]);
 
   // Split logic
   const renderContent = () => {
@@ -58,19 +64,26 @@ export function TextReveal({ text, className = '', type = 'chars', delay = 0 }: 
 
     return words.map((word, i) => (
       <React.Fragment key={`${word}-${i}`}>
-        <span className="inline-block overflow-hidden mr-[0.25em]">
-          <span className="split-word" style={{ opacity: 0, transform: 'translateY(100%)' }}>
+        <span className="inline-block overflow-hidden align-bottom mr-[0.25em] leading-none">
+          <span className="split-word inline-block" style={{ opacity: 0, transform: 'translateY(100%)' }}>
             {word}
           </span>
         </span>
-        {i < words.length - 1 ? ' ' : null}
+        {i < words.length - 1 ? '\u00A0' : null}
       </React.Fragment>
     ));
   };
 
+  const isBlock = className.includes('text-center') || className.includes('w-full');
+
   return (
-    <div ref={containerRef} className={className} style={{ perspective: '1000px' }}>
+    <span
+      ref={containerRef}
+      data-text-reveal
+      className={className}
+      style={{ perspective: '1000px', display: isBlock ? 'block' : 'inline' }}
+    >
       {renderContent()}
-    </div>
+    </span>
   );
 }

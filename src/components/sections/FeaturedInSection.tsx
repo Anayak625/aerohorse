@@ -3,7 +3,7 @@ import { pressOutlets } from '../../lib/site'
 export function FeaturedInSection() {
   return (
     <section className="py-10 lg:py-12 border-y border-border/40 bg-ink/50 relative overflow-hidden">
-      <div className="section-container">
+      <div className="px-4 md:px-8 lg:px-10 xl:px-12 2xl:px-16 ">
         <p className="text-center text-[11px] font-mono uppercase tracking-[0.25em] text-tertiary mb-7">
           As featured in
         </p>

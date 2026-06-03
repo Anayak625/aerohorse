@@ -21,7 +21,7 @@ function DroneGeometry() {
     <group ref={group}>
       <mesh castShadow>
         <boxGeometry args={[0.7, 0.12, 0.7]} />
-        <meshStandardMaterial color="#1a2332" metalness={0.92} roughness={0.08} envMapIntensity={2.5} />
+        <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.12} envMapIntensity={2} />
       </mesh>
       {[45, 135, 225, 315].map((deg, i) => {
         const r = (deg * Math.PI) / 180
@@ -31,16 +31,16 @@ function DroneGeometry() {
           <group key={i} position={[px, 0, pz]}>
             <mesh rotation={[0, -r + Math.PI / 4, 0]}>
               <boxGeometry args={[0.55, 0.035, 0.05]} />
-              <meshStandardMaterial color="#111827" metalness={0.95} roughness={0.05} />
+              <meshStandardMaterial color="#94a3b8" metalness={0.95} roughness={0.08} />
             </mesh>
             <mesh position={[0, 0.035, 0]}>
               <cylinderGeometry args={[0.09, 0.09, 0.07, 16]} />
-              <meshStandardMaterial color="#1e2d3d" metalness={0.85} roughness={0.15} />
+              <meshStandardMaterial color="#64748b" metalness={0.85} roughness={0.15} />
             </mesh>
             <mesh position={[0, 0.09, 0]}>
               <boxGeometry args={[0.65, 0.008, 0.05]} />
               <MeshDistortMaterial
-                color={i % 2 === 0 ? '#f59e0b' : '#fb7185'}
+                color={i % 2 === 0 ? '#2563eb' : '#93c5fd'}
                 metalness={0.3} roughness={0.3}
                 distort={0.08} speed={6}
                 transparent opacity={0.75}
@@ -51,14 +51,14 @@ function DroneGeometry() {
       })}
       <mesh position={[0, -0.1, 0.22]}>
         <sphereGeometry args={[0.07, 20, 20]} />
-        <meshStandardMaterial color="#f59e0b" emissive="#d97706" emissiveIntensity={0.6} metalness={0.9} roughness={0.1} />
+        <meshStandardMaterial color="#2563eb" emissive="#1d4ed8" emissiveIntensity={0.6} metalness={0.9} roughness={0.1} />
       </mesh>
       {[[-0.3, 0, -0.3], [0.3, 0, -0.3]].map(([x, y, z], i) => (
         <mesh key={i} position={[x, y, z]}>
           <sphereGeometry args={[0.022, 8, 8]} />
           <meshStandardMaterial
-            color={i === 0 ? '#fb7185' : '#34d399'}
-            emissive={i === 0 ? '#fb7185' : '#34d399'}
+            color={i === 0 ? '#93c5fd' : '#059669'}
+            emissive={i === 0 ? '#93c5fd' : '#059669'}
             emissiveIntensity={3}
           />
         </mesh>
@@ -79,11 +79,11 @@ function AmbientRings() {
     <>
       <mesh ref={r1} position={[0, -0.25, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[1.15, 0.005, 12, 160]} />
-        <meshStandardMaterial color="#f59e0b" emissive="#f59e0b" emissiveIntensity={4} transparent opacity={0.5} />
+        <meshStandardMaterial color="#2563eb" emissive="#2563eb" emissiveIntensity={4} transparent opacity={0.5} />
       </mesh>
       <mesh ref={r2} position={[0, -0.25, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[1.45, 0.003, 8, 128]} />
-        <meshStandardMaterial color="#fb7185" emissive="#fb7185" emissiveIntensity={3} transparent opacity={0.35} />
+        <meshStandardMaterial color="#93c5fd" emissive="#93c5fd" emissiveIntensity={3} transparent opacity={0.35} />
       </mesh>
     </>
   )
@@ -134,10 +134,10 @@ export function HeroSection() {
 
   return (
     <section ref={ref} className="relative min-h-screen flex flex-col pt-32 pb-6">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.08),transparent_70%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(37,99,235,0.06),transparent_70%)] pointer-events-none" />
       
-      <div className="section-container relative z-10 flex flex-col lg:flex-row items-center gap-12 lg:gap-20 flex-1 py-6 lg:py-8">
-        <div className="flex-1 flex flex-col gap-6 max-w-xl relative z-20">
+      <div className="px-4 md:px-8 lg:px-10 xl:px-12 2xl:px-16 relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-center flex-1 py-6 lg:py-8">
+        <div className="flex flex-col gap-6 relative z-20 w-full min-w-0">
           <div className="h-chip w-fit">
             <span className="chip chip-sage">
               <span className="live-dot" />
@@ -178,7 +178,7 @@ export function HeroSection() {
           </div>
         </div>
 
-        <div className="flex-1 h-[380px] lg:h-[500px] w-full relative group">
+        <div className="w-full min-w-0 h-[380px] lg:h-[520px] relative group">
           {['top-0 left-0 border-t border-l', 'top-0 right-0 border-t border-r', 'bottom-0 left-0 border-b border-l', 'bottom-0 right-0 border-b border-r'].map((cls, i) => (
             <div key={i} className={`absolute w-6 h-6 ${cls} border-gold/30 z-10 opacity-50 group-hover:opacity-100 transition-opacity`} />
           ))}
@@ -201,10 +201,10 @@ export function HeroSection() {
             className="pointer-events-none"
           >
             <ambientLight intensity={0.4} />
-            <pointLight position={[3, 3, 3]} color="#f59e0b" intensity={2.5} />
-            <pointLight position={[-3, -1, -2]} color="#fb7185" intensity={1.5} />
-            <spotLight position={[0, 5, 0]} angle={0.35} penumbra={1} intensity={4} color="#fbbf24" />
-            <Environment preset="sunset" />
+            <pointLight position={[3, 3, 3]} color="#2563eb" intensity={2.5} />
+            <pointLight position={[-3, -1, -2]} color="#93c5fd" intensity={1.5} />
+            <spotLight position={[0, 5, 0]} angle={0.35} penumbra={1} intensity={4} color="#dbeafe" />
+            <Environment preset="city" />
             <Float speed={1.2} rotationIntensity={0.15} floatIntensity={0.4}>
               <DroneGeometry />
             </Float>
